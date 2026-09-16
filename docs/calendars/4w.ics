@@ -1,0 +1,18 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//school-calendar-feed//stpauls-enfield//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:St Paul's Enfield — Year 4 (4W)
+X-WR-TIMEZONE:Europe/London
+BEGIN:VEVENT
+SUMMARY:4W Collective Worship to parents
+DTSTART:20261125T090500Z
+DTEND:20261125T100500Z
+DTSTAMP:20260916T151754Z
+UID:stpauls-880@school-calendar-feed
+LAST-MODIFIED:20260916T151754Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=880
+END:VEVENT
+END:VCALENDAR

@@ -2,43 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>St Paul's Enfield — Calendar Feed</title>
+  <title>St Paul's Enfield — Calendar Feeds</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 640px; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.5; color: #1a1a1a; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 720px; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.5; color: #1a1a1a; }
     h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.1rem; margin-top: 2.2rem; border-bottom: 1px solid #e2e2e2; padding-bottom: 0.3rem; }
     code { background: #f2f2f2; padding: 0.15rem 0.4rem; border-radius: 4px; word-break: break-all; }
-    a.button { display: inline-block; background: #1a1a1a; color: #fff; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; margin: 0.3rem 0.5rem 0.3rem 0; }
-    ol { padding-left: 1.2rem; }
-    li { margin-bottom: 0.6rem; }
+    table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
+    td { padding: 0.35rem 0.5rem 0.35rem 0; vertical-align: middle; border-bottom: 1px solid #f0f0f0; }
+    td.links { white-space: nowrap; text-align: right; }
+    a.button { display: inline-block; background: #1a1a1a; color: #fff; text-decoration: none; padding: 0.3rem 0.7rem; border-radius: 6px; margin-left: 0.4rem; font-size: 0.85rem; }
+    a.button.raw { background: #666; }
+    p.howto { color: #555; font-size: 0.92rem; }
   </style>
 </head>
 <body>
-  <h1>St Paul's C of E Primary (Enfield) — Upcoming Events Calendar</h1>
-  <p>This feed mirrors the school's public <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">Upcoming Events</a> page as a subscribable calendar. It refreshes automatically every few hours — subscribe once and new events appear without you doing anything.</p>
+  <h1>St Paul's C of E Primary (Enfield) — Calendar Feeds</h1>
+  <p>These feeds mirror the school's public <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">Upcoming Events</a> page, split into separate subscribable calendars so you can pick only what's relevant to your family. Each one refreshes automatically every few hours — subscribe once and new events appear without you doing anything.</p>
 
-  <p>
-    <a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendar.ics">Subscribe (Apple/Outlook)</a>
-    <a class="button" href="https://pete-naish.github.io/school-calendar-feed/calendar.ics">calendar.ics (raw file)</a>
+  <p class="howto">
+    <strong>Apple/Outlook:</strong> tap "Subscribe" below (or use the <code>webcal://</code> link with File &rarr; New Calendar Subscription on Mac).<br>
+    <strong>Google Calendar:</strong> copy the "ics" link, then go to <a href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl">Other calendars &rarr; + &rarr; From URL</a> and paste it.
   </p>
 
-  <h2>Google Calendar</h2>
-  <ol>
-    <li>Open <a href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl">Google Calendar &rarr; Other calendars &rarr; + &rarr; From URL</a></li>
-    <li>Paste: <code>https://pete-naish.github.io/school-calendar-feed/calendar.ics</code></li>
-  </ol>
+  <h2>Whole school</h2>
+  <table>
+    <tr>
+      <td>Events affecting the whole school or several year groups (inset days, holidays, whole-school services, etc)</td>
+      <td class="links">
+        <a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/whole-school.ics">Subscribe</a>
+        <a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/whole-school.ics">ics</a>
+      </td>
+    </tr>
+  </table>
 
-  <h2>Apple Calendar (iPhone/iPad/Mac)</h2>
-  <ol>
-    <li>Tap the "Subscribe" button above, or go to <strong>File &rarr; New Calendar Subscription</strong> on Mac</li>
-    <li>If prompted for a URL instead: <code>webcal://pete-naish.github.io/school-calendar-feed/calendar.ics</code></li>
-  </ol>
+  <h2>Friends of St Paul's (FOSPS)</h2>
+  <table>
+    <tr>
+      <td>FOSPS meetings, the AGM, and fundraising events</td>
+      <td class="links">
+        <a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/fosps.ics">Subscribe</a>
+        <a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/fosps.ics">ics</a>
+      </td>
+    </tr>
+  </table>
 
-  <h2>Outlook</h2>
-  <ol>
-    <li>Add calendar &rarr; Subscribe from web</li>
-    <li>Paste: <code>https://pete-naish.github.io/school-calendar-feed/calendar.ics</code></li>
-  </ol>
+  <h2>Class calendars</h2>
+  <p class="howto">Each class calendar includes events specific to that class, plus events for its whole year group.</p>
+  <table>
+    <tr><td>Reception — RR</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/rr.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/rr.ics">ics</a></td></tr>
+    <tr><td>Reception — RGP</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/rgp.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/rgp.ics">ics</a></td></tr>
+    <tr><td>Year 1 — 1MS</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/1ms.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/1ms.ics">ics</a></td></tr>
+    <tr><td>Year 1 — 1T</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/1t.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/1t.ics">ics</a></td></tr>
+    <tr><td>Year 2 — 2LY</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/2ly.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/2ly.ics">ics</a></td></tr>
+    <tr><td>Year 2 — 2S</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/2s.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/2s.ics">ics</a></td></tr>
+    <tr><td>Year 3 — 3B</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/3b.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/3b.ics">ics</a></td></tr>
+    <tr><td>Year 3 — 3D</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/3d.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/3d.ics">ics</a></td></tr>
+    <tr><td>Year 4 — 4M</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/4m.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/4m.ics">ics</a></td></tr>
+    <tr><td>Year 4 — 4W</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/4w.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/4w.ics">ics</a></td></tr>
+    <tr><td>Year 5 — 5L</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/5l.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/5l.ics">ics</a></td></tr>
+    <tr><td>Year 5 — 5HP</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/5hp.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/5hp.ics">ics</a></td></tr>
+    <tr><td>Year 6 — 6BT</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/6bt.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/6bt.ics">ics</a></td></tr>
+    <tr><td>Year 6 — 6R</td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/6r.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/6r.ics">ics</a></td></tr>
+  </table>
 
   <p><small>Not affiliated with the school. A personal tool that re-publishes the school's own public event data in a subscribable format. Source: <a href="https://github.com/pete-naish/school-calendar-feed">github.com/pete-naish/school-calendar-feed</a></small></p>
 </body>

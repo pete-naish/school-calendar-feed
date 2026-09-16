@@ -1,0 +1,8 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//school-calendar-feed//stpauls-enfield//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:St Paul's Enfield — Year 2 (2S)
+X-WR-TIMEZONE:Europe/London
+END:VCALENDAR

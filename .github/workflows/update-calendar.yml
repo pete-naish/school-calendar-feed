@@ -21,17 +21,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build calendar.ics
+      - name: Build calendar feeds
         run: python scripts/build_ics.py
 
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- docs/calendar.ics; then
-            git add docs/calendar.ics
-            git commit -m "Update calendar feed"
+          if ! git diff --quiet -- docs/calendars/; then
+            git add docs/calendars/
+            git commit -m "Update calendar feeds"
             git push
           else
-            echo "No changes to calendar.ics"
+            echo "No changes to calendar feeds"
           fi
