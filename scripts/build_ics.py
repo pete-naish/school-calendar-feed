@@ -17,16 +17,17 @@ each event, and writes out:
                                   appears in both of that year's class
                                   calendars. An event tied to one specific
                                   class appears only in that class's calendar.
+                                  Also includes hand/AI-entered events from
+                                  data/manual_events/<code>.json.
 - calendars/fosps.ics          - Friends of St Paul's events. Not published
                                   by the school API at all; sourced from
-                                  data/fosps_events.json, which is maintained
-                                  by hand (or by an AI agent working from
-                                  newsletters/PDFs).
+                                  data/manual_events/fosps.json, maintained by
+                                  hand or via the class-rep tool (see tool/).
 
 Classification is title-based (the API gives no structured category), using
 the CLASS config below plus a few keyword rules. Unrecognised class-code-shaped
 tokens (e.g. a teacher's initials changing) are logged as warnings and fall
-back to both classes in that year group, so no one misses an event outright.
+back to both classes in that year group, so no one misses an event.
 """
 from __future__ import annotations
 
@@ -46,7 +47,7 @@ API_URL = "https://www.st-pauls.enfield.sch.uk/calendar/api.asp"
 SCHOOL_NAME = "St Paul's Enfield"
 UID_DOMAIN = "school-calendar-feed"
 CALENDARS_DIR = Path(__file__).resolve().parent.parent / "docs" / "calendars"
-FOSPS_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "fosps_events.json"
+MANUAL_EVENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "manual_events"
 
 LONDON = ZoneInfo("Europe/London")
 UTC = timezone.utc
@@ -63,16 +64,23 @@ REQUEST_HEADERS = {
 # --------------------------------------------------------------------------
 # Class / year-group configuration.
 #
-# `aliases` are all the labels the school has used (or might use) for a
-# class, e.g. Reception's classes were "RKJ"/"RKP" and are now "RR"/"RGP".
-# Keep old aliases around rather than deleting them - the school's own event
-# titles are the only signal we get, and old ones can resurface in stale
-# copy/pasted event titles.
+# `code` is a PERMANENT identifier - it's the .ics filename and subscribe URL
+# slug (e.g. "5HP" -> calendars/5hp.ics), and once chosen it must never
+# change, even if the school later relabels the class. `current_label` is
+# what's actually shown to humans (the calendar's display name, and the
+# tool/docs UI) - it can be updated freely as the school's labels change,
+# with zero impact on anyone's subscription URL.
+#
+# `aliases` are every label a class has ever used (e.g. Reception's classes
+# were "RKJ"/"RKP" and are now "RR"/"RGP") - kept around rather than deleted,
+# since the school's own event titles are the only signal we get and old
+# labels can resurface in stale copy/pasted event titles.
 #
 # When the school starts using a class label that isn't listed here (e.g. a
 # new teacher), classify_event() below still figures out the *year group*
 # from the leading digit/R and fans the event out to both of that year's
-# classes, logging a warning so this config can be updated.
+# classes, logging a warning so this config can be updated (add the new
+# label to `aliases` and update `current_label` - never change `code`).
 # --------------------------------------------------------------------------
 YEAR_GROUPS = [
     {
@@ -80,8 +88,8 @@ YEAR_GROUPS = [
         "label": "Reception",
         "number": "R",
         "classes": [
-            {"code": "RR", "aliases": ["RR", "RKJ"]},
-            {"code": "RGP", "aliases": ["RGP", "RKP"]},
+            {"code": "RR", "current_label": "RR", "aliases": ["RR", "RKJ"]},
+            {"code": "RGP", "current_label": "RGP", "aliases": ["RGP", "RKP"]},
         ],
     },
     {
@@ -89,8 +97,8 @@ YEAR_GROUPS = [
         "label": "Year 1",
         "number": "1",
         "classes": [
-            {"code": "1MS", "aliases": ["1MS"]},
-            {"code": "1T", "aliases": ["1T"]},
+            {"code": "1MS", "current_label": "1MS", "aliases": ["1MS"]},
+            {"code": "1T", "current_label": "1T", "aliases": ["1T"]},
         ],
     },
     {
@@ -98,8 +106,8 @@ YEAR_GROUPS = [
         "label": "Year 2",
         "number": "2",
         "classes": [
-            {"code": "2LY", "aliases": ["2LY"]},
-            {"code": "2S", "aliases": ["2S"]},
+            {"code": "2LY", "current_label": "2LY", "aliases": ["2LY"]},
+            {"code": "2S", "current_label": "2S", "aliases": ["2S"]},
         ],
     },
     {
@@ -107,8 +115,8 @@ YEAR_GROUPS = [
         "label": "Year 3",
         "number": "3",
         "classes": [
-            {"code": "3B", "aliases": ["3B"]},
-            {"code": "3D", "aliases": ["3D"]},
+            {"code": "3B", "current_label": "3B", "aliases": ["3B"]},
+            {"code": "3D", "current_label": "3D", "aliases": ["3D"]},
         ],
     },
     {
@@ -116,8 +124,8 @@ YEAR_GROUPS = [
         "label": "Year 4",
         "number": "4",
         "classes": [
-            {"code": "4M", "aliases": ["4M"]},
-            {"code": "4W", "aliases": ["4W"]},
+            {"code": "4M", "current_label": "4M", "aliases": ["4M"]},
+            {"code": "4W", "current_label": "4W", "aliases": ["4W"]},
         ],
     },
     {
@@ -125,8 +133,8 @@ YEAR_GROUPS = [
         "label": "Year 5",
         "number": "5",
         "classes": [
-            {"code": "5L", "aliases": ["5L"]},
-            {"code": "5HP", "aliases": ["5HP"]},
+            {"code": "5L", "current_label": "5L", "aliases": ["5L"]},
+            {"code": "5HP", "current_label": "5HP", "aliases": ["5HP"]},
         ],
     },
     {
@@ -134,8 +142,8 @@ YEAR_GROUPS = [
         "label": "Year 6",
         "number": "6",
         "classes": [
-            {"code": "6BT", "aliases": ["6BT"]},
-            {"code": "6R", "aliases": ["6R"]},
+            {"code": "6BT", "current_label": "6BT", "aliases": ["6BT"]},
+            {"code": "6R", "current_label": "6R", "aliases": ["6R"]},
         ],
     },
 ]
@@ -295,11 +303,20 @@ def build_event(raw: dict) -> Event:
     return event
 
 
-def build_fosps_event(raw: dict) -> Event:
+def build_manual_event(raw: dict, code: str) -> Event:
     event = Event()
-    uid_source = f"{raw['title']}|{raw['date']}|{raw.get('time', '')}"
-    uid = sha1(uid_source.encode("utf-8")).hexdigest()[:16]
-    event.add("uid", f"fosps-{uid}@{UID_DOMAIN}")
+    # Manual events carry a stable `id` assigned at creation time by the
+    # class-rep tool (see tool/functions/api/_shared/github.js), so editing
+    # an event's title/date later updates the same iCalendar UID instead of
+    # producing an apparent new event. Hand-edited entries that predate the
+    # tool (or were added directly to the JSON without an id) fall back to a
+    # content hash.
+    if raw.get("id"):
+        uid = raw["id"]
+    else:
+        uid_source = f"{code}|{raw['title']}|{raw['date']}|{raw.get('time', '')}"
+        uid = sha1(uid_source.encode("utf-8")).hexdigest()[:16]
+    event.add("uid", f"manual-{uid}@{UID_DOMAIN}")
     event.add("summary", raw["title"])
 
     desc = raw.get("description")
@@ -333,10 +350,11 @@ def build_fosps_event(raw: dict) -> Event:
     return event
 
 
-def load_fosps_events() -> list[dict]:
-    if not FOSPS_DATA_PATH.exists():
+def load_manual_events(code: str) -> list[dict]:
+    path = MANUAL_EVENTS_DIR / f"{code.lower()}.json"
+    if not path.exists():
         return []
-    with FOSPS_DATA_PATH.open() as f:
+    with path.open() as f:
         return json.load(f)
 
 
@@ -382,13 +400,14 @@ def main() -> None:
     for group in YEAR_GROUPS:
         for cls in group["classes"]:
             code = cls["code"]
-            events = class_events[code]
-            cal = make_calendar(f"{SCHOOL_NAME} — {group['label']} ({code})", events)
+            events = class_events[code] + [
+                build_manual_event(raw, code) for raw in load_manual_events(code)
+            ]
+            cal = make_calendar(f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})", events)
             (CALENDARS_DIR / f"{code.lower()}.ics").write_bytes(cal.to_ical())
             print(f"Wrote {len(events)} events to {code.lower()}.ics", file=sys.stderr)
 
-    fosps_raw = load_fosps_events()
-    fosps_events = [build_fosps_event(raw) for raw in fosps_raw]
+    fosps_events = [build_manual_event(raw, "fosps") for raw in load_manual_events("fosps")]
     cal = make_calendar(f"{SCHOOL_NAME} — Friends of St Paul's (FOSPS)", fosps_events)
     (CALENDARS_DIR / "fosps.ics").write_bytes(cal.to_ical())
     print(f"Wrote {len(fosps_events)} events to fosps.ics", file=sys.stderr)

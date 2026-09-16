@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>St Paul's Enfield — Class Rep Calendar Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Class rep calendar tool</h1>
+    <p>Add, edit, or remove events on your class (or FOSPS) calendar. Not affiliated with the school.</p>
+  </header>
+
+  <main>
+    <section id="login-section">
+      <label for="calendar-select">Calendar</label>
+      <select id="calendar-select">
+        <option value="">Choose a calendar…</option>
+      </select>
+
+      <label for="passcode-input">Passcode</label>
+      <input type="password" id="passcode-input" autocomplete="off" placeholder="Passcode for this calendar">
+
+      <button id="login-button" disabled>Continue</button>
+      <p id="login-error" class="error" hidden></p>
+    </section>
+
+    <section id="app-section" hidden>
+      <div class="app-header">
+        <h2 id="active-calendar-name"></h2>
+        <button id="switch-calendar-button" class="link-button">Switch calendar</button>
+      </div>
+
+      <section id="add-section">
+        <h3>Add events</h3>
+        <p class="hint">Paste a WhatsApp message, newsletter paragraph, or anything describing one or more events.</p>
+        <textarea id="paste-textarea" rows="6" placeholder="Paste text here…"></textarea>
+        <button id="extract-button">Extract events</button>
+        <p id="extract-error" class="error" hidden></p>
+        <p id="extract-loading" class="hint" hidden>Reading that text…</p>
+
+        <div id="draft-cards"></div>
+        <button id="add-manual-card-button" class="secondary-button" hidden>+ Add an event manually</button>
+        <button id="save-all-button" hidden>Save all</button>
+        <p id="save-error" class="error" hidden></p>
+        <p id="save-success" class="success" hidden></p>
+      </section>
+
+      <section id="existing-section">
+        <h3>Your calendar's events</h3>
+        <p id="existing-loading" class="hint">Loading…</p>
+        <p id="existing-empty" class="hint" hidden>No events saved yet.</p>
+        <div id="existing-cards"></div>
+      </section>
+    </section>
+  </main>
+
+  <template id="event-card-template">
+    <div class="event-card">
+      <label>Title
+        <input type="text" class="field-title" required>
+      </label>
+      <div class="field-row">
+        <label>Date
+          <input type="date" class="field-date" required>
+        </label>
+        <label>Start time
+          <input type="time" class="field-time">
+        </label>
+        <label>End time
+          <input type="time" class="field-end-time">
+        </label>
+      </div>
+      <label>Description
+        <textarea class="field-description" rows="2"></textarea>
+      </label>
+      <label>Link
+        <input type="url" class="field-url" placeholder="https://…">
+      </label>
+      <p class="field-error error" hidden></p>
+      <div class="card-actions">
+        <button type="button" class="card-save-button" hidden>Save changes</button>
+        <button type="button" class="card-remove-button">Remove</button>
+      </div>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

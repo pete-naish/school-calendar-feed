@@ -54,15 +54,34 @@ one misses it. Check the Action's logs occasionally for these warnings and
 add newly-seen class codes as aliases in `YEAR_GROUPS` in
 `scripts/build_ics.py`.
 
-### FOSPS events
+Each class in `YEAR_GROUPS` has a permanent `code` (the `.ics` filename /
+subscribe URL slug - e.g. always `5hp.ics`) separate from a `current_label`
+(what's shown in the calendar's display name and in the tool's UI). When a
+class relabels, add the new label to `aliases` and update `current_label` -
+**never change `code`**, or every parent subscribed to that class breaks
+their subscription.
 
-FOSPS doesn't publish a scrapable calendar, so its events are entered by hand
-into `data/fosps_events.json` - a plain JSON list, edited directly (by a
-person, or by an AI agent fed a newsletter/PDF/photo of a poster). Each entry
+### Manual / hand-entered events (class events + FOSPS)
+
+Class-specific events not published anywhere scrapable (class trips, extra
+collective-worship dates, etc) and all FOSPS events (FOSPS doesn't publish a
+scrapable calendar at all) are entered by hand into
+`data/manual_events/<code>.json` - one plain JSON list per calendar (e.g.
+`data/manual_events/5hp.json`, `data/manual_events/fosps.json`), merged into
+that calendar's `.ics` alongside anything from the school API.
+
+The primary way to add these is **[the class rep tool](tool/README.md)** - a
+password-protected web app where a class rep pastes free text (a WhatsApp
+message, newsletter paragraph, etc) and has it turned into structured events
+by Claude, then reviews/edits/saves. It also supports amending or deleting an
+already-saved event.
+
+Editing the JSON files directly remains a documented fallback. Each entry
 looks like:
 
 ```json
 {
+  "id": "a1b2c3d4e5f6",
   "title": "FOSPS AGM",
   "date": "2026-10-05",
   "time": "19:30",
@@ -72,6 +91,9 @@ looks like:
 }
 ```
 
+`id` should be a short unique string (the tool generates one automatically;
+if adding an entry by hand, any unique value works) - it's what lets an event
+be edited later without becoming a "new" entry in subscribers' calendar apps.
 `time`/`end_time`/`description`/`url` are optional - omit `time` for an
 all-day event.
 
@@ -84,6 +106,10 @@ all-day event.
   `https://pete-naish.github.io/school-calendar-feed/calendars/<name>.ics`.
 - `docs/index.html` is a landing page listing every calendar with subscribe
   links for Google Calendar, Apple Calendar, and Outlook.
+- `tool/` is a separately-deployed (Cloudflare Pages) web app - see
+  [tool/README.md](tool/README.md) - that commits to `data/manual_events/`
+  directly; it doesn't itself rebuild the `.ics` files, it just feeds the
+  same 6-hourly cron above.
 
 ## Local development
 
@@ -101,10 +127,10 @@ branch `main`, folder `/docs`.
 
 ## Scope
 
-This covers only what's published on the school's public Upcoming Events page
+This covers what's published on the school's public Upcoming Events page
 (inset days, whole-school events, trips, class collective worship slots,
-etc), plus hand-entered FOSPS events. Anything not published anywhere
-scrapable (e.g. weekly PE days) isn't included here.
+etc), plus whatever class reps or FOSPS add manually via [the class rep
+tool](tool/README.md) or by hand-editing `data/manual_events/`.
 
 Not affiliated with the school or FOSPS - this just re-publishes their public
 event data in a more convenient, filterable format.

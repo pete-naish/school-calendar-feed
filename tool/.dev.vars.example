@@ -1,0 +1,16 @@
+# Copy this file to .dev.vars for local `wrangler pages dev` testing.
+# .dev.vars is gitignored - never commit real secrets.
+#
+# In production these are set as Cloudflare Pages secrets (dashboard ->
+# your project -> Settings -> Environment variables), not in this repo.
+
+# JSON object, one passcode per calendar code (see functions/api/_shared/calendars.js
+# for the full list of valid codes). Choose your own values - these are examples.
+CLASS_PASSWORDS={"rr":"changeme","rgp":"changeme","1ms":"changeme","1t":"changeme","2ly":"changeme","2s":"changeme","3b":"changeme","3d":"changeme","4m":"changeme","4w":"changeme","5l":"changeme","5hp":"changeme","6bt":"changeme","6r":"changeme","fosps":"changeme"}
+
+# Anthropic API key, used by /api/parse.
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Fine-grained GitHub PAT scoped to ONLY this repo, "Contents" permission set
+# to Read and write. Used by /api/save, /api/events-update, /api/events-delete.
+GITHUB_TOKEN=github_pat_...

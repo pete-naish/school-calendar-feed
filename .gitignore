@@ -1,3 +1,7 @@
 .venv/
 __pycache__/
 *.pyc
+
+tool/.dev.vars
+tool/node_modules/
+tool/.wrangler/
