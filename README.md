@@ -115,6 +115,37 @@ titles), plus weekends for a daily repeat. This is encoded as standard
 iCalendar `EXDATE` exceptions on the recurring `RRULE`, so it works in every
 calendar app without the rep having to think about term dates at all.
 
+**Timed manual events use a `TZID=Europe/London` DTSTART/DTEND/EXDATE (not
+UTC)**, with a `VTIMEZONE` block auto-embedded by `Calendar.add_missing_timezones()`
+(`icalendar` >= 7). This matters specifically for *recurring* events: a
+UTC-normalised DTSTART makes an RRULE repeat at a fixed UTC instant rather
+than the same local wall-clock time, so a weekly "9am" event would silently
+become an 8am or 10am event for any occurrence on the other side of a British
+clock change. `RRULE`'s `UNTIL` and school-API-sourced (never recurring)
+events are unaffected and stay UTC, per RFC 5545 (`UNTIL` must always be UTC
+when `DTSTART` has a time component).
+
+## Calendar preview (`docs/index.html`)
+
+The landing page embeds an interactive month calendar (`docs/assets/calendar.js`,
+`docs/assets/calendar.css`) that fetches and parses all 16 `.ics` files
+client-side with [ical.js](https://github.com/kewisch/ical.js) - including
+expanding `RRULE`/`EXDATE` - so parents can see what they'd actually get
+before subscribing anywhere, or just use the page itself as their calendar.
+Each calendar has an on/off toggle, remembered per-browser in `localStorage`
+(default: Whole School + FOSPS on, classes off). Colors are one validated
+categorical hue per year group + FOSPS, "Whole School" as a neutral grey
+rather than a 9th generated hue (`node scripts/validate_palette.js` from the
+`dataviz` skill; see `docs/assets/calendar.css` for the values).
+
+Because `ical.js`'s own offset math for an `add_missing_timezones()`-style
+(RDATE-list) `VTIMEZONE` doesn't reliably resolve the correct side of a DST
+change, `calendar.js` registers the embedded `VTIMEZONE` (for EXDATE/RRULE
+matching) but independently recomputes each occurrence's actual displayed
+time using the browser's own `Intl` timezone data (`timeZoneOffsetMs()` /
+`londonWallClockToUtc()`) - verified correct regardless of the viewer's own
+device timezone.
+
 ## How it works
 
 - `.github/workflows/update-calendar.yml` runs `scripts/build_ics.py` every 6
@@ -123,7 +154,8 @@ calendar app without the rep having to think about term dates at all.
 - GitHub Pages serves `docs/` as a static site, so the feeds are published at
   `https://pete-naish.github.io/school-calendar-feed/calendars/<name>.ics`.
 - `docs/index.html` is a landing page listing every calendar with subscribe
-  links for Google Calendar, Apple Calendar, and Outlook.
+  links for Google Calendar, Apple Calendar, and Outlook, plus the
+  interactive preview calendar described above.
 - `tool/` is a separately-deployed (Cloudflare Pages) web app - see
   [tool/README.md](tool/README.md) - that commits to `data/manual_events/`
   directly; it doesn't itself rebuild the `.ics` files, it just feeds the

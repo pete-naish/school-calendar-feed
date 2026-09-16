@@ -378,8 +378,15 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
             end_dt = datetime.combine(end_date, dt_time(23, 59)).replace(tzinfo=LONDON)
         else:
             end_dt = start_dt + timedelta(hours=1)
-        event.add("dtstart", start_dt.astimezone(UTC))
-        event.add("dtend", end_dt.astimezone(UTC))
+        # Keep these in Europe/London (not UTC-normalised): a UTC DTSTART
+        # would make a recurring event repeat at a fixed UTC instant rather
+        # than the same local wall-clock time, silently shifting by an hour
+        # for any occurrence on the other side of a DST change. Every
+        # mainstream calendar app resolves this TZID natively; a VTIMEZONE
+        # is also embedded below (add_missing_timezones()) for parsers that
+        # don't recognise IANA ids directly.
+        event.add("dtstart", start_dt)
+        event.add("dtend", end_dt)
     else:
         event.add("dtstart", start_date)
         # DTEND is exclusive in iCalendar, so a single all-day event still
@@ -425,7 +432,10 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
                 if not (is_closure or is_weekend):
                     continue
                 if time_str:
-                    exdates.append(datetime.combine(occ_date, start_dt.timetz()).astimezone(UTC))
+                    # Same reasoning as dtstart/dtend above: EXDATE must
+                    # match DTSTART's value type/zone to actually match and
+                    # exclude the occurrence.
+                    exdates.append(datetime.combine(occ_date, start_dt.timetz()))
                 else:
                     exdates.append(occ_date)
             if exdates:
@@ -455,6 +465,11 @@ def make_calendar(name: str, events: list[Event]) -> Calendar:
     cal.add("x-wr-timezone", "Europe/London")
     for event in events:
         cal.add_component(event)
+    # No-op if nothing uses a TZID; embeds a VTIMEZONE block for Europe/London
+    # otherwise, for the benefit of parsers that don't recognise IANA zone
+    # ids directly (mainstream calendar apps resolve the TZID from their own
+    # timezone database regardless).
+    cal.add_missing_timezones()
     return cal
 
 
