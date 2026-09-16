@@ -58,7 +58,10 @@ export async function onRequestPost({ request, env }) {
           `Resolve relative dates ("next Tuesday", "Friday") and partial dates ("the 12th", no year) ` +
           `against today's date, in Europe/London time. If a date cannot be confidently resolved, omit ` +
           `that event rather than guessing. Extract every distinct event mentioned, even if several ` +
-          `appear in one message.`,
+          `appear in one message. If an event clearly spans more than one day (e.g. "Monday to ` +
+          `Wednesday", a residential trip), set end_date to its last day; otherwise leave end_date null. ` +
+          `Do not attempt to infer recurring/repeating patterns - always extract each event as a single ` +
+          `occurrence, even if the text implies it repeats.`,
         messages: [{ role: "user", content: trimmedText }],
         tool_choice: { type: "tool", name: "record_events" },
         tools: [
@@ -74,7 +77,11 @@ export async function onRequestPost({ request, env }) {
                     type: "object",
                     properties: {
                       title: { type: "string" },
-                      date: { type: "string", description: "ISO 8601 date, YYYY-MM-DD" },
+                      date: { type: "string", description: "ISO 8601 date, YYYY-MM-DD - the event's first/only day" },
+                      end_date: {
+                        type: ["string", "null"],
+                        description: "ISO 8601 date - the event's last day, only if it spans multiple days, else null",
+                      },
                       time: { type: ["string", "null"], description: "24h HH:MM, or null if all-day/unspecified" },
                       end_time: { type: ["string", "null"] },
                       description: { type: ["string", "null"] },

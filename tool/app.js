@@ -11,6 +11,22 @@ const YEAR_GROUPS = [
 ];
 const FOSPS = { code: "fosps", label: "FOSPS" };
 
+const RECURRENCE_OPTIONS = {
+  daily: { freq: "DAILY", interval: 1 },
+  weekly: { freq: "WEEKLY", interval: 1 },
+  fortnightly: { freq: "WEEKLY", interval: 2 },
+  monthly: { freq: "MONTHLY", interval: 1 },
+};
+
+function recurrenceToSelectValue(recurrence) {
+  if (!recurrence) return "";
+  if (recurrence.freq === "DAILY") return "daily";
+  if (recurrence.freq === "WEEKLY" && recurrence.interval === 2) return "fortnightly";
+  if (recurrence.freq === "WEEKLY") return "weekly";
+  if (recurrence.freq === "MONTHLY") return "monthly";
+  return ""; // an interval/freq combination the picker can't represent - treated as non-recurring here
+}
+
 const ALL_CALENDARS = [
   ...YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, yearLabel: g.label }))),
   { ...FOSPS, yearLabel: "Friends of St Paul's" },
@@ -72,7 +88,14 @@ function init() {
 }
 
 function blankEvent() {
-  return { title: "", date: "", time: null, end_time: null, description: null, url: null };
+  return { title: "", date: "", end_date: null, time: null, end_time: null, description: null, url: null, recurrence: null };
+}
+
+function localValidationError(value) {
+  if (!value.title || !value.date) return "Title and date are required.";
+  if (value.end_date && value.end_date < value.date) return "End date can't be before the start date.";
+  if (value.recurrence && !value.recurrence.until) return "Repeat until date is required for a repeating event.";
+  return null;
 }
 
 function updateLoginButtonState() {
@@ -135,11 +158,10 @@ function handleSwitchCalendar() {
   el.pasteTextarea.value = "";
   el.draftCards.innerHTML = "";
   el.existingCards.innerHTML = "";
-  el.addManualCardButton.hidden = true;
-  el.saveAllButton.hidden = true;
   el.saveSuccess.hidden = true;
   el.appSection.hidden = true;
   el.loginSection.hidden = false;
+  updateDraftControlsVisibility();
   updateLoginButtonState();
 }
 
@@ -170,37 +192,63 @@ async function handleExtract() {
   for (const event of data.events || []) {
     addDraftCard(event);
   }
-  el.addManualCardButton.hidden = false;
-  el.saveAllButton.hidden = false;
   el.pasteTextarea.value = "";
 }
 
 function fillCardFields(card, event) {
   card.querySelector(".field-title").value = event.title || "";
   card.querySelector(".field-date").value = event.date || "";
+  card.querySelector(".field-end-date").value = event.end_date || "";
   card.querySelector(".field-time").value = event.time || "";
   card.querySelector(".field-end-time").value = event.end_time || "";
   card.querySelector(".field-description").value = event.description || "";
   card.querySelector(".field-url").value = event.url || "";
+  card.querySelector(".field-recurrence").value = recurrenceToSelectValue(event.recurrence);
+  card.querySelector(".field-recurrence-until").value = (event.recurrence && event.recurrence.until) || "";
 }
 
 function readCardFields(card) {
+  const recurSelectValue = card.querySelector(".field-recurrence").value;
+  const recurUntil = card.querySelector(".field-recurrence-until").value || null;
+  const recurrence = recurSelectValue ? { ...RECURRENCE_OPTIONS[recurSelectValue], until: recurUntil } : null;
   return {
     title: card.querySelector(".field-title").value.trim(),
     date: card.querySelector(".field-date").value,
+    end_date: card.querySelector(".field-end-date").value || null,
     time: card.querySelector(".field-time").value || null,
     end_time: card.querySelector(".field-end-time").value || null,
     description: card.querySelector(".field-description").value.trim() || null,
     url: card.querySelector(".field-url").value.trim() || null,
+    recurrence,
   };
+}
+
+// Shows the "Repeat until" field only once a repeat frequency is picked.
+function wireRecurrenceToggle(card) {
+  const select = card.querySelector(".field-recurrence");
+  const untilLabel = card.querySelector(".field-recurrence-until-label");
+  const sync = () => {
+    untilLabel.hidden = !select.value;
+  };
+  select.addEventListener("change", sync);
+  sync();
+}
+
+function updateDraftControlsVisibility() {
+  el.saveAllButton.hidden = el.draftCards.children.length === 0;
 }
 
 function addDraftCard(event) {
   const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
   fillCardFields(node, event);
+  wireRecurrenceToggle(node);
   node.querySelector(".card-save-button").hidden = true; // drafts save via "Save all", not individually
-  node.querySelector(".card-remove-button").addEventListener("click", () => node.remove());
+  node.querySelector(".card-remove-button").addEventListener("click", () => {
+    node.remove();
+    updateDraftControlsVisibility();
+  });
   el.draftCards.appendChild(node);
+  updateDraftControlsVisibility();
 }
 
 async function handleSaveAll() {
@@ -212,8 +260,9 @@ async function handleSaveAll() {
   const events = cards.map((card) => {
     const errorEl = card.querySelector(".field-error");
     const value = readCardFields(card);
-    if (!value.title || !value.date) {
-      errorEl.textContent = "Title and date are required.";
+    const error = localValidationError(value);
+    if (error) {
+      errorEl.textContent = error;
       errorEl.hidden = false;
       hasFieldError = true;
     } else {
@@ -241,8 +290,7 @@ async function handleSaveAll() {
   el.saveSuccess.textContent = `${data.saved} event(s) saved${skipped}. They'll appear in the calendar within 6 hours.`;
   el.saveSuccess.hidden = false;
   el.draftCards.innerHTML = "";
-  el.addManualCardButton.hidden = true;
-  el.saveAllButton.hidden = true;
+  updateDraftControlsVisibility();
 
   const listResult = await apiCall("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
   if (listResult.ok) renderExistingEvents(listResult.data.events);
@@ -256,6 +304,7 @@ function renderExistingEvents(events) {
   for (const event of events) {
     const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
     fillCardFields(node, event);
+    wireRecurrenceToggle(node);
 
     const saveButton = node.querySelector(".card-save-button");
     saveButton.hidden = false;
@@ -272,8 +321,9 @@ function renderExistingEvents(events) {
 async function handleUpdateExisting(card, id, button) {
   const errorEl = card.querySelector(".field-error");
   const value = readCardFields(card);
-  if (!value.title || !value.date) {
-    errorEl.textContent = "Title and date are required.";
+  const error = localValidationError(value);
+  if (error) {
+    errorEl.textContent = error;
     errorEl.hidden = false;
     return;
   }

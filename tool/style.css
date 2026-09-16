@@ -63,6 +63,12 @@ h3 {
   font-size: 0.9rem;
 }
 
+.optional {
+  font-weight: normal;
+  text-transform: none;
+  color: var(--muted);
+}
+
 label {
   display: block;
   font-size: 0.85rem;

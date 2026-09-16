@@ -35,7 +35,7 @@ import html
 import json
 import re
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time as dt_time, timedelta, timezone
 from hashlib import sha1
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -328,21 +328,48 @@ def build_manual_event(raw: dict, code: str) -> Event:
         event.add("url", url)
 
     start_date = date.fromisoformat(raw["date"])
+    end_date_raw = raw.get("end_date")
+    # Defensive: a hand-edited JSON entry could have end_date before date.
+    end_date = max(date.fromisoformat(end_date_raw), start_date) if end_date_raw else start_date
+
     time_str = raw.get("time")
     if time_str:
         start_dt = datetime.combine(start_date, datetime.strptime(time_str, "%H:%M").time()).replace(tzinfo=LONDON)
         end_time_str = raw.get("end_time")
         if end_time_str:
-            end_dt = datetime.combine(start_date, datetime.strptime(end_time_str, "%H:%M").time()).replace(
+            end_dt = datetime.combine(end_date, datetime.strptime(end_time_str, "%H:%M").time()).replace(
                 tzinfo=LONDON
             )
+        elif end_date != start_date:
+            # Multi-day with only a start time given (e.g. a residential trip
+            # with no stated return time) - run through to the end of the
+            # last day rather than guessing a same-length window.
+            end_dt = datetime.combine(end_date, dt_time(23, 59)).replace(tzinfo=LONDON)
         else:
             end_dt = start_dt + timedelta(hours=1)
         event.add("dtstart", start_dt.astimezone(UTC))
         event.add("dtend", end_dt.astimezone(UTC))
     else:
         event.add("dtstart", start_date)
-        event.add("dtend", start_date + timedelta(days=1))
+        # DTEND is exclusive in iCalendar, so a single all-day event still
+        # ends the following day; a multi-day one ends the day after its
+        # last (inclusive) day.
+        event.add("dtend", end_date + timedelta(days=1))
+
+    recurrence = raw.get("recurrence")
+    if recurrence and recurrence.get("freq"):
+        rrule_params = {"freq": recurrence["freq"], "interval": recurrence.get("interval", 1)}
+        until_raw = recurrence.get("until")
+        if until_raw:
+            until_date = date.fromisoformat(until_raw)
+            if time_str:
+                # RFC 5545: UNTIL must be a UTC date-time when DTSTART has a
+                # time component - use the end of that day so the last
+                # occurrence itself isn't excluded by an early cutoff.
+                rrule_params["until"] = datetime.combine(until_date, dt_time(23, 59, 59), tzinfo=UTC)
+            else:
+                rrule_params["until"] = until_date
+        event.add("rrule", rrule_params)
 
     now = datetime.now(tz=UTC)
     event.add("dtstamp", now)

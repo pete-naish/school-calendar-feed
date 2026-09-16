@@ -41,7 +41,7 @@
         <p id="extract-loading" class="hint" hidden>Reading that text…</p>
 
         <div id="draft-cards"></div>
-        <button id="add-manual-card-button" class="secondary-button" hidden>+ Add an event manually</button>
+        <button id="add-manual-card-button" class="secondary-button">+ Add an event manually</button>
         <button id="save-all-button" hidden>Save all</button>
         <p id="save-error" class="error" hidden></p>
         <p id="save-success" class="success" hidden></p>
@@ -62,14 +62,33 @@
         <input type="text" class="field-title" required>
       </label>
       <div class="field-row">
-        <label>Date
+        <label>Start date
           <input type="date" class="field-date" required>
         </label>
+        <label>End date <span class="optional">(multi-day only)</span>
+          <input type="date" class="field-end-date">
+        </label>
+      </div>
+      <div class="field-row">
         <label>Start time
           <input type="time" class="field-time">
         </label>
         <label>End time
           <input type="time" class="field-end-time">
+        </label>
+      </div>
+      <div class="field-row">
+        <label>Repeats
+          <select class="field-recurrence">
+            <option value="">Doesn't repeat</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="fortnightly">Every 2 weeks</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </label>
+        <label class="field-recurrence-until-label" hidden>Repeat until
+          <input type="date" class="field-recurrence-until">
         </label>
       </div>
       <label>Description

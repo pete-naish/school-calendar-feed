@@ -84,18 +84,28 @@ looks like:
   "id": "a1b2c3d4e5f6",
   "title": "FOSPS AGM",
   "date": "2026-10-05",
+  "end_date": null,
   "time": "19:30",
   "end_time": "21:00",
   "description": "Annual general meeting, all welcome.",
-  "url": "https://example.com/fosps-agm"
+  "url": "https://example.com/fosps-agm",
+  "recurrence": null
 }
 ```
 
 `id` should be a short unique string (the tool generates one automatically;
 if adding an entry by hand, any unique value works) - it's what lets an event
 be edited later without becoming a "new" entry in subscribers' calendar apps.
-`time`/`end_time`/`description`/`url` are optional - omit `time` for an
-all-day event.
+`end_date`/`time`/`end_time`/`description`/`url`/`recurrence` are all
+optional (omit or set `null`).
+
+- Omit `time` for an all-day event.
+- Set `end_date` for a multi-day event (its last day, inclusive) - otherwise
+  it's a single-day event.
+- `recurrence` is `{"freq": "DAILY"|"WEEKLY"|"MONTHLY", "interval": 1, "until": "2027-04-01"}`
+  (becomes a standard iCalendar `RRULE`). Always set `until` by hand if
+  editing the JSON directly - the class rep tool enforces this, but nothing
+  stops a hand-added entry from recurring forever if you leave it out.
 
 ## How it works
 

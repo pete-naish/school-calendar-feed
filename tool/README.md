@@ -15,9 +15,17 @@ integration.
 ## How it works
 
 - `index.html` / `app.js` / `style.css` - the frontend. Calendar picker →
-  passcode → paste text → review/edit extracted events → save. A second
-  section lists and lets you edit/delete events already saved to that
-  calendar.
+  passcode → paste text → review/edit extracted events → save. A "+ Add an
+  event manually" button is always available too - pasting text through
+  Claude is optional, not required. A second section lists and lets you
+  edit/delete events already saved to that calendar.
+- Every event card supports an optional **end date** (for multi-day events -
+  DTEND is set to the end of that day) and an optional **repeat** (daily /
+  weekly / every 2 weeks / monthly, each requiring a "repeat until" date -
+  the tool won't save an open-ended recurring event). These become a
+  standard iCalendar `RRULE` in the published `.ics`. Editing or deleting a
+  recurring entry acts on the whole series, not a single occurrence - the
+  tool doesn't support per-occurrence edits.
 - `functions/api/*.js` - Cloudflare Pages Functions (file-based routing:
   `functions/api/parse.js` becomes `POST /api/parse`, etc). Each endpoint
   re-validates the calendar code and passcode independently.
