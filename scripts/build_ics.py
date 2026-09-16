@@ -41,6 +41,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
+from dateutil.rrule import DAILY, MONTHLY, WEEKLY, rrule
 from icalendar import Calendar, Event
 
 API_URL = "https://www.st-pauls.enfield.sch.uk/calendar/api.asp"
@@ -179,6 +180,10 @@ _RECEPTION_WORD_PATTERN = re.compile(r"\bReception\b", re.IGNORECASE)
 # school's event titles - a looser match risks false positives on ordinary
 # capitalised words.
 _UNKNOWN_CLASS_CODE_PATTERN = re.compile(r"\b([1-6][A-Z]{1,3}|R[A-Z]{1,3})\b")
+# Days the school itself says it's closed - used to automatically skip
+# occurrences of recurring manual events (see collect_closure_dates()).
+_CLOSURE_KEYWORDS = re.compile(r"\bINSET\b|\bHALF TERM\b|\bHOLIDAY\b", re.IGNORECASE)
+_RECUR_FREQ_MAP = {"DAILY": DAILY, "WEEKLY": WEEKLY, "MONTHLY": MONTHLY}
 
 
 def classify_event(title: str) -> tuple[str, set[str]]:
@@ -250,6 +255,32 @@ def fetch_events() -> list[dict]:
     return events
 
 
+def collect_closure_dates(raw_events: list[dict]) -> set[date]:
+    """Every calendar date the school itself marks as closed (inset days,
+    half term, holidays), read straight from the same API feed.
+
+    Used to automatically skip occurrences of a *recurring* manual event
+    (e.g. a weekly PE day) that would otherwise land on a day school isn't
+    even open - reps don't have to think about term dates at all.
+    """
+    closure_dates: set[date] = set()
+    for raw in raw_events:
+        if not _CLOSURE_KEYWORDS.search(_clean(raw.get("title"))):
+            continue
+        if raw.get("allDay"):
+            start, end = _parse_all_day(raw)
+        else:
+            start_dt, end_dt = _parse_timed(raw)
+            start, end = start_dt.astimezone(LONDON).date(), end_dt.astimezone(LONDON).date()
+            if end == start:
+                end = start + timedelta(days=1)
+        d = start
+        while d < end:  # end is exclusive, matching DTEND semantics
+            closure_dates.add(d)
+            d += timedelta(days=1)
+    return closure_dates
+
+
 def _clean(text: str | None) -> str:
     return html.unescape((text or "").strip())
 
@@ -303,7 +334,7 @@ def build_event(raw: dict) -> Event:
     return event
 
 
-def build_manual_event(raw: dict, code: str) -> Event:
+def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
     event = Event()
     # Manual events carry a stable `id` assigned at creation time by the
     # class-rep tool (see tool/functions/api/_shared/github.js), so editing
@@ -358,10 +389,12 @@ def build_manual_event(raw: dict, code: str) -> Event:
 
     recurrence = raw.get("recurrence")
     if recurrence and recurrence.get("freq"):
-        rrule_params = {"freq": recurrence["freq"], "interval": recurrence.get("interval", 1)}
+        freq_name = recurrence["freq"]
+        interval = recurrence.get("interval", 1)
+        rrule_params = {"freq": freq_name, "interval": interval}
         until_raw = recurrence.get("until")
-        if until_raw:
-            until_date = date.fromisoformat(until_raw)
+        until_date = date.fromisoformat(until_raw) if until_raw else None
+        if until_date:
             if time_str:
                 # RFC 5545: UNTIL must be a UTC date-time when DTSTART has a
                 # time component - use the end of that day so the last
@@ -370,6 +403,33 @@ def build_manual_event(raw: dict, code: str) -> Event:
             else:
                 rrule_params["until"] = until_date
         event.add("rrule", rrule_params)
+
+        # Skip occurrences that land on a day the school is closed (inset
+        # days, half term, holidays - see collect_closure_dates()), plus
+        # weekends for a daily repeat, by enumerating the series ourselves
+        # and excluding those dates via EXDATE. The RRULE above still
+        # describes the full pattern; EXDATE is the standard iCalendar way
+        # to carve out exceptions from it.
+        if until_date and freq_name in _RECUR_FREQ_MAP:
+            occurrences = rrule(
+                _RECUR_FREQ_MAP[freq_name],
+                dtstart=datetime.combine(start_date, dt_time.min),
+                until=datetime.combine(until_date, dt_time.max),
+                interval=interval,
+            )
+            exdates = []
+            for occ in occurrences:
+                occ_date = occ.date()
+                is_closure = occ_date in closure_dates
+                is_weekend = freq_name == "DAILY" and occ_date.weekday() >= 5
+                if not (is_closure or is_weekend):
+                    continue
+                if time_str:
+                    exdates.append(datetime.combine(occ_date, start_dt.timetz()).astimezone(UTC))
+                else:
+                    exdates.append(occ_date)
+            if exdates:
+                event.add("exdate", exdates)
 
     now = datetime.now(tz=UTC)
     event.add("dtstamp", now)
@@ -400,6 +460,7 @@ def make_calendar(name: str, events: list[Event]) -> Calendar:
 
 def main() -> None:
     raw_events = fetch_events()
+    closure_dates = collect_closure_dates(raw_events)
 
     seen_ids: set[int] = set()
     whole_school_events: list[Event] = []
@@ -428,13 +489,13 @@ def main() -> None:
         for cls in group["classes"]:
             code = cls["code"]
             events = class_events[code] + [
-                build_manual_event(raw, code) for raw in load_manual_events(code)
+                build_manual_event(raw, code, closure_dates) for raw in load_manual_events(code)
             ]
             cal = make_calendar(f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})", events)
             (CALENDARS_DIR / f"{code.lower()}.ics").write_bytes(cal.to_ical())
             print(f"Wrote {len(events)} events to {code.lower()}.ics", file=sys.stderr)
 
-    fosps_events = [build_manual_event(raw, "fosps") for raw in load_manual_events("fosps")]
+    fosps_events = [build_manual_event(raw, "fosps", closure_dates) for raw in load_manual_events("fosps")]
     cal = make_calendar(f"{SCHOOL_NAME} — Friends of St Paul's (FOSPS)", fosps_events)
     (CALENDARS_DIR / "fosps.ics").write_bytes(cal.to_ical())
     print(f"Wrote {len(fosps_events)} events to fosps.ics", file=sys.stderr)

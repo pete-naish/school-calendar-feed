@@ -25,7 +25,10 @@ integration.
   the tool won't save an open-ended recurring event). These become a
   standard iCalendar `RRULE` in the published `.ics`. Editing or deleting a
   recurring entry acts on the whole series, not a single occurrence - the
-  tool doesn't support per-occurrence edits.
+  tool doesn't support per-occurrence edits. `scripts/build_ics.py`
+  automatically excludes occurrences that fall on inset days, half term, or
+  holidays (and weekends, for a daily repeat) - no need to account for term
+  dates when picking a repeat schedule.
 - `functions/api/*.js` - Cloudflare Pages Functions (file-based routing:
   `functions/api/parse.js` becomes `POST /api/parse`, etc). Each endpoint
   re-validates the calendar code and passcode independently.

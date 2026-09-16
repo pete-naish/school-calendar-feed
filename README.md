@@ -107,6 +107,14 @@ optional (omit or set `null`).
   editing the JSON directly - the class rep tool enforces this, but nothing
   stops a hand-added entry from recurring forever if you leave it out.
 
+A recurring event automatically skips any occurrence that would land on a
+day the school itself marks as closed - inset days, half term, holidays
+(detected from the same school API feed by `collect_closure_dates()` in
+`scripts/build_ics.py`, matching "INSET"/"HALF TERM"/"HOLIDAY" in event
+titles), plus weekends for a daily repeat. This is encoded as standard
+iCalendar `EXDATE` exceptions on the recurring `RRULE`, so it works in every
+calendar app without the rep having to think about term dates at all.
+
 ## How it works
 
 - `.github/workflows/update-calendar.yml` runs `scripts/build_ics.py` every 6
