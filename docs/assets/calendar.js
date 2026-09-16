@@ -302,6 +302,7 @@ function renderMonth() {
       const chip = document.createElement("div");
       chip.className = "cal-chip";
       chip.style.background = `var(${inst.colorVar})`;
+      chip.style.color = `var(${inst.colorVar}-text)`;
       chip.textContent = inst.title;
       cell.appendChild(chip);
     }

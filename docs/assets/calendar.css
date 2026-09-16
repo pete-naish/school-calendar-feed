@@ -18,6 +18,26 @@
   --cal-muted: #666666;
   --cal-fg: #1a1a1a;
   --cal-today-ring: #1a1a1a;
+  --link-color: #1a5fb4; /* 6.3:1 vs white - the default browser link blue was ~4:1 and unreadable in dark mode */
+
+  /* Per-slot chip TEXT color - not a blanket white. Computed via WCAG
+     contrast (whichever of near-black/white wins against that slot's own
+     hex, light and dark computed separately since the hexes differ between
+     modes); a couple of slots land in the high 3s/low 4s even at best,
+     which is what you get from a hue-first categorical palette - acceptable
+     for a small chip label that's never the only way to read the event
+     (title is always in the day-detail panel too). */
+  --chip-text-dark: #14140f;
+  --chip-text-light: #ffffff;
+  --cal-neutral-text: var(--chip-text-light);
+  --cal-1-text: var(--chip-text-light);
+  --cal-2-text: var(--chip-text-dark);
+  --cal-3-text: var(--chip-text-dark);
+  --cal-4-text: var(--chip-text-dark);
+  --cal-5-text: var(--chip-text-dark);
+  --cal-6-text: var(--chip-text-light);
+  --cal-7-text: var(--chip-text-light);
+  --cal-8-text: var(--chip-text-dark);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,6 +57,17 @@
     --cal-muted: #a0a0a0;
     --cal-fg: #ededed;
     --cal-today-ring: #ededed;
+    --link-color: #8ab4f8; /* 8.6:1 vs #16161a */
+
+    --cal-neutral-text: var(--chip-text-dark);
+    --cal-1-text: var(--chip-text-dark);
+    --cal-2-text: var(--chip-text-dark);
+    --cal-3-text: var(--chip-text-dark);
+    --cal-4-text: var(--chip-text-dark);
+    --cal-5-text: var(--chip-text-dark);
+    --cal-6-text: var(--chip-text-light);
+    --cal-7-text: var(--chip-text-dark);
+    --cal-8-text: var(--chip-text-dark);
   }
 }
 
@@ -120,12 +151,18 @@
 
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0, 1fr), not plain 1fr: grid tracks otherwise refuse to shrink
+     below their content's intrinsic width (a long unbroken chip label),
+     which was overflowing the page at narrow widths instead of the 7
+     columns fitting evenly. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   background: var(--cal-border);
   border: 1px solid var(--cal-border);
   border-radius: 8px;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cal-weekday {
@@ -140,11 +177,14 @@
 .cal-day {
   background: var(--cal-surface-alt);
   min-height: 4.5rem;
+  min-width: 0;
   padding: 0.25rem;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .cal-day:hover {
@@ -176,7 +216,7 @@
   font-size: 0.68rem;
   padding: 0.05rem 0.3rem;
   border-radius: 4px;
-  color: #fff;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
