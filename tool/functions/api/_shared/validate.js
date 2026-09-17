@@ -14,6 +14,21 @@ function cleanOptionalDate(value) {
   return typeof value === "string" && DATE_RE.test(value) ? value : null;
 }
 
+// Rejects anything but http(s) - this value is later set as an <a href> on
+// the public preview page (docs/assets/calendar.js), so a javascript: (or
+// other) URL here would be a stored-XSS vector for every site visitor.
+function cleanOptionalUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const trimmed = value.trim();
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  return parsed.protocol === "http:" || parsed.protocol === "https:" ? trimmed : null;
+}
+
 // A recurring event with no end is a standing liability on a school calendar
 // (terms end, teachers change) - require `until`, and drop the whole
 // recurrence rather than publish an open-ended series.
@@ -30,7 +45,7 @@ function commonFields(item) {
     time: cleanOptionalTime(item.time),
     end_time: cleanOptionalTime(item.end_time),
     description: cleanOptionalString(item.description),
-    url: cleanOptionalString(item.url),
+    url: cleanOptionalUrl(item.url),
     recurrence: cleanRecurrence(item.recurrence),
   };
 }

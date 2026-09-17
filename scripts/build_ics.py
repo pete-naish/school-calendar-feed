@@ -38,6 +38,7 @@ import sys
 from datetime import date, datetime, time as dt_time, timedelta, timezone
 from hashlib import sha1
 from pathlib import Path
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 import requests
@@ -285,6 +286,22 @@ def _clean(text: str | None) -> str:
     return html.unescape((text or "").strip())
 
 
+def _safe_url(url: str | None) -> str | None:
+    """Reject anything but http(s). This value ends up as an <a href> on the
+    public preview page (docs/assets/calendar.js), so a javascript: (or
+    other) URL here would be a stored-XSS vector for every site visitor.
+    Applies to both the school API's own `url` field and manual events -
+    the latter can also arrive via hand-edited JSON, bypassing the class
+    rep tool's own validation (tool/functions/api/_shared/validate.js)."""
+    if not url:
+        return None
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return None
+    return url if parsed.scheme in ("http", "https") else None
+
+
 def _parse_all_day(raw: dict) -> tuple[date, date]:
     start_date = date.fromisoformat(raw["start"][:10])
     end_raw = raw.get("end")
@@ -317,7 +334,7 @@ def build_event(raw: dict) -> Event:
     if desc:
         event.add("description", desc)
 
-    url = raw.get("url")
+    url = _safe_url(raw.get("url"))
     if url:
         event.add("url", url)
 
@@ -354,7 +371,7 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
     if desc:
         event.add("description", desc)
 
-    url = raw.get("url")
+    url = _safe_url(raw.get("url"))
     if url:
         event.add("url", url)
 

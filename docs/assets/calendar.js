@@ -93,6 +93,19 @@ function toReliableJsDate(icalTime) {
   return icalTime.toJSDate();
 }
 
+// Defense in depth: scripts/build_ics.py and the class rep tool's
+// validate.js both already reject non-http(s) URLs before they reach a
+// published .ics file, but this is the actual XSS sink (an <a href> on a
+// page every visitor loads) - never trust an upstream check alone here.
+function isSafeUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.href);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function loadToggleState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -445,7 +458,7 @@ function renderEventRow(inst) {
     desc.textContent = inst.description;
     row.appendChild(desc);
   }
-  if (inst.url) {
+  if (inst.url && isSafeUrl(inst.url)) {
     const link = document.createElement("a");
     link.href = inst.url;
     link.textContent = "More info";
