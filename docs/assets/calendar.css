@@ -230,6 +230,14 @@
   overflow: hidden;
 }
 
+.cal-day:focus-visible {
+  /* calendar.css's own token (not index.html's --link-color) - keeps this
+     stylesheet self-contained rather than reaching into the host page's
+     namespace. */
+  outline: 2px solid var(--cal-today-ring);
+  outline-offset: -2px;
+}
+
 /* Week view: same 7-column grid, just one row and more vertical room per
    day since there are only 7 cells to fit instead of 42. */
 .cal-grid--week .cal-day {

@@ -357,7 +357,17 @@ function buildDayCell(cellDate, { isOtherMonth = false, maxChips = MAX_CHIPS_PER
   }
 
   if (dayEvents.length > 0) {
-    cell.addEventListener("click", () => openDayDialog(cellDate, dayEvents));
+    const open = () => openDayDialog(cellDate, dayEvents);
+    cell.tabIndex = 0;
+    cell.setAttribute("role", "button");
+    cell.setAttribute("aria-label", `${formatDayLabel(cellDate)}: ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}`);
+    cell.addEventListener("click", open);
+    cell.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
   }
 
   return cell;
