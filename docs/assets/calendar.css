@@ -126,6 +126,7 @@
 .cal-nav {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.6rem;
   margin-bottom: 0.6rem;
 }
@@ -147,6 +148,33 @@
 
 #cal-today {
   margin-left: auto;
+}
+
+.cal-view-switch {
+  display: flex;
+  border: 1px solid var(--cal-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.cal-view-switch .view-button {
+  background: var(--cal-surface-alt);
+  border: none;
+  border-radius: 0;
+  border-left: 1px solid var(--cal-border);
+  color: var(--cal-fg);
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.cal-view-switch .view-button:first-child {
+  border-left: none;
+}
+
+.cal-view-switch .view-button.active {
+  background: var(--cal-fg);
+  color: var(--cal-surface-alt);
 }
 
 .cal-grid {
@@ -185,6 +213,21 @@
   gap: 0.15rem;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+/* Week view: same 7-column grid, just one row and more vertical room per
+   day since there are only 7 cells to fit instead of 42. */
+.cal-grid--week .cal-day {
+  min-height: 12rem;
+}
+
+/* Day view: a single day's events, full width, no truncation - reuses the
+   same .day-event row markup as the day-detail dialog. */
+.cal-day-agenda {
+  border: 1px solid var(--cal-border);
+  border-radius: 8px;
+  padding: 0 1rem;
+  background: var(--cal-surface-alt);
 }
 
 .cal-day:hover {

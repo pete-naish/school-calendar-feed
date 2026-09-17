@@ -61,15 +61,21 @@
     <div id="calendar-toggles" class="cal-toggles"></div>
 
     <div class="cal-nav">
-      <button id="cal-prev" aria-label="Previous month">&lsaquo;</button>
+      <button id="cal-prev" aria-label="Previous">&lsaquo;</button>
       <span id="cal-month-label"></span>
-      <button id="cal-next" aria-label="Next month">&rsaquo;</button>
+      <button id="cal-next" aria-label="Next">&rsaquo;</button>
       <button id="cal-today">Today</button>
+      <div class="cal-view-switch" role="group" aria-label="Calendar view">
+        <button type="button" class="view-button" data-view="month">Month</button>
+        <button type="button" class="view-button" data-view="week">Week</button>
+        <button type="button" class="view-button" data-view="day">Day</button>
+      </div>
     </div>
 
     <p id="calendar-loading" class="howto">Loading events…</p>
     <p id="calendar-error" class="howto" hidden></p>
     <div id="calendar-grid" class="cal-grid" aria-live="polite"></div>
+    <div id="calendar-day-agenda" class="cal-day-agenda" aria-live="polite" hidden></div>
 
     <dialog id="day-dialog">
       <h3 id="day-dialog-title"></h3>

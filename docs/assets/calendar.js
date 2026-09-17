@@ -27,12 +27,15 @@ const ALL_CALENDARS = [
 
 const DEFAULT_ON = new Set([WHOLE_SCHOOL.code, FOSPS.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
+const VIEW_STORAGE_KEY = "stpauls-calendar-view";
+const VIEWS = ["month", "week", "day"];
 
 const TODAY = new Date();
 const WINDOW_START = ICAL.Time.fromJSDate(addDays(TODAY, -90), true);
 const WINDOW_END = ICAL.Time.fromJSDate(addDays(TODAY, 400), true);
 const MAX_OCCURRENCES_PER_EVENT = 1000;
 const MAX_CHIPS_PER_DAY = 3;
+const MAX_CHIPS_PER_DAY_WEEK = 8;
 
 const LONDON_DATE_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" });
 const LONDON_TIME_FMT = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
@@ -111,6 +114,47 @@ function saveToggleState(state) {
   } catch {
     // localStorage unavailable (private browsing, etc) - toggles just won't persist
   }
+}
+
+function loadView() {
+  try {
+    const saved = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (VIEWS.includes(saved)) return saved;
+  } catch {
+    // localStorage unavailable - fall through to the default
+  }
+  return "month";
+}
+
+function saveView(view) {
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, view);
+  } catch {
+    // localStorage unavailable - view choice just won't persist
+  }
+}
+
+// The anchor date's meaning depends on the view: 1st-of-month for month
+// view, the Monday of the week for week view, the exact day for day view.
+function normalizeAnchor(date, view) {
+  const plainDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (view === "month") return new Date(date.getFullYear(), date.getMonth(), 1);
+  if (view === "week") {
+    const mondayOffset = (plainDate.getDay() + 6) % 7;
+    return addDays(plainDate, -mondayOffset);
+  }
+  return plainDate;
+}
+
+function formatDayLabel(date) {
+  return date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatWeekLabel(monday) {
+  const sunday = addDays(monday, 6);
+  const start = monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const end = sunday.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return `${start} – ${end}`;
 }
 
 function expandInstance(cal, summary, description, url, startTime, endTime) {
@@ -213,10 +257,12 @@ function buildDayIndex(instances) {
 const el = {
   toggles: document.getElementById("calendar-toggles"),
   grid: document.getElementById("calendar-grid"),
+  dayAgenda: document.getElementById("calendar-day-agenda"),
   monthLabel: document.getElementById("cal-month-label"),
   prevButton: document.getElementById("cal-prev"),
   nextButton: document.getElementById("cal-next"),
   todayButton: document.getElementById("cal-today"),
+  viewButtons: [...document.querySelectorAll(".view-button")],
   loading: document.getElementById("calendar-loading"),
   error: document.getElementById("calendar-error"),
   dialog: document.getElementById("day-dialog"),
@@ -227,7 +273,8 @@ const el = {
 
 let toggleState = loadToggleState();
 let dayIndex = new Map();
-let viewedMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+let currentView = loadView();
+let viewedDate = normalizeAnchor(TODAY, currentView);
 
 function renderToggles() {
   el.toggles.innerHTML = "";
@@ -241,7 +288,7 @@ function renderToggles() {
     checkbox.addEventListener("change", () => {
       toggleState[cal.code] = checkbox.checked;
       saveToggleState(toggleState);
-      renderMonth();
+      render();
     });
     const dot = document.createElement("span");
     dot.className = `cal-dot ${cal.dot}`;
@@ -268,122 +315,212 @@ function renderToggles() {
   }
 }
 
-function renderMonth() {
-  el.monthLabel.textContent = MONTH_LABEL_FMT.format(viewedMonth);
-  el.grid.innerHTML = "";
+function buildDayCell(cellDate, { isOtherMonth = false, maxChips = MAX_CHIPS_PER_DAY } = {}) {
+  const key = londonDateKey(cellDate);
+  const todayKey = londonDateKey(TODAY);
 
+  const cell = document.createElement("div");
+  cell.className = "cal-day" + (isOtherMonth ? " other-month" : "") + (key === todayKey ? " is-today" : "");
+
+  const number = document.createElement("span");
+  number.className = "cal-day-number";
+  number.textContent = String(cellDate.getDate());
+  cell.appendChild(number);
+
+  const dayEvents = (dayIndex.get(key) || []).filter((inst) => toggleState[inst.code]);
+  for (const inst of dayEvents.slice(0, maxChips)) {
+    const chip = document.createElement("div");
+    chip.className = "cal-chip";
+    chip.style.background = `var(${inst.colorVar})`;
+    chip.style.color = `var(${inst.colorVar}-text)`;
+    chip.textContent = inst.title;
+    cell.appendChild(chip);
+  }
+  if (dayEvents.length > maxChips) {
+    const more = document.createElement("div");
+    more.className = "cal-more";
+    more.textContent = `+${dayEvents.length - maxChips} more`;
+    cell.appendChild(more);
+  }
+
+  if (dayEvents.length > 0) {
+    cell.addEventListener("click", () => openDayDialog(cellDate, dayEvents));
+  }
+
+  return cell;
+}
+
+function renderWeekdayHeader() {
   for (const day of WEEKDAY_LABELS) {
     const cell = document.createElement("div");
     cell.className = "cal-weekday";
     cell.textContent = day;
     el.grid.appendChild(cell);
   }
+}
 
-  const firstOfMonth = new Date(viewedMonth.getFullYear(), viewedMonth.getMonth(), 1);
-  const mondayOffset = (firstOfMonth.getDay() + 6) % 7; // Monday-start week
-  const gridStart = addDays(firstOfMonth, -mondayOffset);
-  const todayKey = londonDateKey(TODAY);
+function renderMonthGrid() {
+  el.grid.className = "cal-grid";
+  el.grid.innerHTML = "";
+  renderWeekdayHeader();
+
+  const mondayOffset = (viewedDate.getDay() + 6) % 7; // Monday-start week
+  const gridStart = addDays(viewedDate, -mondayOffset);
 
   for (let i = 0; i < 42; i++) {
     const cellDate = addDays(gridStart, i);
-    const key = londonDateKey(cellDate);
-    const isOtherMonth = cellDate.getMonth() !== viewedMonth.getMonth();
-
-    const cell = document.createElement("div");
-    cell.className = "cal-day" + (isOtherMonth ? " other-month" : "") + (key === todayKey ? " is-today" : "");
-
-    const number = document.createElement("span");
-    number.className = "cal-day-number";
-    number.textContent = String(cellDate.getDate());
-    cell.appendChild(number);
-
-    const dayEvents = (dayIndex.get(key) || []).filter((inst) => toggleState[inst.code]);
-    for (const inst of dayEvents.slice(0, MAX_CHIPS_PER_DAY)) {
-      const chip = document.createElement("div");
-      chip.className = "cal-chip";
-      chip.style.background = `var(${inst.colorVar})`;
-      chip.style.color = `var(${inst.colorVar}-text)`;
-      chip.textContent = inst.title;
-      cell.appendChild(chip);
-    }
-    if (dayEvents.length > MAX_CHIPS_PER_DAY) {
-      const more = document.createElement("div");
-      more.className = "cal-more";
-      more.textContent = `+${dayEvents.length - MAX_CHIPS_PER_DAY} more`;
-      cell.appendChild(more);
-    }
-
-    if (dayEvents.length > 0) {
-      cell.addEventListener("click", () => openDayDialog(cellDate, dayEvents));
-    }
-
-    el.grid.appendChild(cell);
+    const isOtherMonth = cellDate.getMonth() !== viewedDate.getMonth();
+    el.grid.appendChild(buildDayCell(cellDate, { isOtherMonth, maxChips: MAX_CHIPS_PER_DAY }));
   }
 }
 
-function openDayDialog(date, dayEvents) {
-  el.dialogTitle.textContent = date.toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  el.dialogEvents.innerHTML = "";
+function renderWeekGrid() {
+  el.grid.className = "cal-grid cal-grid--week";
+  el.grid.innerHTML = "";
+  renderWeekdayHeader();
 
+  for (let i = 0; i < 7; i++) {
+    const cellDate = addDays(viewedDate, i); // viewedDate is normalized to that week's Monday
+    el.grid.appendChild(buildDayCell(cellDate, { maxChips: MAX_CHIPS_PER_DAY_WEEK }));
+  }
+}
+
+function renderDayAgenda() {
+  el.dayAgenda.innerHTML = "";
+  const key = londonDateKey(viewedDate);
+  const dayEvents = (dayIndex.get(key) || []).filter((inst) => toggleState[inst.code]);
+
+  if (dayEvents.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "howto";
+    empty.textContent = "No events on this day for the calendars you've toggled on.";
+    el.dayAgenda.appendChild(empty);
+    return;
+  }
   for (const inst of dayEvents) {
-    const row = document.createElement("div");
-    row.className = "day-event";
+    el.dayAgenda.appendChild(renderEventRow(inst));
+  }
+}
 
-    const title = document.createElement("div");
-    title.className = "day-event-title";
-    const dot = document.createElement("span");
-    dot.className = "cal-dot";
-    dot.style.background = `var(${inst.colorVar})`;
-    title.append(dot, document.createTextNode(inst.title));
-    row.appendChild(title);
+function render() {
+  if (currentView === "month") {
+    el.monthLabel.textContent = MONTH_LABEL_FMT.format(viewedDate);
+    el.grid.hidden = false;
+    el.dayAgenda.hidden = true;
+    renderMonthGrid();
+  } else if (currentView === "week") {
+    el.monthLabel.textContent = formatWeekLabel(viewedDate);
+    el.grid.hidden = false;
+    el.dayAgenda.hidden = true;
+    renderWeekGrid();
+  } else {
+    el.monthLabel.textContent = formatDayLabel(viewedDate);
+    el.grid.hidden = true;
+    el.dayAgenda.hidden = false;
+    renderDayAgenda();
+  }
+}
 
-    const meta = document.createElement("div");
-    meta.className = "day-event-time";
-    const timeText = inst.allDay ? "All day" : `${LONDON_TIME_FMT.format(inst.startJs)}–${LONDON_TIME_FMT.format(inst.endJs)}`;
-    meta.textContent = `${inst.calendarLabel} · ${timeText}`;
-    row.appendChild(meta);
+function renderEventRow(inst) {
+  const row = document.createElement("div");
+  row.className = "day-event";
 
-    if (inst.description) {
-      const desc = document.createElement("div");
-      desc.className = "day-event-desc";
-      desc.textContent = inst.description;
-      row.appendChild(desc);
-    }
-    if (inst.url) {
-      const link = document.createElement("a");
-      link.href = inst.url;
-      link.textContent = "More info";
-      link.className = "day-event-desc";
-      link.rel = "noopener";
-      row.appendChild(link);
-    }
+  const title = document.createElement("div");
+  title.className = "day-event-title";
+  const dot = document.createElement("span");
+  dot.className = "cal-dot";
+  dot.style.background = `var(${inst.colorVar})`;
+  title.append(dot, document.createTextNode(inst.title));
+  row.appendChild(title);
 
-    el.dialogEvents.appendChild(row);
+  const meta = document.createElement("div");
+  meta.className = "day-event-time";
+  const timeText = inst.allDay ? "All day" : `${LONDON_TIME_FMT.format(inst.startJs)}–${LONDON_TIME_FMT.format(inst.endJs)}`;
+  meta.textContent = `${inst.calendarLabel} · ${timeText}`;
+  row.appendChild(meta);
+
+  if (inst.description) {
+    const desc = document.createElement("div");
+    desc.className = "day-event-desc";
+    desc.textContent = inst.description;
+    row.appendChild(desc);
+  }
+  if (inst.url) {
+    const link = document.createElement("a");
+    link.href = inst.url;
+    link.textContent = "More info";
+    link.className = "day-event-desc";
+    link.rel = "noopener";
+    row.appendChild(link);
   }
 
+  return row;
+}
+
+function openDayDialog(date, dayEvents) {
+  el.dialogTitle.textContent = formatDayLabel(date);
+  el.dialogEvents.innerHTML = "";
+  for (const inst of dayEvents) {
+    el.dialogEvents.appendChild(renderEventRow(inst));
+  }
   el.dialog.showModal();
+}
+
+function updateViewButtonStyles() {
+  for (const btn of el.viewButtons) {
+    const active = btn.dataset.view === currentView;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+}
+
+// When switching view granularity, prefer keeping "today" in view (e.g.
+// Month -> Week should land on today's week) rather than always deriving
+// from the current anchor (which would land on the week containing the
+// 1st of the month instead).
+function isTodayInView() {
+  if (currentView === "month") {
+    return TODAY.getFullYear() === viewedDate.getFullYear() && TODAY.getMonth() === viewedDate.getMonth();
+  }
+  if (currentView === "week") {
+    return TODAY >= viewedDate && TODAY < addDays(viewedDate, 7);
+  }
+  return londonDateKey(TODAY) === londonDateKey(viewedDate);
+}
+
+function shiftAnchor(delta) {
+  if (currentView === "month") {
+    viewedDate = new Date(viewedDate.getFullYear(), viewedDate.getMonth() + delta, 1);
+  } else if (currentView === "week") {
+    viewedDate = addDays(viewedDate, delta * 7);
+  } else {
+    viewedDate = addDays(viewedDate, delta);
+  }
+  render();
 }
 
 async function init() {
   renderToggles();
+  updateViewButtonStyles();
 
-  el.prevButton.addEventListener("click", () => {
-    viewedMonth = new Date(viewedMonth.getFullYear(), viewedMonth.getMonth() - 1, 1);
-    renderMonth();
-  });
-  el.nextButton.addEventListener("click", () => {
-    viewedMonth = new Date(viewedMonth.getFullYear(), viewedMonth.getMonth() + 1, 1);
-    renderMonth();
-  });
+  el.prevButton.addEventListener("click", () => shiftAnchor(-1));
+  el.nextButton.addEventListener("click", () => shiftAnchor(1));
   el.todayButton.addEventListener("click", () => {
-    viewedMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
-    renderMonth();
+    viewedDate = normalizeAnchor(TODAY, currentView);
+    render();
   });
+  for (const btn of el.viewButtons) {
+    btn.addEventListener("click", () => {
+      const newView = btn.dataset.view;
+      if (newView === currentView) return;
+      const referenceDate = isTodayInView() ? TODAY : viewedDate;
+      viewedDate = normalizeAnchor(referenceDate, newView);
+      currentView = newView;
+      saveView(currentView);
+      updateViewButtonStyles();
+      render();
+    });
+  }
   el.dialogClose.addEventListener("click", () => el.dialog.close());
 
   const results = await Promise.allSettled(ALL_CALENDARS.map((cal) => loadCalendarInstances(cal)));
@@ -409,7 +546,7 @@ async function init() {
     el.error.textContent = `${failures} calendar(s) couldn't be loaded - the rest are shown below.`;
     el.error.hidden = false;
   }
-  renderMonth();
+  render();
 }
 
 init();

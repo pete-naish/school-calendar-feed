@@ -127,13 +127,18 @@ when `DTSTART` has a time component).
 
 ## Calendar preview (`docs/index.html`)
 
-The landing page embeds an interactive month calendar (`docs/assets/calendar.js`,
+The landing page embeds an interactive calendar (`docs/assets/calendar.js`,
 `docs/assets/calendar.css`) that fetches and parses all 16 `.ics` files
 client-side with [ical.js](https://github.com/kewisch/ical.js) - including
 expanding `RRULE`/`EXDATE` - so parents can see what they'd actually get
 before subscribing anywhere, or just use the page itself as their calendar.
-Each calendar has an on/off toggle, remembered per-browser in `localStorage`
-(default: Whole School + FOSPS on, classes off). Colors are one validated
+Month/Week/Day views (button group in the nav bar) share one `viewedDate`
+anchor whose meaning depends on the active view (1st-of-month / that week's
+Monday / the exact day - see `normalizeAnchor()`); switching views keeps
+"today" in view when it's already visible, rather than always re-deriving
+from the current anchor. Each calendar has an on/off toggle, remembered
+per-browser in `localStorage` (default: Whole School + FOSPS on, classes
+off) - the active view is remembered the same way. Colors are one validated
 categorical hue per year group + FOSPS, "Whole School" as a neutral grey
 rather than a 9th generated hue (`node scripts/validate_palette.js` from the
 `dataviz` skill; see `docs/assets/calendar.css` for the values).
