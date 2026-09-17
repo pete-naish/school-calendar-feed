@@ -2,7 +2,9 @@ import ICAL from "https://cdn.jsdelivr.net/npm/ical.js@2.2.1/dist/ical.min.js";
 
 // Mirrors YEAR_GROUPS in scripts/build_ics.py (and the two JS copies in
 // tool/functions/api/_shared/calendars.js and tool/app.js) - keep all four
-// in sync by hand. `dot` here maps to the categorical palette in calendar.css
+// in sync by hand (scripts/check_config_sync.py checks the 14 class
+// codes/labels actually match on every push - see .github/workflows/test.yml).
+// `dot` here maps to the categorical palette in calendar.css
 // (validated via the dataviz skill's scripts/validate_palette.js): one hue
 // per year group + FOSPS, "Whole School" is a neutral grey rather than a 9th
 // generated hue since it's structurally the "everyone" bucket, not a peer

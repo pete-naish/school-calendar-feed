@@ -8,6 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
@@ -20,3 +21,6 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -v
+
+      - name: Check class-code config hasn't drifted across its 4 copies
+        run: python3 scripts/check_config_sync.py

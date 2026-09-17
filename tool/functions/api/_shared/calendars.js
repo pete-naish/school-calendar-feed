@@ -1,5 +1,6 @@
 // Mirrors YEAR_GROUPS in scripts/build_ics.py - keep the two in sync by hand
-// (no shared build step between the Python script and this JS tool).
+// (no shared build step between the Python script and this JS tool;
+// scripts/check_config_sync.py checks this on every push).
 //
 // `code` is the permanent identifier - it matches docs/calendars/<code>.ics
 // and data/manual_events/<code>.json, and must never change. `label` is

@@ -192,6 +192,13 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
+`scripts/check_config_sync.py` separately checks that the 14 class
+codes/labels in `YEAR_GROUPS` haven't drifted from the 3 hand-maintained JS
+copies (`tool/functions/api/_shared/calendars.js`, `tool/app.js`,
+`docs/assets/calendar.js`) - each has a "keep in sync by hand" comment, and
+nothing previously checked that they actually were. Also run automatically
+in CI.
+
 Runs automatically on every push/PR via `.github/workflows/test.yml`.
 
 ## One-time setup

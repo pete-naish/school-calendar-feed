@@ -1,5 +1,6 @@
 // Mirrors ALL_CALENDARS in functions/api/_shared/calendars.js (and
-// YEAR_GROUPS in scripts/build_ics.py) - keep the three in sync by hand.
+// YEAR_GROUPS in scripts/build_ics.py) - keep the three in sync by hand
+// (scripts/check_config_sync.py checks this on every push).
 const YEAR_GROUPS = [
   { label: "Reception", classes: [{ code: "rr", label: "RR" }, { code: "rgp", label: "RGP" }] },
   { label: "Year 1", classes: [{ code: "1ms", label: "1MS" }, { code: "1t", label: "1T" }] },
