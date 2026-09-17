@@ -132,11 +132,12 @@ The landing page embeds an interactive calendar (`docs/assets/calendar.js`,
 client-side with [ical.js](https://github.com/kewisch/ical.js) - including
 expanding `RRULE`/`EXDATE` - so parents can see what they'd actually get
 before subscribing anywhere, or just use the page itself as their calendar.
-It lives in a collapsed-by-default `<details>`/`<summary>` rather than an
-always-expanded section, so a first-time visitor sees the simple subscribe
-tables right away instead of 16 toggles and a calendar grid before anything
-else - the interactive preview is one click away, not the first thing on
-the page. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
+It's labelled "Preview Calendar" and lives in a collapsed-by-default
+`<details>`/`<summary>` below all three subscribe tables (not above them) -
+a first-time visitor hits "Find your child's class" first and can grab a
+subscribe link immediately, with the interactive preview available lower
+down for anyone who wants to explore before committing, rather than 16
+toggles and a calendar grid being the first thing on the page. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
 anchor whose meaning depends on the active view (1st-of-month / that week's
 Monday / the exact day - see `normalizeAnchor()`); switching views keeps
 "today" in view when it's already visible, rather than always re-deriving
