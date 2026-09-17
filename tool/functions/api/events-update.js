@@ -2,6 +2,7 @@ import { isValidCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput } from "./_shared/validate.js";
 import { commitManualEvents } from "./_shared/github.js";
+import { commitErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -49,6 +50,6 @@ export async function onRequestPost({ request, env }) {
     }
     return jsonResponse({ updated: true });
   } catch (err) {
-    return jsonResponse({ error: "commit_failed", message: String(err) }, 502);
+    return jsonResponse(commitErrorResponse(err), 502);
   }
 }

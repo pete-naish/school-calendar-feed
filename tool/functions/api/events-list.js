@@ -1,6 +1,7 @@
 import { isValidCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
-import { getManualEventsFile } from "./_shared/github.js";
+import { getManualEventsFile, retryable } from "./_shared/github.js";
+import { readErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -24,10 +25,10 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    const { events } = await getManualEventsFile(env, calendar);
+    const { events } = await retryable(() => getManualEventsFile(env, calendar));
     const sorted = [...events].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     return jsonResponse({ events: sorted });
   } catch (err) {
-    return jsonResponse({ error: "list_failed", message: String(err) }, 502);
+    return jsonResponse(readErrorResponse(err), 502);
   }
 }
