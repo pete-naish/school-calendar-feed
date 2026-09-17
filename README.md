@@ -143,7 +143,8 @@ Monday / the exact day - see `normalizeAnchor()`); switching views keeps
 "today" in view when it's already visible, rather than always re-deriving
 from the current anchor. Each calendar has an on/off toggle, remembered
 per-browser in `localStorage` (default: Whole School + FOSPS on, classes
-off) - the active view is remembered the same way. Colors are one validated
+off) - the active view, and whether the `<details>` itself is open or
+collapsed, are remembered the same way. Colors are one validated
 categorical hue per year group + FOSPS, "Whole School" as a neutral grey
 rather than a 9th generated hue (`node scripts/validate_palette.js` from the
 `dataviz` skill; see `docs/assets/calendar.css` for the values).

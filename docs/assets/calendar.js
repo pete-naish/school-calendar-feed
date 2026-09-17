@@ -30,6 +30,7 @@ const ALL_CALENDARS = [
 const DEFAULT_ON = new Set([WHOLE_SCHOOL.code, FOSPS.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
 const VIEW_STORAGE_KEY = "stpauls-calendar-view";
+const PREVIEW_OPEN_STORAGE_KEY = "stpauls-calendar-preview-open";
 const VIEWS = ["month", "week", "day"];
 
 const TODAY = new Date();
@@ -146,6 +147,22 @@ function saveView(view) {
     localStorage.setItem(VIEW_STORAGE_KEY, view);
   } catch {
     // localStorage unavailable - view choice just won't persist
+  }
+}
+
+function loadPreviewOpenState() {
+  try {
+    return localStorage.getItem(PREVIEW_OPEN_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function savePreviewOpenState(isOpen) {
+  try {
+    localStorage.setItem(PREVIEW_OPEN_STORAGE_KEY, String(isOpen));
+  } catch {
+    // localStorage unavailable - open/closed state just won't persist
   }
 }
 
@@ -525,6 +542,14 @@ function shiftAnchor(delta) {
 }
 
 async function init() {
+  const previewDetails = document.getElementById("calendar-preview");
+  if (previewDetails) {
+    // Restore before anything else so there's no flash of collapsed-then-
+    // reopens on a repeat visit.
+    previewDetails.open = loadPreviewOpenState();
+    previewDetails.addEventListener("toggle", () => savePreviewOpenState(previewDetails.open));
+  }
+
   renderToggles();
   updateViewButtonStyles();
 
