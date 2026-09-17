@@ -42,8 +42,12 @@ integration.
 - `functions/api/_shared/` - `calendars.js` (the 15 valid calendar codes,
   mirrors `YEAR_GROUPS` in `scripts/build_ics.py` - keep them in sync by
   hand), `auth.js` (passcode check), `github.js` (GitHub Contents API
-  get/commit, with retry on a concurrent-edit conflict), `validate.js`
-  (sanitizes/validates event data from both the LLM and the frontend form).
+  get/commit, retrying a concurrent-edit conflict, a GitHub 5xx, or a
+  network failure), `validate.js` (sanitizes/validates event data from both
+  the LLM and the frontend form - including rejecting any `url` that isn't
+  http(s), since it's later rendered as a link on the public preview page),
+  `errors.js` (turns a caught failure into a message a non-technical rep
+  can act on, while the detail still goes to `console.error`).
 
 ## Deploying
 
@@ -63,6 +67,34 @@ integration.
 4. Distribute each calendar's passcode to that class's rep (or FOSPS) - how
    you do this (a shared spreadsheet, individual messages, etc) is up to
    you; the tool has no built-in distribution mechanism.
+
+## Rate limiting (recommended, not built in)
+
+The tool has no rate limiting of its own - the passcode gate has no
+attempt-throttling (a weak/guessable passcode is brute-forceable with
+nothing to slow it down), and `/api/parse` costs real Anthropic API money
+per call, uncapped in aggregate for anyone who has a valid passcode.
+
+This is better solved at Cloudflare's edge than in application code - it's
+free on every plan and blocks abusive requests before they even reach the
+Worker:
+
+1. Cloudflare dashboard → your account → **Security → WAF → Rate limiting
+   rules** (for a Pages project, this lives under the zone your custom
+   domain sits on, not the Pages project itself - if you're using the
+   default `*.pages.dev` domain with no custom domain attached, rate
+   limiting rules aren't available and you'd need to attach a domain first).
+2. **Create rule** - match requests where the path starts with `/api/parse`
+   (or `/api/` for all endpoints). A sensible starting point: **10 requests
+   per minute per IP**, action **Block** (or **Challenge** if you'd rather
+   show a CAPTCHA than a hard block).
+3. Repeat for `/api/events-list` / `/api/save` / etc if you want passcode
+   brute-forcing specifically throttled too - those don't cost API money,
+   but nothing stops rapid-fire guessing otherwise.
+
+Separately: make sure the 15 real passcode values you chose aren't
+guessable (the placeholder in `.dev.vars.example` is literally
+`"changeme"` - obviously don't ship that).
 
 ## Local development
 
