@@ -175,6 +175,21 @@ pip install -r requirements.txt
 python3 scripts/build_ics.py   # writes docs/calendars/*.ics
 ```
 
+## Testing
+
+`tests/test_build_ics.py` covers the trickiest logic in `build_ics.py` -
+title classification, closure-date detection, the recurrence/DST fix, and
+the URL sanitizer. Not a full suite (this is a personal project), just
+enough to catch a regression in the parts that are genuinely easy to get
+subtly wrong.
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+Runs automatically on every push/PR via `.github/workflows/test.yml`.
+
 ## One-time setup
 
 In the repo's GitHub Settings → Pages, set **Source: Deploy from a branch**,

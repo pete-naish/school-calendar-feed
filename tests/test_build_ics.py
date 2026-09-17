@@ -1,0 +1,191 @@
+"""Tests for the trickiest logic in scripts/build_ics.py: title-based
+classification, closure-date detection, the recurrence/DST fix, multi-day
+date math, and URL sanitization. Not a full suite - just enough to catch a
+regression in the parts of this script that are genuinely easy to get
+subtly wrong (this session found and fixed a real DST bug in exactly the
+recurrence code covered here).
+
+Run with: pytest tests/ (from the repo root, with requirements-dev.txt
+installed in addition to requirements.txt).
+"""
+
+from __future__ import annotations
+
+import sys
+from datetime import date
+from pathlib import Path
+
+import pytest
+from icalendar import Calendar
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import build_ics  # noqa: E402
+
+
+# --------------------------------------------------------------------------
+# classify_event()
+# --------------------------------------------------------------------------
+
+CLASSIFY_CASES = [
+    # (title, expected_bucket, expected_class_codes_or_None)
+    ("INSET DAY - school closed to pupils", "whole-school", None),
+    ("Back to School", "whole-school", None),
+    ("Half Term Break", "whole-school", None),
+    ("Whole School Church Service (not Reception Children)", "whole-school", None),
+    ("Information meeting for Parents - KS2", "whole-school", None),
+    ("Information meeting for Parents - Year 1 and 2", "whole-school", None),
+    ("Eucharist Year 5 and Year 6 - St Paul's Church", "whole-school", None),
+    ("R/KS1 Dress rehearsal to KS2", "whole-school", None),
+    ("5HP Collective Worship to parents", "classes", {"5HP"}),
+    ("4W Collective Worship to parents", "classes", {"4W"}),
+    ("Year 5 to Celtic Harmony", "classes", {"5L", "5HP"}),
+    ("Year 3 to Celtic Harmony", "classes", {"3B", "3D"}),
+    ("Reception Group 1 Start", "classes", {"RR", "RGP"}),
+    # Unrecognised class-code-shaped tokens fall back to both classes in
+    # that year group (the label-churn case: a new teacher's initials).
+    ("6L Collective Worship to parents", "classes", {"6BT", "6R"}),
+    ("5M Collective Worship", "classes", {"5L", "5HP"}),
+]
+
+
+@pytest.mark.parametrize("title,expected_bucket,expected_codes", CLASSIFY_CASES)
+def test_classify_event(title, expected_bucket, expected_codes):
+    bucket, codes = build_ics.classify_event(title)
+    assert bucket == expected_bucket
+    if expected_codes is not None:
+        assert codes == expected_codes
+
+
+# --------------------------------------------------------------------------
+# collect_closure_dates()
+# --------------------------------------------------------------------------
+
+
+def _all_day_event(title, start_iso, end_iso=None):
+    raw = {"title": title, "allDay": True, "start": start_iso}
+    if end_iso:
+        raw["end"] = end_iso
+    return raw
+
+
+def test_collect_closure_dates_single_day_inset():
+    dates = build_ics.collect_closure_dates([_all_day_event("INSET DAY - school closed to pupils", "2026-09-02")])
+    assert dates == {date(2026, 9, 2)}
+
+
+def test_collect_closure_dates_multi_day_half_term():
+    # DTEND-style exclusive end: 27th through 30th inclusive.
+    dates = build_ics.collect_closure_dates([_all_day_event("Half Term Break", "2026-10-27", "2026-10-31")])
+    assert dates == {date(2026, 10, 27), date(2026, 10, 28), date(2026, 10, 29), date(2026, 10, 30)}
+
+
+def test_collect_closure_dates_ignores_non_closure_events():
+    dates = build_ics.collect_closure_dates(
+        [_all_day_event("Back to School", "2026-09-03"), _all_day_event("MacMillan Coffee Morning", "2026-09-25")]
+    )
+    assert dates == set()
+
+
+def test_collect_closure_dates_matches_holiday_keyword():
+    dates = build_ics.collect_closure_dates([_all_day_event("Christmas Holiday", "2026-12-21", "2026-12-22")])
+    assert dates == {date(2026, 12, 21)}
+
+
+# --------------------------------------------------------------------------
+# _safe_url() - see the stored-XSS fix: an event's url is rendered as an
+# <a href> on the public preview page, so only http(s) may ever pass.
+# --------------------------------------------------------------------------
+
+SAFE_URL_CASES = [
+    ("javascript:alert(1)", None),
+    ("data:text/html,<script>alert(1)</script>", None),
+    (None, None),
+    ("", None),
+    ("http://example.com", "http://example.com"),
+    ("https://example.com/page?x=1", "https://example.com/page?x=1"),
+]
+
+
+@pytest.mark.parametrize("raw_url,expected", SAFE_URL_CASES)
+def test_safe_url(raw_url, expected):
+    assert build_ics._safe_url(raw_url) == expected
+
+
+# --------------------------------------------------------------------------
+# build_manual_event() - multi-day date math + the recurrence/DST fix
+# --------------------------------------------------------------------------
+
+
+def test_multi_day_all_day_event_dtend_is_exclusive():
+    raw = {"id": "t1", "title": "Residential", "date": "2026-11-09", "end_date": "2026-11-11"}
+    event = build_ics.build_manual_event(raw, "5hp", set())
+    assert event["dtstart"].dt == date(2026, 11, 9)
+    # DTEND is exclusive, so a 3-day (9th-11th inclusive) event ends the 12th.
+    assert event["dtend"].dt == date(2026, 11, 12)
+
+
+def test_recurring_event_uses_tzid_not_utc():
+    """Regression test for the DST bug fixed this session: a UTC DTSTART
+    makes an RRULE repeat at a fixed UTC instant rather than the same local
+    time, silently shifting a weekly "9am" event by an hour across a
+    British clock change. Timed recurring (and non-recurring) manual events
+    must use TZID=Europe/London, never a bare UTC datetime."""
+    raw = {
+        "id": "t2",
+        "title": "Weekly PE",
+        "date": "2026-10-06",
+        "time": "09:00",
+        "end_time": "10:00",
+        "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
+    }
+    event = build_ics.build_manual_event(raw, "5hp", set())
+    ical_bytes = build_ics.make_calendar("test", [event]).to_ical()
+
+    assert b"DTSTART;TZID=Europe/London" in ical_bytes
+    assert b"DTSTART:2026" not in ical_bytes  # would indicate a bare-UTC regression
+    assert b"BEGIN:VTIMEZONE" in ical_bytes
+    assert b"RRULE:FREQ=WEEKLY" in ical_bytes
+
+
+def test_recurring_event_excludes_closure_dates_via_exdate():
+    closure_dates = {date(2026, 10, 27)}  # half term Tuesday
+    raw = {
+        "id": "t3",
+        "title": "Weekly PE",
+        "date": "2026-10-06",
+        "time": "09:00",
+        "end_time": "10:00",
+        "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
+    }
+    event = build_ics.build_manual_event(raw, "5hp", closure_dates)
+    ical_bytes = build_ics.make_calendar("test", [event]).to_ical()
+    assert b"EXDATE;TZID=Europe/London:20261027T090000" in ical_bytes
+
+
+def test_daily_recurring_event_excludes_weekends():
+    raw = {
+        "id": "t4",
+        "title": "Daily reading",
+        "date": "2026-10-19",  # Monday
+        "recurrence": {"freq": "DAILY", "interval": 1, "until": "2026-10-20"},  # Mon + Tue only
+    }
+    event = build_ics.build_manual_event(raw, "5hp", set())
+    ical_bytes = build_ics.make_calendar("test", [event]).to_ical()
+    # A 2-day span with no weekend in it shouldn't produce any EXDATE at all.
+    assert b"EXDATE" not in ical_bytes
+
+
+def test_output_parses_as_valid_icalendar():
+    """Round-trip sanity check: whatever we generate must actually parse."""
+    raw = {
+        "id": "t5",
+        "title": "Sanity check event",
+        "date": "2026-10-06",
+        "time": "09:00",
+        "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
+    }
+    event = build_ics.build_manual_event(raw, "5hp", {date(2026, 10, 27)})
+    ical_bytes = build_ics.make_calendar("test", [event]).to_ical()
+    parsed = Calendar.from_ical(ical_bytes)
+    events = [c for c in parsed.walk() if c.name == "VEVENT"]
+    assert len(events) == 1
