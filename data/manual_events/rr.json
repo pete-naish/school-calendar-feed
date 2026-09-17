@@ -13,16 +13,5 @@
       "interval": 1,
       "until": "2027-01-14"
     }
-  },
-  {
-    "id": "965822c71ba1",
-    "title": "Church Service",
-    "date": "2026-09-18",
-    "end_date": null,
-    "time": "09:00",
-    "end_time": "12:00",
-    "description": null,
-    "url": null,
-    "recurrence": null
   }
 ]
