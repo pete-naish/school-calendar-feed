@@ -143,7 +143,13 @@
 
 #cal-month-label {
   font-weight: 600;
-  min-width: 9rem;
+  /* Fixed, not min-width: day labels ("Wednesday, 17 September 2026") are
+     much longer than month labels ("September 2026") - with only a
+     min-width the box still grows/shrinks with the text, which shoves the
+     "next" button around every time the view or date changes. Sized for
+     the longest realistic label ("Wednesday, DD Month YYYY"). */
+  width: 16rem;
+  text-align: center;
 }
 
 #cal-today {
@@ -175,6 +181,15 @@
 .cal-view-switch .view-button.active {
   background: var(--cal-fg);
   color: var(--cal-surface-alt);
+}
+
+/* #calendar-grid[hidden] must out-rank .cal-grid's own `display: grid` -
+   same-specificity class selector vs. the UA's [hidden]{display:none} is a
+   tie broken by cascade order, and .cal-grid (an author style) wins over
+   the UA default regardless of source order, so switching to Day view was
+   leaving the month/week grid visible underneath the day agenda. */
+#calendar-grid[hidden] {
+  display: none;
 }
 
 .cal-grid {

@@ -393,7 +393,7 @@ function renderDayAgenda() {
   if (dayEvents.length === 0) {
     const empty = document.createElement("p");
     empty.className = "howto";
-    empty.textContent = "No events on this day for the calendars you've toggled on.";
+    empty.textContent = "No events on this day for the calendars you've selected.";
     el.dayAgenda.appendChild(empty);
     return;
   }

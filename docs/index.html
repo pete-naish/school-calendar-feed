@@ -35,6 +35,8 @@
     a:visited { color: var(--link-color); }
     h1 { font-size: 1.4rem; }
     h2 { font-size: 1.1rem; margin-top: 2.2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+    #calendar-preview summary { font-size: 1.1rem; font-weight: 600; margin-top: 2.2rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); cursor: pointer; }
+    #calendar-preview[open] summary { margin-bottom: 0.8rem; }
     code { background: var(--code-bg); padding: 0.15rem 0.4rem; border-radius: 4px; word-break: break-all; }
     table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
     td { padding: 0.35rem 0.5rem 0.35rem 0; vertical-align: middle; border-bottom: 1px solid var(--row-border); }
@@ -54,8 +56,8 @@
     <strong>Google Calendar:</strong> copy the "ics" link, then go to <a href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl">Other calendars &rarr; + &rarr; From URL</a> and paste it.
   </p>
 
-  <section id="calendar-preview">
-    <h2>Preview &amp; use as a calendar</h2>
+  <details id="calendar-preview">
+    <summary>Preview &amp; use as a calendar</summary>
     <p class="howto">Toggle on whichever calendars are relevant to you to see what you'd actually get. This works as a calendar in its own right too, if you'd rather not subscribe anywhere - your choices are remembered on this device.</p>
 
     <div id="calendar-toggles" class="cal-toggles"></div>
@@ -82,7 +84,7 @@
       <div id="day-dialog-events"></div>
       <button id="day-dialog-close">Close</button>
     </dialog>
-  </section>
+  </details>
 
   <h2>Whole school</h2>
   <table>
