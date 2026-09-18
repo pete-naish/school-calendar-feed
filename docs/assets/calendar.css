@@ -61,7 +61,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --cal-neutral: #ededed;
     --cal-1: oklch(0.72 0.17 28);
     --cal-2: oklch(0.74 0.13 235);
@@ -92,6 +92,36 @@
     --cal-8-text: var(--chip-text-dark);
   }
 }
+:root[data-theme="dark"] {
+    --cal-neutral: #ededed;
+    --cal-1: oklch(0.72 0.17 28);
+    --cal-2: oklch(0.74 0.13 235);
+    --cal-3: oklch(0.74 0.13 160);
+    --cal-4: oklch(0.74 0.13 305);
+    --cal-5: oklch(0.74 0.13 55);
+    --cal-6: oklch(0.74 0.13 195);
+    --cal-7: oklch(0.74 0.13 270);
+    --cal-8: oklch(0.74 0.13 340);
+    --cal-surface: #1a1a1a;
+    --cal-surface-alt: #0a0a0a;
+    --cal-surface-weekend: #111111;
+    --cal-border: #2e2e2e;
+    --cal-muted: #a1a1a1;
+    --cal-fg: #ededed;
+    --cal-today-ring: #ededed;
+    --cal-focus: #52a8ff;
+    --link-color: #8ab4f8;
+
+    --cal-neutral-text: var(--chip-text-dark);
+    --cal-1-text: var(--chip-text-dark);
+    --cal-2-text: var(--chip-text-dark);
+    --cal-3-text: var(--chip-text-dark);
+    --cal-4-text: var(--chip-text-dark);
+    --cal-5-text: var(--chip-text-dark);
+    --cal-6-text: var(--chip-text-dark);
+    --cal-7-text: var(--chip-text-dark);
+    --cal-8-text: var(--chip-text-dark);
+  }
 
 /* No box: the calendar sits on the page canvas. A narrow rail on the left
    holds the calendar list (the calendar-app layout); the toolbar and grid

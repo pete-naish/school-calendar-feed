@@ -9,6 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&family=Geist+Mono:wght@400..500&display=swap">
   <link rel="stylesheet" href="assets/calendar.css">
+  <script>
+    // Apply a saved theme before first paint so there is no flash. The
+    // toggle itself is wired up at the bottom of the page.
+    try {
+      const saved = localStorage.getItem("stpauls-theme");
+      if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+    } catch {}
+  </script>
   <style>
     :root {
       --bg: #ffffff;
@@ -29,7 +37,7 @@
       --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.25rem; --s6: 1.5rem; --s8: 2rem; --s10: 2.5rem; --s12: 3rem; --s16: 4rem; --s20: 5rem;
     }
     @media (prefers-color-scheme: dark) {
-      :root {
+      :root:not([data-theme="light"]) {
         --bg: #0a0a0a;
         --fg: #ededed;
         --muted: #a1a1a1;
@@ -42,7 +50,21 @@
         --focus: #52a8ff;
       }
     }
+    :root[data-theme="dark"] {
+        --bg: #0a0a0a;
+        --fg: #ededed;
+        --muted: #a1a1a1;
+        --border: #2e2e2e;
+        --border-strong: #ededed;
+        --code-bg: #1a1a1a;
+        --button-bg: #ededed;
+        --button-bg-hover: #cccccc;
+        --button-fg: #0a0a0a;
+        --focus: #52a8ff;
+      }
 
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] { color-scheme: dark; }
     *, *::before, *::after { box-sizing: border-box; }
     body {
       margin: 0;
@@ -96,8 +118,26 @@
     /* --- Opening: the claim, then the live calendar beneath. --- */
     .hero { padding: clamp(3rem, 6vw, 4.5rem) 0 0; }
     .hero-copy > * + * { margin-top: var(--s6); }
+    .hero-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); }
     .eyebrow { font-size: 0.9375rem; font-weight: 500; color: var(--muted); }
-    .hero-copy .eyebrow + h1 { margin-top: var(--s4); }
+    .theme-toggle {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2rem; height: 2rem; border: 0; border-radius: 6px;
+      background: transparent; color: var(--muted); cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease;
+    }
+    .theme-toggle:hover { background: var(--code-bg); color: var(--fg); }
+    .theme-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    /* Show the icon for the mode you would switch to: moon in light, sun in dark. */
+    .theme-toggle .icon-sun { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+    :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: block; }
+      :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: none; }
+    }
+    .eyebrow img { width: auto; height: 1.75rem; }
+    .hero-copy .hero-top + h1 { margin-top: var(--s4); }
     .hero-copy .lede { margin-top: var(--s5); }
 
     .facts {
@@ -126,7 +166,13 @@
     <header class="hero">
       <div class="grid">
         <div class="hero-copy col-12">
-          <p class="eyebrow">St Paul's C of E Primary, Enfield</p>
+          <div class="hero-top">
+            <p class="eyebrow">St Paul's C of E Primary, Enfield</p>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
+              <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+              <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+          </div>
           <h1>School dates, straight into your family calendar.</h1>
           <p class="lede">Subscribe to your child's class once and new school dates appear automatically alongside your family plans. No copying, no missed updates.</p>
         </div>
@@ -197,5 +243,26 @@
   </div>
 
   <script type="module" src="assets/calendar.js"></script>
+  <script>
+    (() => {
+      const button = document.getElementById("theme-toggle");
+      if (!button) return;
+      const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+      const current = () => document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light");
+      const reflect = () => {
+        const dark = current() === "dark";
+        button.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+        button.setAttribute("aria-pressed", String(dark));
+      };
+      button.addEventListener("click", () => {
+        const next = current() === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem("stpauls-theme", next); } catch {}
+        reflect();
+      });
+      systemDark.addEventListener("change", reflect);
+      reflect();
+    })();
+  </script>
 </body>
 </html>
