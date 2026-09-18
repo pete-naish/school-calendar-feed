@@ -4,137 +4,197 @@
   <meta charset="utf-8">
   <title>St Paul's Enfield — Calendar Feeds</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&family=Geist+Mono:wght@400..500&display=swap">
   <link rel="stylesheet" href="assets/calendar.css">
   <style>
     :root {
       --bg: #ffffff;
-      --fg: #1a1a1a;
-      --muted: #555555;
-      --border: #e2e2e2;
-      --row-border: #f0f0f0;
+      --fg: #171717;
+      --muted: #666666;
+      --border: #ebebeb;
+      --border-strong: #171717;
       --code-bg: #f2f2f2;
-      --button-bg: #1a1a1a;
+      --button-bg: #171717;
+      --button-bg-hover: #383838;
       --button-fg: #ffffff;
-      --button-raw-bg: #666666;
+      --focus: #0070f3;
+      --page-max: 1120px;
+      --gutter: clamp(1rem, 4vw, 2.5rem);
+      --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      /* Spacing scale: 4px base. */
+      --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.25rem; --s6: 1.5rem; --s8: 2rem; --s10: 2.5rem; --s12: 3rem; --s16: 4rem; --s20: 5rem;
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #16161a;
+        --bg: #0a0a0a;
         --fg: #ededed;
-        --muted: #a0a0a0;
-        --border: #333333;
-        --row-border: #2a2a2a;
-        --code-bg: #222222;
+        --muted: #a1a1a1;
+        --border: #2e2e2e;
+        --border-strong: #ededed;
+        --code-bg: #1a1a1a;
         --button-bg: #ededed;
-        --button-fg: #16161a;
-        --button-raw-bg: #444444;
+        --button-bg-hover: #cccccc;
+        --button-fg: #0a0a0a;
+        --focus: #52a8ff;
       }
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 720px; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.5; color: var(--fg); background: var(--bg); }
-    a { color: var(--link-color); }
-    a:visited { color: var(--link-color); }
-    h1 { font-size: 1.4rem; }
-    h2 { font-size: 1.1rem; margin-top: 2.2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
-    .page-details summary { font-size: 1.1rem; font-weight: 600; margin-top: 2.2rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); cursor: pointer; }
-    .page-details[open] summary { margin-bottom: 0.8rem; }
-    code { background: var(--code-bg); padding: 0.15rem 0.4rem; border-radius: 4px; word-break: break-all; }
-    table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
-    td { padding: 0.35rem 0.5rem 0.35rem 0; vertical-align: middle; border-bottom: 1px solid var(--row-border); }
-    td.links { white-space: nowrap; text-align: right; }
-    .name-inner { display: flex; align-items: center; gap: 0.45rem; }
-    a.button { display: inline-block; background: var(--button-bg); color: var(--button-fg); text-decoration: none; padding: 0.3rem 0.7rem; border-radius: 6px; margin-left: 0.4rem; font-size: 0.85rem; }
-    a.button.raw { background: var(--button-raw-bg); }
-    p.howto { color: var(--muted); font-size: 0.92rem; }
-    .coming-soon-list { list-style: none; padding: 0; margin: 0.8rem 0; }
-    .coming-soon-list li { display: flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0; border-bottom: 1px solid var(--row-border); color: var(--muted); }
-    .coming-soon-list li:last-child { border-bottom: none; }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      font-size: 1rem;
+      line-height: 1.5;
+      color: var(--fg);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .wrap { max-width: var(--page-max); margin: 0 auto; padding: 0 var(--gutter); }
+    a { color: inherit; font-weight: 600; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 0.2em; transition: text-decoration-color 150ms ease; }
+    a:hover { text-decoration-color: currentColor; }
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    code { font-family: var(--mono); font-size: 0.875em; background: var(--code-bg); padding: 0.1rem 0.35rem; border-radius: 4px; white-space: nowrap; }
+
+    /* --- Type roles. One display size, one section size, one subsection
+       size, body, label, caption. Peers always share a role. --- */
+    h1, h2, h3, p { margin: 0; }
+    h1 {
+      font-size: clamp(2.5rem, 1.6rem + 3.4vw, 4rem);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      font-weight: 600;
+      max-width: 24ch;
+      text-wrap: balance;
+    }
+    h2 { font-size: 2rem; line-height: 1.15; letter-spacing: -0.03em; font-weight: 600; text-wrap: balance; }
+    h3 { font-size: 1rem; line-height: 1.4; letter-spacing: -0.01em; font-weight: 500; }
+    .lede { font-size: 1.25rem; line-height: 1.45; color: var(--muted); max-width: 48ch; text-wrap: pretty; }
+    .body-secondary { color: var(--muted); font-size: 1rem; max-width: 36ch; text-wrap: pretty; }
+    .label { font-size: 0.8125rem; line-height: 1.4; color: var(--muted); }
+    .caption, .howto { font-size: 0.875rem; line-height: 1.5; color: var(--muted); }
+    .mono { font-family: var(--mono); font-weight: 500; letter-spacing: 0; }
+
+    /* --- 12-column grid, used by every section. --- */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--s6);
+      row-gap: var(--s8);
+    }
+    .col-7 { grid-column: span 7; }
+    .col-4-end { grid-column: 9 / -1; }
+    .col-12 { grid-column: 1 / -1; }
+    @media (max-width: 860px) {
+      .col-7, .col-4-end { grid-column: 1 / -1; }
+    }
+
+    /* --- Opening: the claim, then the live calendar beneath. --- */
+    .hero { padding: clamp(3rem, 6vw, 4.5rem) 0 0; }
+    .hero-copy > * + * { margin-top: var(--s6); }
+    .eyebrow { font-size: 0.9375rem; font-weight: 500; color: var(--muted); }
+    .hero-copy .eyebrow + h1 { margin-top: var(--s4); }
+    .hero-copy .lede { margin-top: var(--s5); }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--s6);
+      margin: var(--s12) 0 0;
+    }
+    .facts > div { min-width: 0; }
+    .facts dt { font-size: 0.8125rem; line-height: 1.4; color: var(--muted); margin: 0 0 var(--s1, 0.25rem); }
+    .facts dd { font-size: 0.875rem; line-height: 1.5; margin: 0; text-wrap: pretty; }
+    @media (max-width: 900px) { .facts { grid-template-columns: 1fr; gap: var(--s5); max-width: 40rem; } }
+    @media (max-width: 560px) { .facts { grid-template-columns: 1fr; gap: var(--s5); } }
+    .hero .cal-card { margin-top: var(--s16); }
+
+    footer { padding: var(--s16) 0 var(--s12); color: var(--muted); font-size: 0.875rem; }
+    footer p { max-width: 56ch; text-wrap: pretty; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0s !important; animation: none !important; }
+    }
   </style>
 </head>
 <body>
-  <h1>St Paul's C of E Primary (Enfield) — Calendar Feeds</h1>
-  <p>Tired of copying dates from newsletters, WhatsApp groups and the <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">school website</a> into your own calendar by hand?</p>
-  <p>Subscribe to your child's class and new dates appear automatically, alongside the rest of your family's plans. No manual admin, no missed updates.</p>
-
-  <p class="howto">
-    <strong>Apple/Outlook:</strong> tap "Subscribe" below (or use the <code>webcal://</code> link with File &rarr; New Calendar Subscription on Mac).<br>
-    <strong>Google Calendar:</strong> copy the "ics" link, then go to <a href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl">Other calendars &rarr; + &rarr; From URL</a> and paste it.
-  </p>
-
-  <h2>Find your child's class</h2>
-  <p class="howto">Each class calendar includes events specific to that class, plus events for its whole year group. PE kit days, homework deadlines, school discos and everything in between.</p>
-  <table>
-    <tr><td class="name"><span class="name-inner"><span class="cal-dot dot-reception"></span>Reception — RR</span></td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/rr.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/rr.ics">ics</a></td></tr>
-    <tr><td class="name"><span class="name-inner"><span class="cal-dot dot-reception"></span>Reception — RGP</span></td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/rgp.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/rgp.ics">ics</a></td></tr>
-  </table>
-
-  <h2>Whole school</h2>
-  <table>
-    <tr>
-      <td class="name"><span class="name-inner"><span class="cal-dot dot-whole"></span>Events affecting the whole school or several year groups: inset days, half term dates, whole-school services and more.</span></td>
-      <td class="links">
-        <a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/whole-school.ics">Subscribe</a>
-        <a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/whole-school.ics">ics</a>
-      </td>
-    </tr>
-  </table>
-
-  <details id="calendar-preview" class="page-details">
-    <summary>Preview Calendar</summary>
-    <p class="howto">Toggle on whichever calendars are relevant to you to see what you'll get. This works as a calendar in its own right too, if you'd rather not subscribe anywhere - your choices are remembered on this device.</p>
-
-    <div id="calendar-toggles" class="cal-toggles"></div>
-
-    <div class="cal-nav">
-      <button id="cal-prev" aria-label="Previous" type="button">&lsaquo;</button>
-      <span id="cal-month-label" aria-live="polite"></span>
-      <button id="cal-next" aria-label="Next" type="button">&rsaquo;</button>
-      <button id="cal-today" type="button">Today</button>
-      <div class="cal-view-switch" role="group" aria-label="Calendar view">
-        <button type="button" class="view-button" data-view="month">Month</button>
-        <button type="button" class="view-button" data-view="week">Week</button>
-        <button type="button" class="view-button" data-view="day">Day</button>
+  <div class="wrap">
+    <header class="hero">
+      <div class="grid">
+        <div class="hero-copy col-12">
+          <p class="eyebrow">St Paul's C of E Primary, Enfield</p>
+          <h1>School dates, straight into your family calendar.</h1>
+          <p class="lede">Subscribe to your child's class once and new school dates appear automatically alongside your family plans. No copying, no missed updates.</p>
+        </div>
       </div>
-      <button id="cal-refresh" aria-label="Refresh events" type="button">&#8635; Refresh</button>
-    </div>
 
-    <p id="calendar-loading" class="howto">Loading events…</p>
-    <p id="calendar-error" class="howto" hidden></p>
-    <div id="calendar-grid" class="cal-grid"></div>
-    <div id="calendar-day-agenda" class="cal-day-agenda" hidden></div>
+      <div class="cal-card" id="calendars" aria-labelledby="calendars-heading" role="region">
+        <aside class="cal-rail">
+          <h2 id="calendars-heading" class="label">Calendars</h2>
+          <div id="calendar-toggles" class="cal-tiles"></div>
+          <div class="cal-add-group">
+            <p id="calendar-add-label" class="label">Add the ticked calendars to</p>
+            <div id="calendar-add" class="cal-add-buttons" aria-labelledby="calendar-add-label"></div>
+            <div id="calendar-add-list" class="cal-add-list" hidden></div>
+          </div>
+          <p id="coming-soon" class="cal-rail-note">Years 1 to 6 and FOSPS follow once they're ready.</p>
+        </aside>
 
-    <dialog id="day-dialog">
-      <h3 id="day-dialog-title"></h3>
-      <div id="day-dialog-events"></div>
-      <button id="day-dialog-close" type="button">Close</button>
-    </dialog>
-  </details>
+        <div class="cal-main">
+          <div class="cal-nav">
+            <div class="cal-nav-dates">
+              <button id="cal-prev" aria-label="Previous" type="button">&lsaquo;</button>
+              <span id="cal-month-label" aria-live="polite"></span>
+              <button id="cal-next" aria-label="Next" type="button">&rsaquo;</button>
+              <button id="cal-today" type="button">Today</button>
+            </div>
+            <div class="cal-nav-tools">
+              <div class="cal-view-switch" role="group" aria-label="Calendar view">
+                <button type="button" class="view-button" data-view="month">Month</button>
+                <button type="button" class="view-button" data-view="week">Week</button>
+                <button type="button" class="view-button" data-view="day">Day</button>
+              </div>
+              <button id="cal-refresh" aria-label="Refresh events" type="button">&#8635; Refresh</button>
+            </div>
+          </div>
 
-  <details id="coming-soon" class="page-details">
-    <summary>Coming Soon</summary>
-    <p class="howto">These calendars aren't switched on yet - they'll move up above once they're ready.</p>
-    <!--
-      Reinstating one: move its <li> into the matching subscribe table as a
-      row like the Whole School / RR / RGP ones above, using data-webcal /
-      data-ics here as the href values (Subscribe / ics buttons respectively).
-    -->
-    <ul class="coming-soon-list">
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/fosps.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/fosps.ics"><span class="cal-dot dot-fosps"></span>Friends of St Paul's (FOSPS)</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/1ms.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/1ms.ics"><span class="cal-dot dot-year1"></span>Year 1 — 1MS</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/1t.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/1t.ics"><span class="cal-dot dot-year1"></span>Year 1 — 1T</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/2ly.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/2ly.ics"><span class="cal-dot dot-year2"></span>Year 2 — 2LY</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/2s.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/2s.ics"><span class="cal-dot dot-year2"></span>Year 2 — 2S</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/3b.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/3b.ics"><span class="cal-dot dot-year3"></span>Year 3 — 3B</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/3d.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/3d.ics"><span class="cal-dot dot-year3"></span>Year 3 — 3D</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/4m.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/4m.ics"><span class="cal-dot dot-year4"></span>Year 4 — 4M</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/4w.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/4w.ics"><span class="cal-dot dot-year4"></span>Year 4 — 4W</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/5l.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/5l.ics"><span class="cal-dot dot-year5"></span>Year 5 — 5L</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/5hp.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/5hp.ics"><span class="cal-dot dot-year5"></span>Year 5 — 5HP</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/6bt.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/6bt.ics"><span class="cal-dot dot-year6"></span>Year 6 — 6BT</li>
-      <li data-webcal="webcal://pete-naish.github.io/school-calendar-feed/calendars/6r.ics" data-ics="https://pete-naish.github.io/school-calendar-feed/calendars/6r.ics"><span class="cal-dot dot-year6"></span>Year 6 — 6R</li>
-    </ul>
-  </details>
+          <div class="cal-card-body">
+            <p id="calendar-loading" class="howto cal-status">Loading events…</p>
+            <p id="calendar-error" class="howto cal-status" hidden></p>
+            <div id="calendar-grid" class="cal-grid"></div>
+            <div id="calendar-day-agenda" class="cal-day-agenda" hidden></div>
+          </div>
+        </div>
 
-  <p><small>Not affiliated with the school. A personal tool that re-publishes the school's own public event data in a subscribable format. Source: <a href="https://github.com/pete-naish/school-calendar-feed">github.com/pete-naish/school-calendar-feed</a></small></p>
+        <dialog id="day-dialog" aria-labelledby="day-dialog-title">
+          <div class="day-dialog-head">
+            <h3 id="day-dialog-title"></h3>
+            <button id="day-dialog-close" type="button" aria-label="Close">&times;</button>
+          </div>
+          <div id="day-dialog-events" class="day-events"></div>
+        </dialog>
+      </div>
+    </header>
+
+    <main>
+      <dl class="facts">
+        <div><dt>Source</dt><dd>The school's own <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">public calendar</a>, checked every six hours. Free, no account.</dd></div>
+        <div><dt>Adding a calendar</dt><dd>Your calendar opens the subscription for confirmation. Once added, new dates sync automatically.</dd></div>
+        <div><dt>Other apps</dt><dd>Paste a plain feed address into any calendar app that can subscribe by URL: <span id="ics-links"></span></dd></div>
+      </dl>
+    </main>
+
+    <footer>
+      <div class="grid">
+        <p class="col-7">Not affiliated with the school. A personal tool that re-publishes the school's own public event data in a subscribable format.</p>
+        <p class="col-4-end">Source: <a href="https://github.com/pete-naish/school-calendar-feed">github.com/pete-naish/school-calendar-feed</a></p>
+      </div>
+    </footer>
+  </div>
 
   <script type="module" src="assets/calendar.js"></script>
 </body>

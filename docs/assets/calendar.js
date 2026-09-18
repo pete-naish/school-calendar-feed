@@ -4,11 +4,11 @@ import ICAL from "https://cdn.jsdelivr.net/npm/ical.js@2.2.1/dist/ical.min.js";
 // tool/functions/api/_shared/calendars.js and tool/app.js) - keep all four
 // in sync by hand (scripts/check_config_sync.py checks the 14 class
 // codes/labels actually match on every push - see .github/workflows/test.yml).
-// `dot` here maps to the categorical palette in calendar.css
-// (validated via the dataviz skill's scripts/validate_palette.js): one hue
-// per year group + FOSPS, "Whole School" is a neutral grey rather than a 9th
-// generated hue since it's structurally the "everyone" bucket, not a peer
-// category.
+// `colorVar` maps to the categorical palette in calendar.css: Reception
+// wears the school colours (RR red, RGP yellow), the other year groups and
+// FOSPS are OKLCH hues at one lightness and chroma; "Everyone" (whole
+// school) is a neutral grey rather than another hue since it's structurally
+// the "everyone" bucket, not a peer category.
 const GROUPS = [
   { label: "Reception", dot: "dot-reception", colorVar: "--cal-1", classes: [{ code: "rr", label: "RR" }, { code: "rgp", label: "RGP" }] },
   { label: "Year 1", dot: "dot-year1", colorVar: "--cal-2", classes: [{ code: "1ms", label: "1MS" }, { code: "1t", label: "1T" }] },
@@ -18,27 +18,32 @@ const GROUPS = [
   { label: "Year 5", dot: "dot-year5", colorVar: "--cal-6", classes: [{ code: "5l", label: "5L" }, { code: "5hp", label: "5HP" }] },
   { label: "Year 6", dot: "dot-year6", colorVar: "--cal-7", classes: [{ code: "6bt", label: "6BT" }, { code: "6r", label: "6R" }] },
 ];
-const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School", dot: "dot-whole", colorVar: "--cal-neutral" };
+const WHOLE_SCHOOL = { code: "whole-school", label: "Everyone", dot: "dot-whole", colorVar: "--cal-neutral" };
 const FOSPS = { code: "fosps", label: "FOSPS", dot: "dot-fosps", colorVar: "--cal-8" };
 
+// The first class in a year group takes the year's hue, the second a
+// lighter tint of it (--cal-N-b in calendar.css), so siblings' classes tell
+// apart in the grid and the rail without a text prefix.
 const ALL_CALENDARS = [
   WHOLE_SCHOOL,
-  ...GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, dot: g.dot, colorVar: g.colorVar, groupLabel: g.label }))),
+  ...GROUPS.flatMap((g) =>
+    g.classes.map((c, i) => ({ ...c, dot: g.dot, colorVar: i === 0 ? g.colorVar : `${g.colorVar}-b`, groupLabel: g.label }))
+  ),
   FOSPS,
 ];
 
-// Which calendars have a real subscribe link on the page yet (see
-// docs/index.html's "Coming Soon" section) - only these get a toggle
-// checkbox in the preview. Everything else still gets *fetched* below
-// (ALL_CALENDARS, unchanged) so day-indexed data is ready the moment a
-// calendar is un-hidden here; nothing else needs to change to launch one,
-// just add its code to this set.
+// Which calendars are launched. Only these get a row in the rail (preview
+// toggle, see renderTiles) and are offered by the platform buttons
+// (renderAddActions); the rest are named in the "coming soon" line.
+// Everything else still gets *fetched* below (ALL_CALENDARS, unchanged) so
+// day-indexed data is ready the moment a calendar is launched; launching
+// one is just adding its code to this set - the page has no per-calendar
+// markup of its own.
 const LAUNCHED_CALENDARS = new Set([WHOLE_SCHOOL.code, "rr", "rgp"]);
 
 const DEFAULT_ON = new Set([WHOLE_SCHOOL.code, FOSPS.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
 const VIEW_STORAGE_KEY = "stpauls-calendar-view";
-const PREVIEW_OPEN_STORAGE_KEY = "stpauls-calendar-preview-open";
 const VIEWS = ["month", "week", "day"];
 
 const TODAY = new Date();
@@ -163,22 +168,6 @@ function saveView(view) {
   }
 }
 
-function loadPreviewOpenState() {
-  try {
-    return localStorage.getItem(PREVIEW_OPEN_STORAGE_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function savePreviewOpenState(isOpen) {
-  try {
-    localStorage.setItem(PREVIEW_OPEN_STORAGE_KEY, String(isOpen));
-  } catch {
-    // localStorage unavailable - open/closed state just won't persist
-  }
-}
-
 // The anchor date's meaning depends on the view: 1st-of-month for month
 // view, the Monday of the week for week view, the exact day for day view.
 function normalizeAnchor(date, view) {
@@ -200,6 +189,17 @@ function formatWeekLabel(monday) {
   const start = monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   const end = sunday.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   return `${start} – ${end}`;
+}
+
+// build_ics.py prefixes every class/FOSPS event's published title with its
+// calendar code ("RR: PE Kit") so subscribers with siblings can tell feeds
+// apart in their own calendar app. In this preview the colour already does
+// that job, so the prefix comes off for display only - the .ics is untouched.
+function displayTitle(summary, cal) {
+  if (!summary) return "(untitled event)";
+  const code = cal.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const stripped = summary.replace(new RegExp("^" + code + ":\\s*", "i"), "");
+  return stripped || summary;
 }
 
 function expandInstance(cal, summary, description, url, startTime, endTime) {
@@ -232,8 +232,8 @@ function expandInstance(cal, summary, description, url, startTime, endTime) {
   return {
     code: cal.code,
     colorVar: cal.colorVar,
-    calendarLabel: cal.groupLabel ? `${cal.groupLabel} (${cal.label})` : cal.label,
-    title: summary || "(untitled event)",
+    calendarLabel: cal.groupLabel ? `${cal.groupLabel} ${cal.label}` : cal.label,
+    title: displayTitle(summary, cal),
     description: description || null,
     url: url || null,
     allDay,
@@ -301,6 +301,10 @@ function buildDayIndex(instances) {
 
 const el = {
   toggles: document.getElementById("calendar-toggles"),
+  comingSoon: document.getElementById("coming-soon"),
+  addButtons: document.getElementById("calendar-add"),
+  addList: document.getElementById("calendar-add-list"),
+  icsLinks: document.getElementById("ics-links"),
   grid: document.getElementById("calendar-grid"),
   dayAgenda: document.getElementById("calendar-day-agenda"),
   monthLabel: document.getElementById("cal-month-label"),
@@ -322,12 +326,69 @@ let dayIndex = new Map();
 let currentView = loadView();
 let viewedDate = normalizeAnchor(TODAY, currentView);
 
-function renderToggles() {
-  el.toggles.innerHTML = "";
+// The feed URLs are derived from where the page is served, so the same
+// markup works on GitHub Pages and on a local http.server. webcal:// is
+// what makes Apple Calendar / Outlook open a subscription instead of
+// downloading the file.
+function feedUrls(cal) {
+  const https = new URL(`calendars/${cal.code}.ics`, window.location.href).href;
+  // String swap, not URL.protocol: the URL spec ignores a change from a
+  // special scheme (http/https) to a non-special one like webcal.
+  return { https, webcal: https.replace(/^https?:/, "webcal:") };
+}
 
-  const makeToggle = (cal) => {
+function displayName(cal) {
+  return cal.groupLabel ? `${cal.groupLabel} ${cal.label}` : cal.label;
+}
+
+// One link per (platform, calendar). Every platform subscribes to a single
+// feed per link, which is why the buttons below fan out to a list when more
+// than one calendar is ticked.
+const PLATFORMS = [
+  { key: "apple", label: "Apple Calendar", url: (cal) => feedUrls(cal).webcal },
+  {
+    key: "google",
+    label: "Google Calendar",
+    url: (cal) => `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feedUrls(cal).webcal)}`,
+  },
+  {
+    key: "outlook",
+    label: "Outlook",
+    url: (cal) =>
+      `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(feedUrls(cal).https)}&name=${encodeURIComponent(
+        `St Paul's: ${displayName(cal)}`
+      )}`,
+  },
+];
+
+function tileName(cal) {
+  const name = document.createElement("span");
+  name.className = "cal-tile-name";
+  if (cal.groupLabel) {
+    const code = document.createElement("span");
+    code.className = "mono";
+    code.textContent = cal.label;
+    name.append(document.createTextNode(`${cal.groupLabel} `), code);
+  } else {
+    name.textContent = cal.label;
+  }
+  return name;
+}
+
+function launchedCalendars() {
+  return ALL_CALENDARS.filter((cal) => LAUNCHED_CALENDARS.has(cal.code));
+}
+
+function renderTiles() {
+  el.toggles.innerHTML = "";
+  launchedCalendars().forEach((cal, i) => {
+    const tile = document.createElement("div");
+    tile.className = "cal-tile";
+    tile.style.setProperty("--tile-color", `var(${cal.colorVar})`);
+    tile.style.setProperty("--i", i);
+
     const label = document.createElement("label");
-    label.className = "cal-toggle";
+    label.className = "cal-tile-toggle";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = toggleState[cal.code];
@@ -335,42 +396,100 @@ function renderToggles() {
       toggleState[cal.code] = checkbox.checked;
       saveToggleState(toggleState);
       render();
+      renderAddActions();
     });
-    const dot = document.createElement("span");
-    dot.className = `cal-dot ${cal.dot}`;
-    label.append(checkbox, dot, document.createTextNode(cal.groupLabel ? `${cal.groupLabel} ${cal.label}` : cal.label));
-    return label;
-  };
+    label.append(checkbox, tileName(cal));
+    tile.appendChild(label);
+    el.toggles.appendChild(tile);
+  });
+}
 
-  // Only launched calendars get a checkbox at all (see LAUNCHED_CALENDARS)
-  // - a not-yet-launched one has no working subscribe link on the page
-  // either, so offering to preview it would be more confusing than
-  // useful. A whole-school/FOSPS-style group is skipped entirely if
-  // nothing in it is launched (e.g. FOSPS alone, right now); a year group
-  // is skipped entirely if neither of its classes is launched.
-  const topLevel = [WHOLE_SCHOOL, FOSPS].filter((cal) => LAUNCHED_CALENDARS.has(cal.code));
-  if (topLevel.length > 0) {
-    const wholeGroup = document.createElement("div");
-    wholeGroup.className = "cal-toggle-group";
-    wholeGroup.append(...topLevel.map(makeToggle));
-    el.toggles.appendChild(wholeGroup);
-  }
+let openPlatform = null;
 
-  for (const group of GROUPS) {
-    const launchedClasses = group.classes.filter((cls) => LAUNCHED_CALENDARS.has(cls.code));
-    if (launchedClasses.length === 0) continue;
+// Three platform buttons acting on the ticked calendars. Exactly one ticked:
+// each button is a direct link. Several: each button discloses one link per
+// ticked calendar underneath (a platform can only subscribe to one feed per
+// click). None: buttons are disabled.
+function renderAddActions() {
+  if (!el.addButtons) return;
+  const selected = launchedCalendars().filter((cal) => toggleState[cal.code]);
+  el.addButtons.innerHTML = "";
+  el.addList.innerHTML = "";
+  el.addList.hidden = true;
+  if (selected.length <= 1) openPlatform = null;
 
-    const groupEl = document.createElement("div");
-    groupEl.className = "cal-toggle-group";
-    const groupLabel = document.createElement("span");
-    groupLabel.className = "cal-toggle-group-label";
-    groupLabel.textContent = group.label;
-    groupEl.appendChild(groupLabel);
-    for (const cls of launchedClasses) {
-      groupEl.appendChild(makeToggle({ ...cls, dot: group.dot }));
+  for (const platform of PLATFORMS) {
+    let control;
+    if (selected.length === 1) {
+      control = document.createElement("a");
+      control.href = platform.url(selected[0]);
+      control.setAttribute("aria-label", `Add ${displayName(selected[0])} to ${platform.label}`);
+    } else if (selected.length === 0) {
+      control = document.createElement("span");
+      control.setAttribute("aria-disabled", "true");
+      control.title = "Tick a calendar first";
+    } else {
+      control = document.createElement("button");
+      control.type = "button";
+      control.setAttribute("aria-expanded", String(openPlatform === platform.key));
+      control.setAttribute("aria-controls", "calendar-add-list");
+      control.addEventListener("click", () => {
+        openPlatform = openPlatform === platform.key ? null : platform.key;
+        renderAddActions();
+      });
     }
-    el.toggles.appendChild(groupEl);
+    control.className = "cal-add";
+    control.append(document.createTextNode(platform.label));
+    el.addButtons.appendChild(control);
   }
+
+  if (openPlatform && selected.length > 1) {
+    const platform = PLATFORMS.find((p) => p.key === openPlatform);
+    const intro = document.createElement("p");
+    intro.textContent = `${platform.label} adds one calendar at a time:`;
+    el.addList.appendChild(intro);
+    for (const cal of selected) {
+      const link = document.createElement("a");
+      link.href = platform.url(cal);
+      link.textContent = displayName(cal);
+      el.addList.appendChild(link);
+    }
+    el.addList.hidden = false;
+  }
+}
+
+// Plain https feed addresses for apps not covered by the platform buttons.
+function renderIcsLinks() {
+  if (!el.icsLinks) return;
+  el.icsLinks.innerHTML = "";
+  for (const cal of launchedCalendars()) {
+    const link = document.createElement("a");
+    link.href = feedUrls(cal).https;
+    link.textContent = displayName(cal);
+    el.icsLinks.appendChild(link);
+  }
+}
+
+// One short line naming what isn't launched yet, for the rail under the
+// calendar list: "Years 1 to 6 and FOSPS follow once they're ready."
+function renderComingSoon() {
+  if (!el.comingSoon) return;
+  const pendingGroups = GROUPS.filter((g) => g.classes.some((c) => !LAUNCHED_CALENDARS.has(c.code)));
+  const pendingTop = [FOSPS, WHOLE_SCHOOL].filter((cal) => !LAUNCHED_CALENDARS.has(cal.code));
+  if (pendingGroups.length === 0 && pendingTop.length === 0) {
+    el.comingSoon.hidden = true;
+    return;
+  }
+  const parts = [];
+  if (pendingGroups.length > 0) {
+    const first = pendingGroups[0].label;
+    const last = pendingGroups[pendingGroups.length - 1].label;
+    parts.push(pendingGroups.length === 1 ? first : `${first.replace(/^Year /, "Years ")} to ${last.replace(/^Year /, "")}`);
+  }
+  parts.push(...pendingTop.map((cal) => cal.label));
+  const lead = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
+  const verb = pendingGroups.length + pendingTop.length > 1 || pendingGroups.length > 0 ? "follow" : "follows";
+  el.comingSoon.textContent = `${lead} ${verb} once they're ready.`;
 }
 
 function buildDayCell(cellDate, { isOtherMonth = false, maxChips = MAX_CHIPS_PER_DAY } = {}) {
@@ -489,44 +608,66 @@ function render() {
   }
 }
 
+// One event: time column, then title / calendar / description / link, with
+// a bar in the calendar's colour down the left. Shared by the day dialog and
+// the Day view agenda.
 function renderEventRow(inst) {
-  const row = document.createElement("div");
+  const row = document.createElement("article");
   row.className = "day-event";
+  row.style.setProperty("--event-color", `var(${inst.colorVar})`);
 
-  const title = document.createElement("div");
+  const time = document.createElement("div");
+  time.className = "day-event-time";
+  if (inst.allDay) {
+    time.textContent = "All day";
+  } else {
+    const start = document.createElement("span");
+    start.textContent = LONDON_TIME_FMT.format(inst.startJs);
+    const end = document.createElement("span");
+    end.textContent = LONDON_TIME_FMT.format(inst.endJs);
+    time.append(start, end);
+  }
+  row.appendChild(time);
+
+  const body = document.createElement("div");
+  body.className = "day-event-body";
+
+  const title = document.createElement("h4");
   title.className = "day-event-title";
-  const dot = document.createElement("span");
-  dot.className = "cal-dot";
-  dot.style.background = `var(${inst.colorVar})`;
-  title.append(dot, document.createTextNode(inst.title));
-  row.appendChild(title);
+  title.textContent = inst.title;
+  body.appendChild(title);
 
   const meta = document.createElement("div");
-  meta.className = "day-event-time";
-  const timeText = inst.allDay ? "All day" : `${LONDON_TIME_FMT.format(inst.startJs)}–${LONDON_TIME_FMT.format(inst.endJs)}`;
-  meta.textContent = `${inst.calendarLabel} · ${timeText}`;
-  row.appendChild(meta);
+  meta.className = "day-event-meta";
+  meta.textContent = inst.calendarLabel;
+  body.appendChild(meta);
 
   if (inst.description) {
-    const desc = document.createElement("div");
+    const desc = document.createElement("p");
     desc.className = "day-event-desc";
     desc.textContent = inst.description;
-    row.appendChild(desc);
+    body.appendChild(desc);
   }
   if (inst.url && isSafeUrl(inst.url)) {
     const link = document.createElement("a");
     link.href = inst.url;
     link.textContent = "More info";
-    link.className = "day-event-desc";
+    link.className = "day-event-link";
     link.rel = "noopener";
-    row.appendChild(link);
+    body.appendChild(link);
   }
 
+  row.appendChild(body);
   return row;
 }
 
 function openDayDialog(date, dayEvents) {
-  el.dialogTitle.textContent = formatDayLabel(date);
+  // "Monday" as a small label, then the date, so the weekday reads first.
+  el.dialogTitle.innerHTML = "";
+  const weekday = document.createElement("span");
+  weekday.className = "day-dialog-weekday";
+  weekday.textContent = date.toLocaleDateString("en-GB", { weekday: "long" });
+  el.dialogTitle.append(weekday, document.createTextNode(date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })));
   el.dialogEvents.innerHTML = "";
   for (const inst of dayEvents) {
     el.dialogEvents.appendChild(renderEventRow(inst));
@@ -611,15 +752,10 @@ async function handleRefresh() {
 }
 
 async function init() {
-  const previewDetails = document.getElementById("calendar-preview");
-  if (previewDetails) {
-    // Restore before anything else so there's no flash of collapsed-then-
-    // reopens on a repeat visit.
-    previewDetails.open = loadPreviewOpenState();
-    previewDetails.addEventListener("toggle", () => savePreviewOpenState(previewDetails.open));
-  }
-
-  renderToggles();
+  renderTiles();
+  renderComingSoon();
+  renderAddActions();
+  renderIcsLinks();
   updateViewButtonStyles();
 
   el.prevButton.addEventListener("click", () => shiftAnchor(-1));
@@ -642,6 +778,11 @@ async function init() {
     });
   }
   el.dialogClose.addEventListener("click", () => el.dialog.close());
+  // A click on the backdrop lands on the <dialog> itself, not on its
+  // content, so this closes it without a wrapper element.
+  el.dialog.addEventListener("click", (e) => {
+    if (e.target === el.dialog) el.dialog.close();
+  });
 
   const { failures } = await loadAllCalendarData();
   el.loading.hidden = true;
