@@ -294,6 +294,7 @@ const el = {
   prevButton: document.getElementById("cal-prev"),
   nextButton: document.getElementById("cal-next"),
   todayButton: document.getElementById("cal-today"),
+  refreshButton: document.getElementById("cal-refresh"),
   viewButtons: [...document.querySelectorAll(".view-button")],
   loading: document.getElementById("calendar-loading"),
   error: document.getElementById("calendar-error"),
@@ -541,6 +542,49 @@ function shiftAnchor(delta) {
   render();
 }
 
+// Fetches + parses all 16 calendars and rebuilds dayIndex. Used both at
+// startup and by the Refresh button - the .ics fetches already use
+// cache: "no-cache" (loadCalendarInstances), so a re-run always gets live
+// data with no extra cache-busting needed.
+async function loadAllCalendarData() {
+  const results = await Promise.allSettled(ALL_CALENDARS.map((cal) => loadCalendarInstances(cal)));
+  const allInstances = [];
+  let failures = 0;
+  results.forEach((result, i) => {
+    if (result.status === "fulfilled") {
+      allInstances.push(...result.value);
+    } else {
+      failures++;
+      console.warn(`Couldn't load ${ALL_CALENDARS[i].code}:`, result.reason);
+    }
+  });
+  dayIndex = buildDayIndex(allInstances);
+  return { failures };
+}
+
+async function handleRefresh() {
+  el.refreshButton.disabled = true;
+  const originalText = el.refreshButton.textContent;
+  el.refreshButton.textContent = "Refreshing…";
+  el.error.hidden = true;
+
+  const { failures } = await loadAllCalendarData();
+
+  el.refreshButton.disabled = false;
+  el.refreshButton.textContent = originalText;
+
+  if (failures === ALL_CALENDARS.length) {
+    el.error.textContent = "Couldn't refresh - try again.";
+    el.error.hidden = false;
+    return;
+  }
+  if (failures > 0) {
+    el.error.textContent = `${failures} calendar(s) couldn't be refreshed - the rest are up to date.`;
+    el.error.hidden = false;
+  }
+  render(); // redraws whatever view/date is currently shown, doesn't reset to today
+}
+
 async function init() {
   const previewDetails = document.getElementById("calendar-preview");
   if (previewDetails) {
@@ -559,6 +603,7 @@ async function init() {
     viewedDate = normalizeAnchor(TODAY, currentView);
     render();
   });
+  el.refreshButton.addEventListener("click", handleRefresh);
   for (const btn of el.viewButtons) {
     btn.addEventListener("click", () => {
       const newView = btn.dataset.view;
@@ -573,19 +618,7 @@ async function init() {
   }
   el.dialogClose.addEventListener("click", () => el.dialog.close());
 
-  const results = await Promise.allSettled(ALL_CALENDARS.map((cal) => loadCalendarInstances(cal)));
-  const allInstances = [];
-  let failures = 0;
-  results.forEach((result, i) => {
-    if (result.status === "fulfilled") {
-      allInstances.push(...result.value);
-    } else {
-      failures++;
-      console.warn(`Couldn't load ${ALL_CALENDARS[i].code}:`, result.reason);
-    }
-  });
-
-  dayIndex = buildDayIndex(allInstances);
+  const { failures } = await loadAllCalendarData();
   el.loading.hidden = true;
   if (failures === ALL_CALENDARS.length) {
     el.error.textContent = "Couldn't load any calendars - try reloading the page.";

@@ -132,6 +132,11 @@ The landing page embeds an interactive calendar (`docs/assets/calendar.js`,
 client-side with [ical.js](https://github.com/kewisch/ical.js) - including
 expanding `RRULE`/`EXDATE` - so parents can see what they'd actually get
 before subscribing anywhere, or just use the page itself as their calendar.
+The `.ics` fetches only happen once at page load, so a "↻ Refresh" button
+next to "Today" re-fetches and redraws without a full page reload (via
+`loadAllCalendarData()`, shared with the initial load) - useful right after
+a class rep saves a new event, since the page itself has no way to know
+that happened otherwise.
 It's labelled "Preview Calendar" and lives in a collapsed-by-default
 `<details>`/`<summary>` below all three subscribe tables (not above them) -
 a first-time visitor hits "Find your child's class" first and can grab a
