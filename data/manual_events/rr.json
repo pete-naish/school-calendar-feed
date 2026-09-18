@@ -1,18 +1,1 @@
-[
-  {
-    "id": "d98378d16c88",
-    "title": "PE Kit",
-    "date": "2026-09-24",
-    "end_date": null,
-    "time": null,
-    "end_time": null,
-    "description": null,
-    "url": null,
-    "recurrence": {
-      "freq": "WEEKLY",
-      "interval": 1,
-      "until": "2026-12-18"
-    },
-    "exceptions": []
-  }
-]
+[]
