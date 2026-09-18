@@ -1,17 +1,1 @@
-[
-  {
-    "id": "aa55d3565ea9",
-    "title": "PE Kit",
-    "date": "2026-09-17",
-    "end_date": null,
-    "time": null,
-    "end_time": null,
-    "description": "Don't forget to send your child to school in their PE Kit!",
-    "url": null,
-    "recurrence": {
-      "freq": "WEEKLY",
-      "interval": 1,
-      "until": "2027-01-14"
-    }
-  }
-]
+[]
