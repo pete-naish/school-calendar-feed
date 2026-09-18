@@ -91,6 +91,35 @@
           <input type="date" class="field-recurrence-until">
         </label>
       </div>
+      <div class="field-exceptions" hidden>
+        <p class="exceptions-label">Exceptions (single-occurrence changes)</p>
+        <div class="exceptions-list"></div>
+        <div class="exception-add-form">
+          <div class="field-row">
+            <label>Occurrence date
+              <input type="date" class="exception-date">
+            </label>
+            <label>Action
+              <select class="exception-action">
+                <option value="cancelled">Cancel this occurrence</option>
+                <option value="moved">Move this occurrence</option>
+              </select>
+            </label>
+          </div>
+          <div class="field-row exception-move-fields" hidden>
+            <label>New date
+              <input type="date" class="exception-new-date">
+            </label>
+            <label>New start time <span class="optional">(optional)</span>
+              <input type="time" class="exception-new-time">
+            </label>
+            <label>New end time <span class="optional">(optional)</span>
+              <input type="time" class="exception-new-end-time">
+            </label>
+          </div>
+          <button type="button" class="secondary-button exception-add-button">+ Add exception</button>
+        </div>
+      </div>
       <label>Description
         <textarea class="field-description" rows="2"></textarea>
       </label>

@@ -89,15 +89,16 @@ looks like:
   "end_time": "21:00",
   "description": "Annual general meeting, all welcome.",
   "url": "https://example.com/fosps-agm",
-  "recurrence": null
+  "recurrence": null,
+  "exceptions": []
 }
 ```
 
 `id` should be a short unique string (the tool generates one automatically;
 if adding an entry by hand, any unique value works) - it's what lets an event
 be edited later without becoming a "new" entry in subscribers' calendar apps.
-`end_date`/`time`/`end_time`/`description`/`url`/`recurrence` are all
-optional (omit or set `null`).
+`end_date`/`time`/`end_time`/`description`/`url`/`recurrence`/`exceptions`
+are all optional (omit, set `null`, or `[]`).
 
 - Omit `time` for an all-day event.
 - Set `end_date` for a multi-day event (its last day, inclusive) - otherwise
@@ -106,14 +107,24 @@ optional (omit or set `null`).
   (becomes a standard iCalendar `RRULE`). Always set `until` by hand if
   editing the JSON directly - the class rep tool enforces this, but nothing
   stops a hand-added entry from recurring forever if you leave it out.
+- `exceptions` overrides a single occurrence of a `recurrence` (e.g. one
+  week's PE clashes with something else and moves to Friday, without
+  touching the rest of the series): a list of
+  `{"date": "2026-10-15", "action": "cancelled"}` or
+  `{"date": "2026-10-15", "action": "moved", "new_date": "2026-10-16",
+  "new_time": "09:00", "new_end_time": "10:00"}` (`new_time`/`new_end_time`
+  optional, default to the parent event's own `time`/`end_time`). `date` is
+  the *original* occurrence being overridden. Meaningless without
+  `recurrence` - ignored if present without one.
 
 A recurring event automatically skips any occurrence that would land on a
 day the school itself marks as closed - inset days, half term, holidays
 (detected from the same school API feed by `collect_closure_dates()` in
 `scripts/build_ics.py`, matching "INSET"/"HALF TERM"/"HOLIDAY" in event
-titles), plus weekends for a daily repeat. This is encoded as standard
-iCalendar `EXDATE` exceptions on the recurring `RRULE`, so it works in every
-calendar app without the rep having to think about term dates at all.
+titles), plus weekends for a daily repeat, using the same `EXDATE`
+mechanism as a rep-added `exceptions` entry above - both are just dates
+carved out of the `RRULE`, so it works in every calendar app without the
+rep having to think about term dates at all.
 
 **Timed manual events use a `TZID=Europe/London` DTSTART/DTEND/EXDATE (not
 UTC)**, with a `VTIMEZONE` block auto-embedded by `Calendar.add_missing_timezones()`

@@ -12,7 +12,7 @@ installed in addition to requirements.txt).
 from __future__ import annotations
 
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
@@ -118,10 +118,11 @@ def test_safe_url(raw_url, expected):
 
 def test_multi_day_all_day_event_dtend_is_exclusive():
     raw = {"id": "t1", "title": "Residential", "date": "2026-11-09", "end_date": "2026-11-11"}
-    event = build_ics.build_manual_event(raw, "5hp", set())
-    assert event["dtstart"].dt == date(2026, 11, 9)
+    events = build_ics.build_manual_event(raw, "5hp", set())
+    assert len(events) == 1  # no exceptions -> just the base event, no moved one-offs
+    assert events[0]["dtstart"].dt == date(2026, 11, 9)
     # DTEND is exclusive, so a 3-day (9th-11th inclusive) event ends the 12th.
-    assert event["dtend"].dt == date(2026, 11, 12)
+    assert events[0]["dtend"].dt == date(2026, 11, 12)
 
 
 def test_recurring_event_uses_tzid_not_utc():
@@ -138,8 +139,8 @@ def test_recurring_event_uses_tzid_not_utc():
         "end_time": "10:00",
         "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
     }
-    event = build_ics.build_manual_event(raw, "5hp", set())
-    ical_bytes = build_ics.make_calendar("test", [event]).to_ical()
+    events = build_ics.build_manual_event(raw, "5hp", set())
+    ical_bytes = build_ics.make_calendar("test", events).to_ical()
 
     assert b"DTSTART;TZID=Europe/London" in ical_bytes
     assert b"DTSTART:2026" not in ical_bytes  # would indicate a bare-UTC regression
@@ -157,8 +158,8 @@ def test_recurring_event_excludes_closure_dates_via_exdate():
         "end_time": "10:00",
         "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
     }
-    event = build_ics.build_manual_event(raw, "5hp", closure_dates)
-    ical_bytes = build_ics.make_calendar("test", [event]).to_ical()
+    events = build_ics.build_manual_event(raw, "5hp", closure_dates)
+    ical_bytes = build_ics.make_calendar("test", events).to_ical()
     assert b"EXDATE;TZID=Europe/London:20261027T090000" in ical_bytes
 
 
@@ -169,8 +170,8 @@ def test_daily_recurring_event_excludes_weekends():
         "date": "2026-10-19",  # Monday
         "recurrence": {"freq": "DAILY", "interval": 1, "until": "2026-10-20"},  # Mon + Tue only
     }
-    event = build_ics.build_manual_event(raw, "5hp", set())
-    ical_bytes = build_ics.make_calendar("test", [event]).to_ical()
+    events = build_ics.build_manual_event(raw, "5hp", set())
+    ical_bytes = build_ics.make_calendar("test", events).to_ical()
     # A 2-day span with no weekend in it shouldn't produce any EXDATE at all.
     assert b"EXDATE" not in ical_bytes
 
@@ -184,8 +185,85 @@ def test_output_parses_as_valid_icalendar():
         "time": "09:00",
         "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
     }
-    event = build_ics.build_manual_event(raw, "5hp", {date(2026, 10, 27)})
-    ical_bytes = build_ics.make_calendar("test", [event]).to_ical()
+    events = build_ics.build_manual_event(raw, "5hp", {date(2026, 10, 27)})
+    ical_bytes = build_ics.make_calendar("test", events).to_ical()
     parsed = Calendar.from_ical(ical_bytes)
     events = [c for c in parsed.walk() if c.name == "VEVENT"]
     assert len(events) == 1
+
+
+# --------------------------------------------------------------------------
+# build_manual_event() - single-occurrence exceptions (move/cancel one week
+# of a recurring event, e.g. PE clashing with a one-off church service)
+# --------------------------------------------------------------------------
+
+WEEKLY_PE_BASE = {
+    "id": "pe1",
+    "title": "PE",
+    "date": "2026-10-06",  # Tuesday
+    "time": "09:00",
+    "end_time": "10:00",
+    "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
+}
+
+
+def test_cancelled_exception_adds_exdate_only():
+    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled"}]}
+    events = build_ics.build_manual_event(raw, "5hp", set())
+    assert len(events) == 1  # cancelled -> no second event, just an EXDATE
+    ical_bytes = build_ics.make_calendar("test", events).to_ical()
+    assert b"EXDATE;TZID=Europe/London:20261020T090000" in ical_bytes
+
+
+def test_moved_exception_excludes_original_and_adds_new_event():
+    raw = {
+        **WEEKLY_PE_BASE,
+        "exceptions": [
+            {
+                "date": "2026-10-20",
+                "action": "moved",
+                "new_date": "2026-10-21",
+                "new_time": "13:00",
+                "new_end_time": "14:00",
+            }
+        ],
+    }
+    events = build_ics.build_manual_event(raw, "5hp", set())
+    assert len(events) == 2
+
+    base_event, moved_event = events
+    base_ical = build_ics.make_calendar("test", [base_event]).to_ical()
+    assert b"EXDATE;TZID=Europe/London:20261020T090000" in base_ical
+
+    assert str(moved_event["summary"]) == "PE"
+    assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 13, 0, tzinfo=build_ics.LONDON)
+    assert moved_event["dtend"].dt == datetime(2026, 10, 21, 14, 0, tzinfo=build_ics.LONDON)
+    # Derived from the parent's id + the ORIGINAL date - distinct from, but
+    # stably linked to, the parent series' own UID.
+    assert str(moved_event["uid"]) == "manual-pe1-2026-10-20@school-calendar-feed"
+    assert str(base_event["uid"]) != str(moved_event["uid"])
+
+
+def test_moved_exception_inherits_parent_time_if_unspecified():
+    raw = {
+        **WEEKLY_PE_BASE,
+        "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"}],
+    }
+    events = build_ics.build_manual_event(raw, "5hp", set())
+    moved_event = events[1]
+    # No new_time given - falls back to the parent's own time/end_time.
+    assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 9, 0, tzinfo=build_ics.LONDON)
+    assert moved_event["dtend"].dt == datetime(2026, 10, 21, 10, 0, tzinfo=build_ics.LONDON)
+
+
+def test_rebuild_is_idempotent_for_moved_exceptions():
+    """Running the build twice must not create a second/duplicate UID for
+    the same exception - a routine rebuild or the rep re-saving shouldn't
+    multiply moved events."""
+    raw = {
+        **WEEKLY_PE_BASE,
+        "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"}],
+    }
+    first = build_ics.build_manual_event(raw, "5hp", set())
+    second = build_ics.build_manual_event(raw, "5hp", set())
+    assert str(first[1]["uid"]) == str(second[1]["uid"])

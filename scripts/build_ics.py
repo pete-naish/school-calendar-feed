@@ -351,7 +351,55 @@ def build_event(raw: dict) -> Event:
     return event
 
 
-def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
+def _single_day_dtstart_dtend(target_date: date, time_str: str | None, end_time_str: str | None):
+    """DTSTART/DTEND for a single-day event on `target_date` - the same
+    time-of-day rules build_manual_event uses for a non-multi-day event,
+    factored out so a moved recurrence exception (always single-day, since
+    it's one occurrence of an otherwise-single-day series) can reuse it."""
+    if time_str:
+        start_dt = datetime.combine(target_date, datetime.strptime(time_str, "%H:%M").time()).replace(tzinfo=LONDON)
+        if end_time_str:
+            end_dt = datetime.combine(target_date, datetime.strptime(end_time_str, "%H:%M").time()).replace(
+                tzinfo=LONDON
+            )
+        else:
+            end_dt = start_dt + timedelta(hours=1)
+        return start_dt, end_dt
+    return target_date, target_date + timedelta(days=1)
+
+
+def _build_moved_exception_event(raw: dict, exception: dict) -> Event:
+    """A single recurring occurrence moved to a new date/time (see the
+    `exceptions` field) - a genuinely separate one-off VEVENT. Its UID is
+    derived from the parent event's id plus the ORIGINAL occurrence date
+    (not the new one), so re-running the build never creates duplicates or
+    a new UID for the same exception."""
+    event = Event()
+    base_id = raw.get("id") or sha1(f"{raw['title']}|{raw['date']}".encode("utf-8")).hexdigest()[:16]
+    event.add("uid", f"manual-{base_id}-{exception['date']}@{UID_DOMAIN}")
+    event.add("summary", raw["title"])
+
+    desc = raw.get("description")
+    if desc:
+        event.add("description", desc)
+    url = _safe_url(raw.get("url"))
+    if url:
+        event.add("url", url)
+
+    new_date = date.fromisoformat(exception["new_date"])
+    new_time = exception.get("new_time") or raw.get("time")
+    new_end_time = exception.get("new_end_time") or raw.get("end_time")
+    dtstart, dtend = _single_day_dtstart_dtend(new_date, new_time, new_end_time)
+    event.add("dtstart", dtstart)
+    event.add("dtend", dtend)
+
+    now = datetime.now(tz=UTC)
+    event.add("dtstamp", now)
+    event.add("last-modified", now)
+    return event
+
+
+def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[Event]:
     event = Event()
     # Manual events carry a stable `id` assigned at creation time by the
     # class-rep tool (see tool/functions/api/_shared/github.js), so editing
@@ -411,6 +459,14 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
         # last (inclusive) day.
         event.add("dtend", end_date + timedelta(days=1))
 
+    moved_events: list[Event] = []
+    exception_by_date: dict[date, dict] = {}
+    for exc in raw.get("exceptions") or []:
+        try:
+            exception_by_date[date.fromisoformat(exc["date"])] = exc
+        except (KeyError, ValueError):
+            continue
+
     recurrence = raw.get("recurrence")
     if recurrence and recurrence.get("freq"):
         freq_name = recurrence["freq"]
@@ -429,11 +485,13 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
         event.add("rrule", rrule_params)
 
         # Skip occurrences that land on a day the school is closed (inset
-        # days, half term, holidays - see collect_closure_dates()), plus
-        # weekends for a daily repeat, by enumerating the series ourselves
-        # and excluding those dates via EXDATE. The RRULE above still
-        # describes the full pattern; EXDATE is the standard iCalendar way
-        # to carve out exceptions from it.
+        # days, half term, holidays - see collect_closure_dates()), a
+        # weekend for a daily repeat, or a date the rep has explicitly
+        # overridden (see `exceptions` - a single occurrence moved or
+        # cancelled, e.g. one week's PE swapping for a church service), by
+        # enumerating the series ourselves and excluding those dates via
+        # EXDATE. The RRULE above still describes the full pattern; EXDATE
+        # is the standard iCalendar way to carve out exceptions from it.
         if until_date and freq_name in _RECUR_FREQ_MAP:
             occurrences = rrule(
                 _RECUR_FREQ_MAP[freq_name],
@@ -446,7 +504,8 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
                 occ_date = occ.date()
                 is_closure = occ_date in closure_dates
                 is_weekend = freq_name == "DAILY" and occ_date.weekday() >= 5
-                if not (is_closure or is_weekend):
+                is_exception = occ_date in exception_by_date
+                if not (is_closure or is_weekend or is_exception):
                     continue
                 if time_str:
                     # Same reasoning as dtstart/dtend above: EXDATE must
@@ -458,10 +517,14 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> Event:
             if exdates:
                 event.add("exdate", exdates)
 
+        for exc in exception_by_date.values():
+            if exc.get("action") == "moved":
+                moved_events.append(_build_moved_exception_event(raw, exc))
+
     now = datetime.now(tz=UTC)
     event.add("dtstamp", now)
     event.add("last-modified", now)
-    return event
+    return [event, *moved_events]
 
 
 def load_manual_events(code: str) -> list[dict]:
@@ -521,13 +584,19 @@ def main() -> None:
         for cls in group["classes"]:
             code = cls["code"]
             events = class_events[code] + [
-                build_manual_event(raw, code, closure_dates) for raw in load_manual_events(code)
+                event
+                for raw in load_manual_events(code)
+                for event in build_manual_event(raw, code, closure_dates)
             ]
             cal = make_calendar(f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})", events)
             (CALENDARS_DIR / f"{code.lower()}.ics").write_bytes(cal.to_ical())
             print(f"Wrote {len(events)} events to {code.lower()}.ics", file=sys.stderr)
 
-    fosps_events = [build_manual_event(raw, "fosps", closure_dates) for raw in load_manual_events("fosps")]
+    fosps_events = [
+        event
+        for raw in load_manual_events("fosps")
+        for event in build_manual_event(raw, "fosps", closure_dates)
+    ]
     cal = make_calendar(f"{SCHOOL_NAME} — Friends of St Paul's (FOSPS)", fosps_events)
     (CALENDARS_DIR / "fosps.ics").write_bytes(cal.to_ical())
     print(f"Wrote {len(fosps_events)} events to fosps.ics", file=sys.stderr)

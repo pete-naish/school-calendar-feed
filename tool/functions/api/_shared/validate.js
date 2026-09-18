@@ -40,6 +40,38 @@ function cleanRecurrence(value) {
   return { freq: value.freq, interval, until };
 }
 
+const EXCEPTION_ACTIONS = new Set(["cancelled", "moved"]);
+
+// Single-occurrence overrides on a recurring event (e.g. one week's PE
+// clashes with something else and moves to Friday). Drops individual
+// malformed entries rather than failing the whole event - a rep fixing
+// one exception shouldn't lose every other exception on the card.
+// Meaningless without `recurrence`, but harmless to carry through either
+// way; scripts/build_ics.py only applies them when recurrence is present.
+function cleanExceptions(value) {
+  if (!Array.isArray(value)) return [];
+  const cleaned = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const date = cleanOptionalDate(item.date);
+    if (!date || !EXCEPTION_ACTIONS.has(item.action)) continue;
+    if (item.action === "cancelled") {
+      cleaned.push({ date, action: "cancelled" });
+      continue;
+    }
+    const new_date = cleanOptionalDate(item.new_date);
+    if (!new_date) continue; // "moved" with no destination date isn't valid - drop it
+    cleaned.push({
+      date,
+      action: "moved",
+      new_date,
+      new_time: cleanOptionalTime(item.new_time),
+      new_end_time: cleanOptionalTime(item.new_end_time),
+    });
+  }
+  return cleaned;
+}
+
 function commonFields(item) {
   return {
     time: cleanOptionalTime(item.time),
@@ -47,6 +79,7 @@ function commonFields(item) {
     description: cleanOptionalString(item.description),
     url: cleanOptionalUrl(item.url),
     recurrence: cleanRecurrence(item.recurrence),
+    exceptions: cleanExceptions(item.exceptions),
   };
 }
 

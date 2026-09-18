@@ -221,7 +221,95 @@ function readCardFields(card) {
     description: card.querySelector(".field-description").value.trim() || null,
     url: card.querySelector(".field-url").value.trim() || null,
     recurrence,
+    exceptions: getCardExceptions(card),
   };
+}
+
+// Exceptions (single-occurrence move/cancel) are only offered on an
+// already-saved recurring event (renderExistingEvents), never on a draft
+// card - there's no series to override yet. The working list lives as
+// JSON in a data attribute on the card, so it flows through the normal
+// "Save changes" -> /api/events-update path with no separate endpoint.
+function getCardExceptions(card) {
+  try {
+    return JSON.parse(card.dataset.exceptions || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function setCardExceptions(card, exceptions) {
+  card.dataset.exceptions = JSON.stringify(exceptions);
+  renderExceptionsList(card);
+}
+
+function formatExceptionSummary(exc) {
+  const fmt = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  if (exc.action === "cancelled") return `${fmt(exc.date)}: cancelled`;
+  const timeText = exc.new_time ? ` at ${exc.new_time}${exc.new_end_time ? `–${exc.new_end_time}` : ""}` : "";
+  return `${fmt(exc.date)}: moved to ${fmt(exc.new_date)}${timeText}`;
+}
+
+function renderExceptionsList(card) {
+  const container = card.querySelector(".exceptions-list");
+  container.innerHTML = "";
+  getCardExceptions(card).forEach((exc, index) => {
+    const row = document.createElement("div");
+    row.className = "exception-row";
+    const text = document.createElement("span");
+    text.textContent = formatExceptionSummary(exc);
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "exception-remove-button";
+    removeButton.textContent = "Remove";
+    removeButton.addEventListener("click", () => {
+      setCardExceptions(card, getCardExceptions(card).filter((_, i) => i !== index));
+    });
+    row.append(text, removeButton);
+    container.appendChild(row);
+  });
+}
+
+function wireExceptionsSection(card, initialExceptions) {
+  card.dataset.exceptions = JSON.stringify(initialExceptions || []);
+  renderExceptionsList(card);
+
+  const section = card.querySelector(".field-exceptions");
+  const recurrenceSelect = card.querySelector(".field-recurrence");
+  const syncSectionVisibility = () => {
+    section.hidden = !recurrenceSelect.value;
+  };
+  recurrenceSelect.addEventListener("change", syncSectionVisibility);
+  syncSectionVisibility();
+
+  const actionSelect = card.querySelector(".exception-action");
+  const moveFields = card.querySelector(".exception-move-fields");
+  const syncMoveFieldsVisibility = () => {
+    moveFields.hidden = actionSelect.value !== "moved";
+  };
+  actionSelect.addEventListener("change", syncMoveFieldsVisibility);
+  syncMoveFieldsVisibility();
+
+  const dateInput = card.querySelector(".exception-date");
+  const newDateInput = card.querySelector(".exception-new-date");
+  const newTimeInput = card.querySelector(".exception-new-time");
+  const newEndTimeInput = card.querySelector(".exception-new-end-time");
+
+  card.querySelector(".exception-add-button").addEventListener("click", () => {
+    if (!dateInput.value) return;
+    const exception = { date: dateInput.value, action: actionSelect.value };
+    if (exception.action === "moved") {
+      if (!newDateInput.value) return;
+      exception.new_date = newDateInput.value;
+      exception.new_time = newTimeInput.value || null;
+      exception.new_end_time = newEndTimeInput.value || null;
+    }
+    setCardExceptions(card, [...getCardExceptions(card), exception]);
+    dateInput.value = "";
+    newDateInput.value = "";
+    newTimeInput.value = "";
+    newEndTimeInput.value = "";
+  });
 }
 
 // Shows the "Repeat until" field only once a repeat frequency is picked.
@@ -306,6 +394,7 @@ function renderExistingEvents(events) {
     const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
     fillCardFields(node, event);
     wireRecurrenceToggle(node);
+    wireExceptionsSection(node, event.exceptions);
 
     const saveButton = node.querySelector(".card-save-button");
     saveButton.hidden = false;

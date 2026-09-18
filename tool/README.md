@@ -26,13 +26,21 @@ integration.
   every Thursday" auto-detects the repeat pattern and pre-fills the card's
   Repeats dropdown (with a suggested "repeat until" - see `parse.js` /
   `termEnd.js` below) - still fully editable before saving, same as a
-  manually-set repeat. These become a
-  standard iCalendar `RRULE` in the published `.ics`. Editing or deleting a
-  recurring entry acts on the whole series, not a single occurrence - the
-  tool doesn't support per-occurrence edits. `scripts/build_ics.py`
-  automatically excludes occurrences that fall on inset days, half term, or
-  holidays (and weekends, for a daily repeat) - no need to account for term
-  dates when picking a repeat schedule.
+  manually-set repeat. These become a standard iCalendar `RRULE` in the
+  published `.ics`. `scripts/build_ics.py` automatically excludes
+  occurrences that fall on inset days, half term, or holidays (and
+  weekends, for a daily repeat) - no need to account for term dates when
+  picking a repeat schedule.
+- A recurring event's card also gets an **Exceptions** section - move or
+  cancel a single occurrence (e.g. one week's PE clashes with a church
+  service, so just that week moves to Friday) without touching the rest of
+  the series. Saved as an `exceptions` array on the event
+  (`{date, action: "cancelled"}` or `{date, action: "moved", new_date,
+  new_time?, new_end_time?}`); `build_ics.py` turns each into a standard
+  iCalendar `EXDATE` on the series plus, for a move, a genuinely separate
+  one-off event with its own stable UID. Only available on an
+  already-saved event (not a draft/extraction-review card) - there's no
+  series yet to override.
 - `functions/api/*.js` - Cloudflare Pages Functions (file-based routing:
   `functions/api/parse.js` becomes `POST /api/parse`, etc). Each endpoint
   re-validates the calendar code and passcode independently.
