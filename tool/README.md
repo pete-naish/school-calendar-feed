@@ -22,7 +22,11 @@ integration.
 - Every event card supports an optional **end date** (for multi-day events -
   DTEND is set to the end of that day) and an optional **repeat** (daily /
   weekly / every 2 weeks / monthly, each requiring a "repeat until" date -
-  the tool won't save an open-ended recurring event). These become a
+  the tool won't save an open-ended recurring event). Pasting text like "PE
+  every Thursday" auto-detects the repeat pattern and pre-fills the card's
+  Repeats dropdown (with a suggested "repeat until" - see `parse.js` /
+  `termEnd.js` below) - still fully editable before saving, same as a
+  manually-set repeat. These become a
   standard iCalendar `RRULE` in the published `.ics`. Editing or deleting a
   recurring entry acts on the whole series, not a single occurrence - the
   tool doesn't support per-occurrence edits. `scripts/build_ics.py`
@@ -32,8 +36,12 @@ integration.
 - `functions/api/*.js` - Cloudflare Pages Functions (file-based routing:
   `functions/api/parse.js` becomes `POST /api/parse`, etc). Each endpoint
   re-validates the calendar code and passcode independently.
-  - `parse.js` - calls Claude to extract events from pasted text. Nothing is
-    persisted here.
+  - `parse.js` - calls Claude to extract events from pasted text. Detects
+    an explicitly-stated repeat pattern ("every Thursday", "weekly") and
+    sets `recurrence.freq`/`interval` - it's never allowed to guess how
+    long a series runs for (`recurrence.until`), so that gets filled in
+    separately (see `termEnd.js` below) as a suggestion the rep still
+    reviews before saving. Nothing is persisted at this step.
   - `save.js` - bulk-creates the reviewed events (from `parse.js`, or typed
     in manually), skipping any that duplicate an already-saved event
     (same calendar + title + date).
@@ -47,7 +55,13 @@ integration.
   the LLM and the frontend form - including rejecting any `url` that isn't
   http(s), since it's later rendered as a link on the public preview page),
   `errors.js` (turns a caught failure into a message a non-technical rep
-  can act on, while the detail still goes to `console.error`).
+  can act on, while the detail still goes to `console.error`), `termEnd.js`
+  (finds the next "Last Day of ... Term" date from the site's own public
+  `whole-school.ics`, by splitting it into VEVENT blocks and regex-matching
+  `SUMMARY`/`DTSTART` per block - no ICS parser dependency needed. Used
+  only to default a newly-detected recurring event's "repeat until";
+  falls back to a fixed ~12-week horizon if the fetch fails or nothing
+  matches).
 
 ## Deploying
 

@@ -1,6 +1,7 @@
 import { isValidCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateExtractedEvents } from "./_shared/validate.js";
+import { getNextTermEndDate } from "./_shared/termEnd.js";
 
 const MODEL = "claude-haiku-4-5";
 const MAX_TEXT_LENGTH = 8000;
@@ -60,8 +61,11 @@ export async function onRequestPost({ request, env }) {
           `that event rather than guessing. Extract every distinct event mentioned, even if several ` +
           `appear in one message. If an event clearly spans more than one day (e.g. "Monday to ` +
           `Wednesday", a residential trip), set end_date to its last day; otherwise leave end_date null. ` +
-          `Do not attempt to infer recurring/repeating patterns - always extract each event as a single ` +
-          `occurrence, even if the text implies it repeats.`,
+          `If the text explicitly states a repeating pattern (e.g. "every Thursday", "weekly", "every ` +
+          `other Monday"), set recurrence.freq (DAILY/WEEKLY/MONTHLY) and recurrence.interval (2 for ` +
+          `"every other/fortnightly", otherwise 1). Never set recurrence unless the text explicitly says ` +
+          `the event repeats - do not assume a one-off event repeats just because it sounds routine. ` +
+          `Never guess how long it repeats for - that is filled in separately; always leave recurrence.until unset.`,
         messages: [{ role: "user", content: trimmedText }],
         tool_choice: { type: "tool", name: "record_events" },
         tools: [
@@ -86,6 +90,15 @@ export async function onRequestPost({ request, env }) {
                       end_time: { type: ["string", "null"] },
                       description: { type: ["string", "null"] },
                       url: { type: ["string", "null"] },
+                      recurrence: {
+                        type: ["object", "null"],
+                        description:
+                          "Set only if the text explicitly states a repeating pattern. Never set `until` - filled in separately.",
+                        properties: {
+                          freq: { type: "string", enum: ["DAILY", "WEEKLY", "MONTHLY"] },
+                          interval: { type: "integer", description: "2 for \"every other\"/fortnightly, else 1" },
+                        },
+                      },
                     },
                     required: ["title", "date"],
                   },
@@ -121,6 +134,25 @@ export async function onRequestPost({ request, env }) {
     return jsonResponse({ error: "extraction_failed", message: "Model did not return structured events." }, 502);
   }
 
-  const { events, warnings } = validateExtractedEvents(toolUse.input);
+  const rawEvents = Array.isArray(toolUse.input && toolUse.input.events) ? toolUse.input.events : [];
+
+  // The model only ever detects the repeat *pattern* (freq/interval) - it
+  // never invents an end date (see the system prompt above). Fill "until"
+  // in here with a suggestion the rep still reviews/edits before saving:
+  // the next published "Last Day of ... Term" date. One lookup per
+  // request (not per event) using the earliest date that needs it, since
+  // a single pasted message's events are almost always for the same term.
+  const needsUntil = rawEvents.filter(
+    (e) => e && e.recurrence && e.recurrence.freq && !e.recurrence.until && typeof e.date === "string"
+  );
+  if (needsUntil.length > 0) {
+    const earliestDate = needsUntil.map((e) => e.date).sort()[0];
+    const termEnd = await getNextTermEndDate(earliestDate);
+    for (const item of needsUntil) {
+      item.recurrence.until = termEnd;
+    }
+  }
+
+  const { events, warnings } = validateExtractedEvents({ events: rawEvents });
   return jsonResponse({ events, warnings });
 }
