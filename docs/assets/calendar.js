@@ -27,6 +27,14 @@ const ALL_CALENDARS = [
   FOSPS,
 ];
 
+// Which calendars have a real subscribe link on the page yet (see
+// docs/index.html's "Coming Soon" section) - only these get a toggle
+// checkbox in the preview. Everything else still gets *fetched* below
+// (ALL_CALENDARS, unchanged) so day-indexed data is ready the moment a
+// calendar is un-hidden here; nothing else needs to change to launch one,
+// just add its code to this set.
+const LAUNCHED_CALENDARS = new Set([WHOLE_SCHOOL.code, "rr", "rgp"]);
+
 const DEFAULT_ON = new Set([WHOLE_SCHOOL.code, FOSPS.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
 const VIEW_STORAGE_KEY = "stpauls-calendar-view";
@@ -110,16 +118,21 @@ function isSafeUrl(url) {
 }
 
 function loadToggleState() {
+  // Not-yet-launched calendars are always forced off here - defensive
+  // against stale localStorage from before a calendar was un-launched (or,
+  // now, from before this restriction existed at all) - not just "no
+  // checkbox to turn it on with", but genuinely never shown even if an old
+  // saved state says otherwise.
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) throw new Error("no saved state");
     const saved = JSON.parse(raw);
     const state = {};
-    for (const cal of ALL_CALENDARS) state[cal.code] = Boolean(saved[cal.code]);
+    for (const cal of ALL_CALENDARS) state[cal.code] = LAUNCHED_CALENDARS.has(cal.code) && Boolean(saved[cal.code]);
     return state;
   } catch {
     const state = {};
-    for (const cal of ALL_CALENDARS) state[cal.code] = DEFAULT_ON.has(cal.code);
+    for (const cal of ALL_CALENDARS) state[cal.code] = LAUNCHED_CALENDARS.has(cal.code) && DEFAULT_ON.has(cal.code);
     return state;
   }
 }
@@ -329,19 +342,31 @@ function renderToggles() {
     return label;
   };
 
-  const wholeGroup = document.createElement("div");
-  wholeGroup.className = "cal-toggle-group";
-  wholeGroup.append(makeToggle(WHOLE_SCHOOL), makeToggle(FOSPS));
-  el.toggles.appendChild(wholeGroup);
+  // Only launched calendars get a checkbox at all (see LAUNCHED_CALENDARS)
+  // - a not-yet-launched one has no working subscribe link on the page
+  // either, so offering to preview it would be more confusing than
+  // useful. A whole-school/FOSPS-style group is skipped entirely if
+  // nothing in it is launched (e.g. FOSPS alone, right now); a year group
+  // is skipped entirely if neither of its classes is launched.
+  const topLevel = [WHOLE_SCHOOL, FOSPS].filter((cal) => LAUNCHED_CALENDARS.has(cal.code));
+  if (topLevel.length > 0) {
+    const wholeGroup = document.createElement("div");
+    wholeGroup.className = "cal-toggle-group";
+    wholeGroup.append(...topLevel.map(makeToggle));
+    el.toggles.appendChild(wholeGroup);
+  }
 
   for (const group of GROUPS) {
+    const launchedClasses = group.classes.filter((cls) => LAUNCHED_CALENDARS.has(cls.code));
+    if (launchedClasses.length === 0) continue;
+
     const groupEl = document.createElement("div");
     groupEl.className = "cal-toggle-group";
     const groupLabel = document.createElement("span");
     groupLabel.className = "cal-toggle-group-label";
     groupLabel.textContent = group.label;
     groupEl.appendChild(groupLabel);
-    for (const cls of group.classes) {
+    for (const cls of launchedClasses) {
       groupEl.appendChild(makeToggle({ ...cls, dot: group.dot }));
     }
     el.toggles.appendChild(groupEl);

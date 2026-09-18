@@ -33,11 +33,13 @@ never both whole-school *and* class-specific).
 what's promoted on the landing page - `docs/index.html` currently only
 gives Whole School and Reception (RR/RGP) their own subscribe table for
 launch; the other 13 are listed under a collapsed "Coming Soon" section
-with no working links yet (still visible/toggleable in the Preview
-Calendar though - see below). To launch a calendar, just add its row to
-the relevant subscribe table in `docs/index.html` and remove it from the
-Coming Soon list - no backend change needed, the `.ics` file has been
-there the whole time.
+with no working links yet, and no toggle in the Preview Calendar either
+(see below). To launch a calendar, add its row to the relevant subscribe
+table in `docs/index.html`, remove its `<li>` from the Coming Soon list
+(it carries `data-webcal`/`data-ics` attributes with the values to reuse
+for the new row), and add its `code` to `LAUNCHED_CALENDARS` in
+`docs/assets/calendar.js` so it gets a Preview Calendar toggle too - no
+backend change needed, the `.ics` file has been there the whole time.
 
 ### How classification works
 
@@ -163,10 +165,12 @@ It's labelled "Preview Calendar" and lives in a collapsed-by-default
 first-time visitor hits "Find your child's class" first and can grab a
 subscribe link immediately, with the interactive preview available lower
 down for anyone who wants to explore before committing, rather than 16
-toggles and a calendar grid being the first thing on the page. Note that
-the preview always shows toggles for all 16 calendars regardless of launch
-scope below - it's explicitly a preview of everything that could be added,
-not a promise of what's live. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
+toggles and a calendar grid being the first thing on the page. The preview
+only offers a toggle for a calendar that's actually launched below
+(`LAUNCHED_CALENDARS` in `calendar.js`) - a Coming Soon calendar has no
+subscribe link yet either, so a checkbox for it would be more confusing
+than useful; its `.ics` is still fetched and ready the moment it's
+un-hidden, nothing else needs to change to launch one. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
 anchor whose meaning depends on the active view (1st-of-month / that week's
 Monday / the exact day - see `normalizeAnchor()`); switching views keeps
 "today" in view when it's already visible, rather than always re-deriving
