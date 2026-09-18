@@ -52,7 +52,8 @@
 </head>
 <body>
   <h1>St Paul's C of E Primary (Enfield) — Calendar Feeds</h1>
-  <p>Tired of copying dates from newsletters, WhatsApp groups and the <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">school website</a> into your own calendar by hand? Subscribe to your child's class (or the whole school) and new dates — inset days, trips, PE kit reminders — just appear, automatically, alongside the rest of your family's plans. No manual admin, no missed updates.</p>
+  <p>Tired of copying dates from newsletters, WhatsApp groups and the <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">school website</a> into your own calendar by hand?</p>
+  <p>Subscribe to your child's class and new dates appear automatically, alongside the rest of your family's plans. No manual admin, no missed updates.</p>
 
   <p class="howto">
     <strong>Apple/Outlook:</strong> tap "Subscribe" below (or use the <code>webcal://</code> link with File &rarr; New Calendar Subscription on Mac).<br>
@@ -60,7 +61,7 @@
   </p>
 
   <h2>Find your child's class</h2>
-  <p class="howto">Each class calendar includes events specific to that class, plus events for its whole year group.</p>
+  <p class="howto">Each class calendar includes events specific to that class, plus events for its whole year group. PE kit days, homework deadlines, school discos and everything in between.</p>
   <table>
     <tr><td class="name"><span class="name-inner"><span class="cal-dot dot-reception"></span>Reception — RR</span></td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/rr.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/rr.ics">ics</a></td></tr>
     <tr><td class="name"><span class="name-inner"><span class="cal-dot dot-reception"></span>Reception — RGP</span></td><td class="links"><a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/rgp.ics">Subscribe</a><a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/rgp.ics">ics</a></td></tr>
@@ -69,7 +70,7 @@
   <h2>Whole school</h2>
   <table>
     <tr>
-      <td class="name"><span class="name-inner"><span class="cal-dot dot-whole"></span>Events affecting the whole school or several year groups (inset days, holidays, whole-school services, etc)</span></td>
+      <td class="name"><span class="name-inner"><span class="cal-dot dot-whole"></span>Events affecting the whole school or several year groups: inset days, half term dates, whole-school services and more.</span></td>
       <td class="links">
         <a class="button" href="webcal://pete-naish.github.io/school-calendar-feed/calendars/whole-school.ics">Subscribe</a>
         <a class="button raw" href="https://pete-naish.github.io/school-calendar-feed/calendars/whole-school.ics">ics</a>
@@ -79,21 +80,21 @@
 
   <details id="calendar-preview" class="page-details">
     <summary>Preview Calendar</summary>
-    <p class="howto">Toggle on whichever calendars are relevant to you to see what you'd actually get. This works as a calendar in its own right too, if you'd rather not subscribe anywhere - your choices are remembered on this device.</p>
+    <p class="howto">Toggle on whichever calendars are relevant to you to see what you'll get. This works as a calendar in its own right too, if you'd rather not subscribe anywhere - your choices are remembered on this device.</p>
 
     <div id="calendar-toggles" class="cal-toggles"></div>
 
     <div class="cal-nav">
-      <button id="cal-prev" aria-label="Previous">&lsaquo;</button>
+      <button id="cal-prev" aria-label="Previous" type="button">&lsaquo;</button>
       <span id="cal-month-label" aria-live="polite"></span>
-      <button id="cal-next" aria-label="Next">&rsaquo;</button>
-      <button id="cal-today">Today</button>
+      <button id="cal-next" aria-label="Next" type="button">&rsaquo;</button>
+      <button id="cal-today" type="button">Today</button>
       <div class="cal-view-switch" role="group" aria-label="Calendar view">
         <button type="button" class="view-button" data-view="month">Month</button>
         <button type="button" class="view-button" data-view="week">Week</button>
         <button type="button" class="view-button" data-view="day">Day</button>
       </div>
-      <button id="cal-refresh" aria-label="Refresh events">&#8635; Refresh</button>
+      <button id="cal-refresh" aria-label="Refresh events" type="button">&#8635; Refresh</button>
     </div>
 
     <p id="calendar-loading" class="howto">Loading events…</p>
@@ -104,7 +105,7 @@
     <dialog id="day-dialog">
       <h3 id="day-dialog-title"></h3>
       <div id="day-dialog-events"></div>
-      <button id="day-dialog-close">Close</button>
+      <button id="day-dialog-close" type="button">Close</button>
     </dialog>
   </details>
 
