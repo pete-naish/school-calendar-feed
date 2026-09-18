@@ -6,7 +6,9 @@
 
 # JSON object, one passcode per calendar code (see functions/api/_shared/calendars.js
 # for the full list of valid codes). Choose your own values - these are examples.
-CLASS_PASSWORDS={"rr":"changeme","rgp":"changeme","1ms":"changeme","1t":"changeme","2ly":"changeme","2s":"changeme","3b":"changeme","3d":"changeme","4m":"changeme","4w":"changeme","5l":"changeme","5hp":"changeme","6bt":"changeme","6r":"changeme","fosps":"changeme"}
+# "whole-school" is a restricted entry - description-editing only, see
+# calendars.js's WHOLE_SCHOOL/isDescriptionOnlyCalendar() and tool/README.md.
+CLASS_PASSWORDS={"whole-school":"changeme","rr":"changeme","rgp":"changeme","1ms":"changeme","1t":"changeme","2ly":"changeme","2s":"changeme","3b":"changeme","3d":"changeme","4m":"changeme","4w":"changeme","5l":"changeme","5hp":"changeme","6bt":"changeme","6r":"changeme","fosps":"changeme"}
 
 # Anthropic API key, used by /api/parse.
 ANTHROPIC_API_KEY=sk-ant-...

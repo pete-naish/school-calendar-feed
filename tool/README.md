@@ -8,6 +8,10 @@ repo's `data/manual_events/<code>.json` files, which
 `scripts/build_ics.py` already merges into the published `.ics` feeds on its
 existing 6-hourly schedule.
 
+A separate **Whole School** calendar entry (its own passcode) offers a much
+more restricted mode: editing an already-published whole-school event's
+*description* only - see "Whole School events" below.
+
 No framework, no build step: plain HTML/CSS/JS frontend + plain JS
 Cloudflare Pages Functions. Deploys via Cloudflare's zero-build-command git
 integration.
@@ -52,24 +56,62 @@ integration.
     reviews before saving. Nothing is persisted at this step.
   - `save.js` - bulk-creates the reviewed events (from `parse.js`, or typed
     in manually), skipping any that duplicate an already-saved event
-    (same calendar + title + date).
+    (same calendar + title + date). Rejected outright for the Whole School
+    entry (see below).
   - `events-list.js` / `events-update.js` / `events-delete.js` - list,
-    amend, or remove an already-saved event by its stable `id`.
-- `functions/api/_shared/` - `calendars.js` (the 15 valid calendar codes,
-  mirrors `YEAR_GROUPS` in `scripts/build_ics.py` - keep them in sync by
-  hand), `auth.js` (passcode check), `github.js` (GitHub Contents API
-  get/commit, retrying a concurrent-edit conflict, a GitHub 5xx, or a
-  network failure), `validate.js` (sanitizes/validates event data from both
-  the LLM and the frontend form - including rejecting any `url` that isn't
-  http(s), since it's later rendered as a link on the public preview page),
-  `errors.js` (turns a caught failure into a message a non-technical rep
-  can act on, while the detail still goes to `console.error`), `termEnd.js`
-  (finds the next "Last Day of ... Term" date from the site's own public
-  `whole-school.ics`, by splitting it into VEVENT blocks and regex-matching
-  `SUMMARY`/`DTSTART` per block - no ICS parser dependency needed. Used
-  only to default a newly-detected recurring event's "repeat until";
-  falls back to a fixed ~12-week horizon if the fetch fails or nothing
-  matches).
+    amend, or remove an already-saved event by its stable `id`. For the
+    Whole School entry, `events-list.js` and `events-update.js` instead
+    read/write a description override (see below); `events-delete.js`
+    rejects it outright, same as `save.js`.
+- `functions/api/_shared/` - `calendars.js` (the 16 valid calendar codes -
+  14 classes + FOSPS mirror `YEAR_GROUPS` in `scripts/build_ics.py` and are
+  kept in sync by hand; the 16th, `whole-school`, is the restricted entry
+  below and isn't mirrored from anywhere, since it has no
+  `data/manual_events/` file at all), `auth.js` (passcode check), `github.js`
+  (GitHub Contents API get/commit for any JSON file in the repo, retrying a
+  concurrent-edit conflict, a GitHub 5xx, or a network failure), `validate.js`
+  (sanitizes/validates event data from both the LLM and the frontend form -
+  including rejecting any `url` that isn't http(s), since it's later
+  rendered as a link on the public preview page), `errors.js` (turns a
+  caught failure into a message a non-technical rep can act on, while the
+  detail still goes to `console.error`), `termEnd.js` (finds the next "Last
+  Day of ... Term" date from the site's own public `whole-school.ics`, by
+  splitting it into VEVENT blocks and regex-matching `SUMMARY`/`DTSTART` per
+  block - no ICS parser dependency needed. Used only to default a
+  newly-detected recurring event's "repeat until"; falls back to a fixed
+  ~12-week horizon if the fetch fails or nothing matches), `wholeSchool.js`
+  (lists current whole-school events the same way - by reading the
+  published `.ics` - rather than re-implementing `build_ics.py`'s
+  classification logic in JS), `wholeSchoolOverrides.js` (commits a
+  description override to `data/whole_school_overrides.json`).
+
+## Whole School events
+
+The **Whole School** entry in the calendar picker is deliberately much more
+restricted than every other calendar: it can only edit an already-published
+whole-school event's *description* (e.g. adding parking or kit notes to an
+inset day) - adding, deleting, or editing anything else about an event
+(title, date, recurrence, ...) is disabled both in the UI (a simpler
+read-mostly card with just a description box - no other fields, no "Add
+events" section at all) and re-checked server-side in every endpoint
+(`save.js`/`events-delete.js`/`parse.js` reject this calendar outright;
+`events-update.js` accepts only a `description`).
+
+This is a structurally different data source from every other calendar:
+whole-school events aren't hand-entered at all (there's no
+`data/manual_events/whole-school.json`) - they come straight from the
+school's own API on every 6-hourly `scripts/build_ics.py` run.
+`events-list.js` lists them by reading the site's own already-published
+`whole-school.ics` (`_shared/wholeSchool.js`), recovering each event's
+stable id from its `UID` (`stpauls-<id>@school-calendar-feed`) and merging
+in any not-yet-published override so a rep sees their own recent edit
+immediately rather than the stale pre-edit text. A saved description is
+written to `data/whole_school_overrides.json`
+(`{"<school event id>": "override text"}`) via `_shared/wholeSchoolOverrides.js`;
+clearing the box back to empty removes the override entirely (reverting to
+whatever the school's own feed says) rather than storing `""`, which
+`build_ics.py` applies on the next build - same ~6 hour lag as every other
+change made through this tool.
 
 ## Deploying
 
@@ -78,7 +120,7 @@ integration.
    command empty (no build step needed).
 2. Under the project's **Settings → Environment variables** (as secrets, for
    both Production and Preview), set:
-   - `CLASS_PASSWORDS` - a JSON object mapping each of the 15 calendar codes
+   - `CLASS_PASSWORDS` - a JSON object mapping each of the 16 calendar codes
      to a passcode you choose (see `.dev.vars.example` for the shape).
    - `ANTHROPIC_API_KEY` - an Anthropic API key.
    - `GITHUB_TOKEN` - a fine-grained GitHub PAT, scoped to only this repo,
@@ -88,7 +130,10 @@ integration.
    domain, if you attach one).
 4. Distribute each calendar's passcode to that class's rep (or FOSPS) - how
    you do this (a shared spreadsheet, individual messages, etc) is up to
-   you; the tool has no built-in distribution mechanism.
+   you; the tool has no built-in distribution mechanism. Keep the Whole
+   School passcode separately, for whoever's trusted to add descriptions to
+   whole-school events (e.g. the school office) - see "Whole School events"
+   below.
 
 ## Rate limiting (recommended, not built in)
 
@@ -114,7 +159,7 @@ Worker:
    brute-forcing specifically throttled too - those don't cost API money,
    but nothing stops rapid-fire guessing otherwise.
 
-Separately: make sure the 15 real passcode values you chose aren't
+Separately: make sure the 16 real passcode values you chose aren't
 guessable (the placeholder in `.dev.vars.example` is literally
 `"changeme"` - obviously don't ship that).
 

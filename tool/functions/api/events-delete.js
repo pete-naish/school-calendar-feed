@@ -1,4 +1,4 @@
-import { isValidCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { commitManualEvents } from "./_shared/github.js";
 import { commitErrorResponse } from "./_shared/errors.js";
@@ -22,6 +22,14 @@ export async function onRequestPost({ request, env }) {
   }
   if (!checkPasscode(env, calendar, passcode)) {
     return jsonResponse({ error: "invalid_passcode" }, 401);
+  }
+  // Whole School events aren't stored here at all (they come from the
+  // school's own feed) - nothing to delete via this tool.
+  if (isDescriptionOnlyCalendar(calendar)) {
+    return jsonResponse(
+      { error: "not_allowed", message: "Whole School events can't be deleted here - only their description can be edited." },
+      403
+    );
   }
   if (typeof id !== "string" || !id) {
     return jsonResponse({ error: "missing_id" }, 400);

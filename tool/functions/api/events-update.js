@@ -1,7 +1,8 @@
-import { isValidCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput } from "./_shared/validate.js";
 import { commitManualEvents } from "./_shared/github.js";
+import { commitWholeSchoolDescription } from "./_shared/wholeSchoolOverrides.js";
 import { commitErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
@@ -27,6 +28,21 @@ export async function onRequestPost({ request, env }) {
   if (typeof id !== "string" || !id) {
     return jsonResponse({ error: "missing_id" }, 400);
   }
+
+  // Whole School only ever allows editing an event's description - no
+  // title/date/recurrence/etc, and events themselves aren't stored here at
+  // all (they come from the school's own feed), so this is a completely
+  // different, much smaller write than the regular manual-event path below.
+  if (isDescriptionOnlyCalendar(calendar)) {
+    const description = typeof body.description === "string" ? body.description.trim() : "";
+    try {
+      await commitWholeSchoolDescription(env, id, description);
+      return jsonResponse({ updated: true });
+    } catch (err) {
+      return jsonResponse(commitErrorResponse(err), 502);
+    }
+  }
+
   const validated = validateEventInput(event);
   if (!validated.valid) {
     return jsonResponse({ error: "validation_failed", message: validated.error }, 400);

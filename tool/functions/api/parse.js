@@ -1,4 +1,4 @@
-import { isValidCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateExtractedEvents } from "./_shared/validate.js";
 import { getNextTermEndDate } from "./_shared/termEnd.js";
@@ -25,6 +25,14 @@ export async function onRequestPost({ request, env }) {
   }
   if (!checkPasscode(env, calendar, passcode)) {
     return jsonResponse({ error: "invalid_passcode" }, 401);
+  }
+  // Whole School has nothing to extract into - this tool can only edit an
+  // existing event's description there, never add new ones.
+  if (isDescriptionOnlyCalendar(calendar)) {
+    return jsonResponse(
+      { error: "not_allowed", message: "Whole School events can't be added here - only their description can be edited." },
+      403
+    );
   }
   if (typeof text !== "string" || !text.trim()) {
     return jsonResponse({ error: "empty_text" }, 400);

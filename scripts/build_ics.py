@@ -50,6 +50,12 @@ SCHOOL_NAME = "St Paul's Enfield"
 UID_DOMAIN = "school-calendar-feed"
 CALENDARS_DIR = Path(__file__).resolve().parent.parent / "docs" / "calendars"
 MANUAL_EVENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "manual_events"
+# Description-only overrides for whole-school events, set via the class rep
+# tool's restricted "Whole School" calendar entry (see tool/README.md) -
+# {"<school event id>": "override description"}. Whole-school events
+# otherwise come entirely from the school's own API on every build, so this
+# is the only piece of them that's ever hand-edited/persisted.
+WHOLE_SCHOOL_OVERRIDES_PATH = Path(__file__).resolve().parent.parent / "data" / "whole_school_overrides.json"
 
 LONDON = ZoneInfo("Europe/London")
 UTC = timezone.utc
@@ -325,12 +331,24 @@ def _parse_timed(raw: dict) -> tuple[datetime, datetime]:
     return start_dt.astimezone(UTC), end_dt.astimezone(UTC)
 
 
-def build_event(raw: dict) -> Event:
+def build_event(raw: dict, code: str | None = None, description_override: str | None = None) -> Event:
+    """`code` prefixes the published title with that calendar's code (e.g.
+    "RR: PE Kit") - only class/FOSPS calendars pass this; whole-school
+    events (code=None) are never prefixed, since a parent only ever sees a
+    whole-school event once, in one calendar, with no other class's events
+    to disambiguate against. `description_override` (whole-school only -
+    see WHOLE_SCHOOL_OVERRIDES_PATH) replaces the school's own description
+    outright when set, including clearing it entirely if set to "" - both
+    are display-only changes to the published .ics; the source data (title,
+    raw description) is never touched."""
     event = Event()
     event.add("uid", f"stpauls-{raw['id']}@{UID_DOMAIN}")
-    event.add("summary", _clean(raw.get("title")))
+    title = _clean(raw.get("title"))
+    if code:
+        title = f"{code.upper()}: {title}"
+    event.add("summary", title)
 
-    desc = _clean(raw.get("desc"))
+    desc = description_override if description_override is not None else _clean(raw.get("desc"))
     if desc:
         event.add("description", desc)
 
@@ -368,7 +386,7 @@ def _single_day_dtstart_dtend(target_date: date, time_str: str | None, end_time_
     return target_date, target_date + timedelta(days=1)
 
 
-def _build_moved_exception_event(raw: dict, exception: dict) -> Event:
+def _build_moved_exception_event(raw: dict, exception: dict, code: str) -> Event:
     """A single recurring occurrence moved to a new date/time (see the
     `exceptions` field) - a genuinely separate one-off VEVENT. Its UID is
     derived from the parent event's id plus the ORIGINAL occurrence date
@@ -377,7 +395,7 @@ def _build_moved_exception_event(raw: dict, exception: dict) -> Event:
     event = Event()
     base_id = raw.get("id") or sha1(f"{raw['title']}|{raw['date']}".encode("utf-8")).hexdigest()[:16]
     event.add("uid", f"manual-{base_id}-{exception['date']}@{UID_DOMAIN}")
-    event.add("summary", raw["title"])
+    event.add("summary", f"{code.upper()}: {raw['title']}")
 
     desc = raw.get("description")
     if desc:
@@ -413,7 +431,11 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
         uid_source = f"{code}|{raw['title']}|{raw['date']}|{raw.get('time', '')}"
         uid = sha1(uid_source.encode("utf-8")).hexdigest()[:16]
     event.add("uid", f"manual-{uid}@{UID_DOMAIN}")
-    event.add("summary", raw["title"])
+    # Prefixed with the calendar's own code (e.g. "RR: PE Kit") so a parent
+    # subscribed to several class calendars at once can tell which class an
+    # event belongs to without opening it - the stored `title` itself is
+    # never touched, only what's published.
+    event.add("summary", f"{code.upper()}: {raw['title']}")
 
     desc = raw.get("description")
     if desc:
@@ -519,7 +541,7 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
 
         for exc in exception_by_date.values():
             if exc.get("action") == "moved":
-                moved_events.append(_build_moved_exception_event(raw, exc))
+                moved_events.append(_build_moved_exception_event(raw, exc, code))
 
     now = datetime.now(tz=UTC)
     event.add("dtstamp", now)
@@ -532,6 +554,13 @@ def load_manual_events(code: str) -> list[dict]:
     if not path.exists():
         return []
     with path.open() as f:
+        return json.load(f)
+
+
+def load_whole_school_overrides() -> dict[str, str]:
+    if not WHOLE_SCHOOL_OVERRIDES_PATH.exists():
+        return {}
+    with WHOLE_SCHOOL_OVERRIDES_PATH.open() as f:
         return json.load(f)
 
 
@@ -556,6 +585,7 @@ def make_calendar(name: str, events: list[Event]) -> Calendar:
 def main() -> None:
     raw_events = fetch_events()
     closure_dates = collect_closure_dates(raw_events)
+    whole_school_overrides = load_whole_school_overrides()
 
     seen_ids: set[int] = set()
     whole_school_events: list[Event] = []
@@ -567,12 +597,17 @@ def main() -> None:
         seen_ids.add(raw["id"])
 
         bucket, class_codes = classify_event(_clean(raw.get("title")))
-        event = build_event(raw)
         if bucket == "whole-school":
-            whole_school_events.append(event)
+            whole_school_events.append(
+                build_event(raw, description_override=whole_school_overrides.get(str(raw["id"])))
+            )
         else:
+            # A separate Event per class code (not one object appended to
+            # several codes' lists) - each calendar's title is prefixed with
+            # its own code, so a year-group-wide event needs its own
+            # instance per class rather than one shared, mutated object.
             for code in class_codes:
-                class_events[code].append(event)
+                class_events[code].append(build_event(raw, code=code))
 
     CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
 

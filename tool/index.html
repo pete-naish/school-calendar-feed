@@ -32,6 +32,8 @@
         <button id="switch-calendar-button" class="link-button">Switch calendar</button>
       </div>
 
+      <p id="whole-school-notice" class="hint" hidden>Only the description can be edited here — titles, dates, and which events appear at all come from the school's own calendar feed and can't be changed in this tool.</p>
+
       <section id="add-section">
         <h3>Add events</h3>
         <p class="hint">Paste a WhatsApp message, newsletter paragraph, or anything describing one or more events.</p>
@@ -130,6 +132,20 @@
       <div class="card-actions">
         <button type="button" class="card-save-button" hidden>Save changes</button>
         <button type="button" class="card-remove-button">Remove</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="whole-school-event-template">
+    <div class="event-card whole-school-card">
+      <h4 class="ws-title"></h4>
+      <p class="ws-date hint"></p>
+      <label>Description
+        <textarea class="field-description" rows="3"></textarea>
+      </label>
+      <p class="field-error error" hidden></p>
+      <div class="card-actions">
+        <button type="button" class="card-save-button">Save description</button>
       </div>
     </div>
   </template>

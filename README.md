@@ -29,6 +29,15 @@ An event never appears in more than one of these top-level buckets (it's
 either whole-school, or in one/both of a single year's two class calendars,
 never both whole-school *and* class-specific).
 
+Every class/FOSPS event's *published* title is prefixed with its calendar's
+code (e.g. "PE Kit" becomes "RR: PE Kit") - useful for a parent subscribed
+to more than one class calendar (siblings in different year groups), who'd
+otherwise see identically-titled events from each with no way to tell them
+apart at a glance. This only affects the `.ics` `SUMMARY` at build time -
+nothing stored (a title typed into the class rep tool, or `data/manual_events/`
+JSON) ever has the prefix baked in. Whole-school events are never prefixed,
+since a parent only ever gets them from the one whole-school calendar.
+
 **All 16 calendars are always generated and published**, regardless of
 what's promoted on the landing page - `docs/index.html` currently only
 gives Whole School and Reception (RR/RGP) their own subscribe table for
@@ -147,6 +156,22 @@ become an 8am or 10am event for any occurrence on the other side of a British
 clock change. `RRULE`'s `UNTIL` and school-API-sourced (never recurring)
 events are unaffected and stay UTC, per RFC 5545 (`UNTIL` must always be UTC
 when `DTSTART` has a time component).
+
+### Whole School event descriptions
+
+Whole-school events (inset days, holidays, whole-school services, etc)
+aren't hand-entered at all - see "How classification works" above - they
+come straight from the school's own API on every 6-hourly build, so
+there's no `data/manual_events/whole-school.json` to edit. [The class rep
+tool](tool/README.md) still has a **Whole School** calendar entry with its
+own passcode, but it can only edit an already-published event's
+*description* (e.g. adding parking or kit notes to an inset day) - never
+its title, date, or whether it exists at all, since none of that is this
+tool's to control; adding and deleting events is disabled entirely for
+this entry. Saved descriptions live in `data/whole_school_overrides.json`
+(`{"<school event id>": "override text"}`, keyed by the id embedded in
+that event's own UID) and are applied by `scripts/build_ics.py` on the
+next build, same lag as every other change made through the tool.
 
 ## Calendar preview (`docs/index.html`)
 

@@ -30,25 +30,23 @@ async function githubRequest(env, method, path, body) {
   });
 }
 
-// Reads data/manual_events/<calendar>.json. A missing file (first submission
-// for that calendar) is treated as an empty array, same as
-// load_manual_events() in scripts/build_ics.py.
-export async function getManualEventsFile(env, calendar) {
-  const path = `data/manual_events/${calendar}.json`;
+// Reads and JSON-decodes an arbitrary repo file via the Contents API. A
+// missing file is treated as `defaultValue` (e.g. a calendar's first-ever
+// submission), same as the Python side's own missing-file handling.
+export async function getJsonFile(env, path, defaultValue) {
   const resp = await githubRequest(env, "GET", `/repos/${REPO}/contents/${path}?ref=${BRANCH}`);
   if (resp.status === 404) {
-    return { events: [], sha: null, path };
+    return { data: defaultValue, sha: null, path };
   }
   if (!resp.ok) {
     throw new Error(`GitHub GET failed: ${resp.status} ${await resp.text()}`);
   }
-  const data = await resp.json();
-  const events = JSON.parse(base64DecodeUtf8(data.content));
-  return { events, sha: data.sha, path };
+  const body = await resp.json();
+  return { data: JSON.parse(base64DecodeUtf8(body.content)), sha: body.sha, path };
 }
 
-async function putManualEventsFile(env, path, events, sha, message) {
-  const content = base64EncodeUtf8(`${JSON.stringify(events, null, 2)}\n`);
+async function putJsonFile(env, path, data, sha, message) {
+  const content = base64EncodeUtf8(`${JSON.stringify(data, null, 2)}\n`);
   return githubRequest(env, "PUT", `/repos/${REPO}/contents/${path}`, {
     message: `${message} via class rep tool`,
     content,
@@ -56,6 +54,14 @@ async function putManualEventsFile(env, path, events, sha, message) {
     ...(sha ? { sha } : {}),
     committer: { name: "Class Rep Tool", email: "noreply@users.noreply.github.com" },
   });
+}
+
+// Reads data/manual_events/<calendar>.json. A missing file (first submission
+// for that calendar) is treated as an empty array, same as
+// load_manual_events() in scripts/build_ics.py.
+export async function getManualEventsFile(env, calendar) {
+  const { data, sha, path } = await getJsonFile(env, `data/manual_events/${calendar}.json`, []);
+  return { events: data, sha, path };
 }
 
 export function generateEventId() {
@@ -99,28 +105,28 @@ export async function retryable(fn) {
   throw lastError;
 }
 
-// GET -> mutatorFn(currentEvents) -> PUT, retrying the whole cycle on a sha
+// GET -> mutatorFn(currentData) -> PUT, retrying the whole cycle on a sha
 // conflict, a GitHub 5xx, or a network-level failure (fetch() itself
-// throwing) - not just the 409 case. Backs every write path - save
-// appends, update replaces-by-id, delete filters-by-id - each supplies
-// only how the array should change via `mutatorFn`.
+// throwing) - not just the 409 case. Backs every write path against any
+// JSON file in the repo (manual events, whole-school description overrides)
+// - each caller supplies only how the data should change via `mutatorFn`.
 //
-// `mutatorFn` is async and returns either `{ events, ...extra }` (the new
-// array to write, plus anything the caller wants back, e.g. `saved` count)
+// `mutatorFn` is async and returns either `{ data, ...extra }` (the new
+// value to write, plus anything the caller wants back, e.g. `saved` count)
 // or `{ error: "not_found" }` to abort without writing.
-export async function commitManualEvents(env, calendar, mutatorFn, commitMessage) {
+export async function commitJsonFile(env, path, defaultValue, mutatorFn, commitMessage) {
   let lastError;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      const { events, sha, path } = await getManualEventsFile(env, calendar);
-      const result = await mutatorFn(events);
+      const { data, sha } = await getJsonFile(env, path, defaultValue);
+      const result = await mutatorFn(data);
       if (result.error) return result;
 
-      const { events: newEvents, ...extra } = result;
-      const resp = await putManualEventsFile(env, path, newEvents, sha, commitMessage);
+      const { data: newData, ...extra } = result;
+      const resp = await putJsonFile(env, path, newData, sha, commitMessage);
       if (resp.ok) {
-        const data = await resp.json();
-        return { ...extra, commitSha: data.commit && data.commit.sha };
+        const body = await resp.json();
+        return { ...extra, commitSha: body.commit && body.commit.sha };
       }
       const message = `GitHub PUT failed: ${resp.status} ${await resp.text()}`;
       if (isRetryableStatus(resp.status) && attempt < MAX_ATTEMPTS - 1) {
@@ -130,9 +136,9 @@ export async function commitManualEvents(env, calendar, mutatorFn, commitMessage
       }
       throw new Error(message);
     } catch (err) {
-      // A GET that came back non-ok/non-404 (getManualEventsFile throws),
-      // or fetch() itself rejecting (offline, DNS, timeout), lands here too
-      // - worth a retry rather than an immediate surprise error for a
+      // A GET that came back non-ok/non-404 (getJsonFile throws), or
+      // fetch() itself rejecting (offline, DNS, timeout), lands here too -
+      // worth a retry rather than an immediate surprise error for a
       // non-technical rep.
       lastError = err;
       if (attempt < MAX_ATTEMPTS - 1) {
@@ -142,5 +148,23 @@ export async function commitManualEvents(env, calendar, mutatorFn, commitMessage
       throw err;
     }
   }
-  throw lastError || new Error("commitManualEvents: exhausted retries");
+  throw lastError || new Error("commitJsonFile: exhausted retries");
+}
+
+// calendar-events-specific wrapper around commitJsonFile - keeps the
+// `{ events, ...extra }` shape every existing caller (save/update/delete)
+// already uses.
+export async function commitManualEvents(env, calendar, mutatorFn, commitMessage) {
+  return commitJsonFile(
+    env,
+    `data/manual_events/${calendar}.json`,
+    [],
+    async (events) => {
+      const result = await mutatorFn(events);
+      if (result.error) return result;
+      const { events: newEvents, ...extra } = result;
+      return { data: newEvents, ...extra };
+    },
+    commitMessage
+  );
 }

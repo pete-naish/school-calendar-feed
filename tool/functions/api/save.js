@@ -1,4 +1,4 @@
-import { isValidCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput } from "./_shared/validate.js";
 import { commitManualEvents, dedupeKey, generateEventId } from "./_shared/github.js";
@@ -23,6 +23,15 @@ export async function onRequestPost({ request, env }) {
   }
   if (!checkPasscode(env, calendar, passcode)) {
     return jsonResponse({ error: "invalid_passcode" }, 401);
+  }
+  // Whole School events come entirely from the school's own feed - this
+  // tool can only edit an existing one's description (see events-update.js),
+  // never add new ones.
+  if (isDescriptionOnlyCalendar(calendar)) {
+    return jsonResponse(
+      { error: "not_allowed", message: "Whole School events can't be added here - only their description can be edited." },
+      403
+    );
   }
   if (!Array.isArray(events) || events.length === 0) {
     return jsonResponse({ error: "no_events" }, 400);

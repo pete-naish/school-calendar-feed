@@ -112,6 +112,55 @@ def test_safe_url(raw_url, expected):
 
 
 # --------------------------------------------------------------------------
+# build_event() - school-API-sourced events: per-calendar title prefixing,
+# and the whole-school description-override mechanism (see
+# load_whole_school_overrides() / WHOLE_SCHOOL_OVERRIDES_PATH).
+# --------------------------------------------------------------------------
+
+
+def test_build_event_whole_school_has_no_prefix():
+    raw = {"id": 1, "title": "INSET DAY", "allDay": True, "start": "2026-09-02"}
+    event = build_ics.build_event(raw)
+    assert str(event["summary"]) == "INSET DAY"
+
+
+def test_build_event_class_prefixes_title_with_code():
+    raw = {"id": 2, "title": "PE Kit", "allDay": True, "start": "2026-09-16"}
+    event = build_ics.build_event(raw, code="rr")
+    assert str(event["summary"]) == "RR: PE Kit"
+
+
+def test_build_event_keeps_school_description_with_no_override():
+    raw = {"id": 3, "title": "Some Event", "allDay": True, "start": "2026-09-23", "desc": "Original text"}
+    event = build_ics.build_event(raw)
+    assert str(event["description"]) == "Original text"
+
+
+def test_build_event_override_replaces_school_description():
+    raw = {"id": 4, "title": "Nasal Flu Spray", "allDay": True, "start": "2026-09-23", "desc": "<p>Whole School</p>"}
+    event = build_ics.build_event(raw, description_override="Updated by the office")
+    assert str(event["description"]) == "Updated by the office"
+
+
+def test_build_event_empty_override_clears_description():
+    raw = {"id": 5, "title": "Some Event", "allDay": True, "start": "2026-09-23", "desc": "Original text"}
+    event = build_ics.build_event(raw, description_override="")
+    assert "description" not in event
+
+
+def test_load_whole_school_overrides_missing_file_returns_empty(tmp_path, monkeypatch):
+    monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", tmp_path / "missing.json")
+    assert build_ics.load_whole_school_overrides() == {}
+
+
+def test_load_whole_school_overrides_reads_json(tmp_path, monkeypatch):
+    path = tmp_path / "overrides.json"
+    path.write_text('{"857": "Updated description"}')
+    monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", path)
+    assert build_ics.load_whole_school_overrides() == {"857": "Updated description"}
+
+
+# --------------------------------------------------------------------------
 # build_manual_event() - multi-day date math + the recurrence/DST fix
 # --------------------------------------------------------------------------
 
@@ -123,6 +172,18 @@ def test_multi_day_all_day_event_dtend_is_exclusive():
     assert events[0]["dtstart"].dt == date(2026, 11, 9)
     # DTEND is exclusive, so a 3-day (9th-11th inclusive) event ends the 12th.
     assert events[0]["dtend"].dt == date(2026, 11, 12)
+
+
+def test_manual_event_prefixes_title_with_calendar_code():
+    raw = {"id": "m1", "title": "PE Kit", "date": "2026-09-16"}
+    events = build_ics.build_manual_event(raw, "rr", set())
+    assert str(events[0]["summary"]) == "RR: PE Kit"
+
+
+def test_manual_event_fosps_prefix_is_uppercased():
+    raw = {"id": "m2", "title": "AGM", "date": "2026-10-05"}
+    events = build_ics.build_manual_event(raw, "fosps", set())
+    assert str(events[0]["summary"]) == "FOSPS: AGM"
 
 
 def test_recurring_event_uses_tzid_not_utc():
@@ -235,7 +296,7 @@ def test_moved_exception_excludes_original_and_adds_new_event():
     base_ical = build_ics.make_calendar("test", [base_event]).to_ical()
     assert b"EXDATE;TZID=Europe/London:20261020T090000" in base_ical
 
-    assert str(moved_event["summary"]) == "PE"
+    assert str(moved_event["summary"]) == "5HP: PE"
     assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 13, 0, tzinfo=build_ics.LONDON)
     assert moved_event["dtend"].dt == datetime(2026, 10, 21, 14, 0, tzinfo=build_ics.LONDON)
     # Derived from the parent's id + the ORIGINAL date - distinct from, but

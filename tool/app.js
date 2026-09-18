@@ -11,6 +11,9 @@ const YEAR_GROUPS = [
   { label: "Year 6", classes: [{ code: "6bt", label: "6BT" }, { code: "6r", label: "6R" }] },
 ];
 const FOSPS = { code: "fosps", label: "FOSPS" };
+// Restricted entry - description-editing only, see calendars.js's
+// WHOLE_SCHOOL and isDescriptionOnlyCalendar() on the server side.
+const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School" };
 
 const RECURRENCE_OPTIONS = {
   daily: { freq: "DAILY", interval: 1 },
@@ -29,6 +32,7 @@ function recurrenceToSelectValue(recurrence) {
 }
 
 const ALL_CALENDARS = [
+  { ...WHOLE_SCHOOL, yearLabel: "Whole School" },
   ...YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, yearLabel: g.label }))),
   { ...FOSPS, yearLabel: "Friends of St Paul's" },
 ];
@@ -47,6 +51,9 @@ const el = {
   appSection: document.getElementById("app-section"),
   activeCalendarName: document.getElementById("active-calendar-name"),
   switchCalendarButton: document.getElementById("switch-calendar-button"),
+  wholeSchoolNotice: document.getElementById("whole-school-notice"),
+  addSection: document.getElementById("add-section"),
+  wholeSchoolCardTemplate: document.getElementById("whole-school-event-template"),
   pasteTextarea: document.getElementById("paste-textarea"),
   extractButton: document.getElementById("extract-button"),
   extractError: document.getElementById("extract-error"),
@@ -63,6 +70,11 @@ const el = {
 };
 
 function init() {
+  const wholeSchoolOpt = document.createElement("option");
+  wholeSchoolOpt.value = WHOLE_SCHOOL.code;
+  wholeSchoolOpt.textContent = WHOLE_SCHOOL.label;
+  el.calendarSelect.appendChild(wholeSchoolOpt);
+
   for (const group of YEAR_GROUPS) {
     const optgroup = document.createElement("optgroup");
     optgroup.label = group.label;
@@ -104,6 +116,7 @@ function updateLoginButtonState() {
 }
 
 function calendarLabelFor(code) {
+  if (code === WHOLE_SCHOOL.code) return WHOLE_SCHOOL.label;
   const entry = ALL_CALENDARS.find((c) => c.code === code);
   return entry ? `${entry.yearLabel} — ${entry.label}` : code;
 }
@@ -149,7 +162,16 @@ async function handleLogin() {
   el.activeCalendarName.textContent = calendarLabelFor(calendar);
   el.loginSection.hidden = true;
   el.appSection.hidden = false;
-  renderExistingEvents(data.events);
+
+  const isWholeSchool = calendar === WHOLE_SCHOOL.code;
+  el.addSection.hidden = isWholeSchool;
+  el.wholeSchoolNotice.hidden = !isWholeSchool;
+
+  if (isWholeSchool) {
+    renderWholeSchoolEvents(data.events);
+  } else {
+    renderExistingEvents(data.events);
+  }
 }
 
 function handleSwitchCalendar() {
@@ -161,6 +183,8 @@ function handleSwitchCalendar() {
   el.existingCards.innerHTML = "";
   el.saveSuccess.hidden = true;
   el.appSection.hidden = true;
+  el.addSection.hidden = false;
+  el.wholeSchoolNotice.hidden = true;
   el.loginSection.hidden = false;
   updateDraftControlsVisibility();
   updateLoginButtonState();
@@ -383,6 +407,62 @@ async function handleSaveAll() {
 
   const listResult = await apiCall("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
   if (listResult.ok) renderExistingEvents(listResult.data.events);
+}
+
+function formatEventDate(iso) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// Whole School events aren't stored/edited like a normal manual event -
+// title/date/recurrence/etc all come from the school's own feed and can't
+// be changed here, so this renders a much simpler read-mostly card (see
+// #whole-school-event-template) instead of the full event-card-template
+// used everywhere else, with only a description textarea + one save button.
+function renderWholeSchoolEvents(events) {
+  el.existingLoading.hidden = true;
+  el.existingCards.innerHTML = "";
+  el.existingEmpty.hidden = events.length > 0;
+
+  for (const event of events) {
+    const node = el.wholeSchoolCardTemplate.content.firstElementChild.cloneNode(true);
+    node.querySelector(".ws-title").textContent = event.title;
+    node.querySelector(".ws-date").textContent = formatEventDate(event.date);
+    node.querySelector(".field-description").value = event.description || "";
+
+    const saveButton = node.querySelector(".card-save-button");
+    saveButton.addEventListener("click", () => handleUpdateWholeSchoolDescription(node, event.id, saveButton));
+
+    el.existingCards.appendChild(node);
+  }
+}
+
+async function handleUpdateWholeSchoolDescription(card, id, button) {
+  const errorEl = card.querySelector(".field-error");
+  errorEl.hidden = true;
+  const description = card.querySelector(".field-description").value.trim();
+
+  button.disabled = true;
+  const originalText = button.textContent;
+  button.textContent = "Saving…";
+
+  const { ok, data } = await apiCall("/api/events-update", {
+    calendar: state.calendar,
+    passcode: state.passcode,
+    id,
+    description,
+  });
+
+  button.disabled = false;
+  if (!ok) {
+    errorEl.textContent = (data && data.message) || "Couldn't save changes - try again.";
+    errorEl.hidden = false;
+    button.textContent = originalText;
+    return;
+  }
+  button.textContent = "Saved ✓";
+  setTimeout(() => {
+    button.textContent = originalText;
+  }, 2000);
 }
 
 function renderExistingEvents(events) {
