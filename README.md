@@ -29,6 +29,16 @@ An event never appears in more than one of these top-level buckets (it's
 either whole-school, or in one/both of a single year's two class calendars,
 never both whole-school *and* class-specific).
 
+**All 16 calendars are always generated and published**, regardless of
+what's promoted on the landing page - `docs/index.html` currently only
+gives Whole School and Reception (RR/RGP) their own subscribe table for
+launch; the other 13 are listed under a collapsed "Coming Soon" section
+with no working links yet (still visible/toggleable in the Preview
+Calendar though - see below). To launch a calendar, just add its row to
+the relevant subscribe table in `docs/index.html` and remove it from the
+Coming Soon list - no backend change needed, the `.ics` file has been
+there the whole time.
+
 ### How classification works
 
 The API gives no structured "which year/class is this for" field, so
@@ -149,11 +159,14 @@ next to "Today" re-fetches and redraws without a full page reload (via
 a class rep saves a new event, since the page itself has no way to know
 that happened otherwise.
 It's labelled "Preview Calendar" and lives in a collapsed-by-default
-`<details>`/`<summary>` below all three subscribe tables (not above them) -
-a first-time visitor hits "Find your child's class" first and can grab a
+`<details>`/`<summary>` below the subscribe tables (not above them) - a
+first-time visitor hits "Find your child's class" first and can grab a
 subscribe link immediately, with the interactive preview available lower
 down for anyone who wants to explore before committing, rather than 16
-toggles and a calendar grid being the first thing on the page. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
+toggles and a calendar grid being the first thing on the page. Note that
+the preview always shows toggles for all 16 calendars regardless of launch
+scope below - it's explicitly a preview of everything that could be added,
+not a promise of what's live. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
 anchor whose meaning depends on the active view (1st-of-month / that week's
 Monday / the exact day - see `normalizeAnchor()`); switching views keeps
 "today" in view when it's already visible, rather than always re-deriving
