@@ -6,12 +6,12 @@ METHOD:PUBLISH
 X-WR-CALNAME:St Paul's Enfield — Year 6 (6BT)
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:6L Collective Worship to parents
+SUMMARY:6BT: 6L Collective Worship to parents
 DTSTART:20261014T080500Z
 DTEND:20261014T090500Z
-DTSTAMP:20260918T100731Z
+DTSTAMP:20260918T151638Z
 UID:stpauls-867@school-calendar-feed
-LAST-MODIFIED:20260918T100731Z
+LAST-MODIFIED:20260918T151638Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=867
 END:VEVENT
