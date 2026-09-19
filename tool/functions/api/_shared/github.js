@@ -151,6 +151,31 @@ export async function commitJsonFile(env, path, defaultValue, mutatorFn, commitM
   throw lastError || new Error("commitJsonFile: exhausted retries");
 }
 
+const REBUILD_WORKFLOW = "update-calendar.yml";
+
+// Kicks off the "Update calendar feed" workflow so a change made through the
+// tool reaches the published .ics files in a few minutes instead of waiting
+// for the next 6-hourly run. Best-effort by design: by the time this runs
+// the change is already committed, so a failure here (missing "Actions:
+// Read and write" permission on the token, a GitHub blip) must never turn a
+// successful save into an error for the rep - the scheduled run still
+// picks it up. Returns whether the dispatch was accepted.
+export async function triggerRebuild(env) {
+  try {
+    const resp = await githubRequest(
+      env,
+      "POST",
+      `/repos/${REPO}/actions/workflows/${REBUILD_WORKFLOW}/dispatches`,
+      { ref: BRANCH }
+    );
+    if (resp.status === 204) return true;
+    console.error("Rebuild dispatch failed:", resp.status, await resp.text());
+  } catch (err) {
+    console.error("Rebuild dispatch failed:", err);
+  }
+  return false;
+}
+
 // calendar-events-specific wrapper around commitJsonFile - keeps the
 // `{ events, ...extra }` shape every existing caller (save/update/delete)
 // already uses.

@@ -160,6 +160,30 @@ def test_load_whole_school_overrides_reads_json(tmp_path, monkeypatch):
     assert build_ics.load_whole_school_overrides() == {"857": "Updated description"}
 
 
+def test_prune_whole_school_overrides_drops_ids_missing_from_feed():
+    overrides = {"857": "kept", "999": "school deleted this event"}
+    raw_events = [{"id": 857}, {"id": 858}]
+    assert build_ics.prune_whole_school_overrides(overrides, raw_events) == {"857": "kept"}
+
+
+def test_prune_whole_school_overrides_keeps_all_when_feed_has_them():
+    overrides = {"857": "a", "858": "b"}
+    assert build_ics.prune_whole_school_overrides(overrides, [{"id": 857}, {"id": 858}]) == overrides
+
+
+def test_prune_whole_school_overrides_empty_feed_prunes_nothing():
+    # A school-side outage returning [] must not wipe every saved override.
+    overrides = {"857": "a"}
+    assert build_ics.prune_whole_school_overrides(overrides, []) == overrides
+
+
+def test_save_whole_school_overrides_matches_tool_format(tmp_path, monkeypatch):
+    path = tmp_path / "overrides.json"
+    monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", path)
+    build_ics.save_whole_school_overrides({"857": "Parking – use the side gate"})
+    assert path.read_text() == '{\n  "857": "Parking – use the side gate"\n}\n'
+
+
 # --------------------------------------------------------------------------
 # build_manual_event() - multi-day date math + the recurrence/DST fix
 # --------------------------------------------------------------------------

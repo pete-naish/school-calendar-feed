@@ -13,6 +13,10 @@ CLASS_PASSWORDS={"whole-school":"changeme","rr":"changeme","rgp":"changeme","1ms
 # Anthropic API key, used by /api/parse.
 ANTHROPIC_API_KEY=sk-ant-...
 
-# Fine-grained GitHub PAT scoped to ONLY this repo, "Contents" permission set
-# to Read and write. Used by /api/save, /api/events-update, /api/events-delete.
+# Fine-grained GitHub PAT scoped to ONLY this repo, with "Contents" and
+# "Actions" permissions both set to Read and write. Used by /api/save,
+# /api/events-update, /api/events-delete (Contents: commit the change;
+# Actions: dispatch the "Update calendar feed" workflow so it's published in
+# minutes - without Actions access saves still work, they just wait for the
+# 6-hourly run).
 GITHUB_TOKEN=github_pat_...

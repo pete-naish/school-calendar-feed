@@ -1,6 +1,6 @@
 import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
-import { commitManualEvents } from "./_shared/github.js";
+import { commitManualEvents, triggerRebuild } from "./_shared/github.js";
 import { commitErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
@@ -50,7 +50,7 @@ export async function onRequestPost({ request, env }) {
     if (result.error) {
       return jsonResponse(result, 404);
     }
-    return jsonResponse({ deleted: true });
+    return jsonResponse({ deleted: true, rebuild_triggered: await triggerRebuild(env) });
   } catch (err) {
     return jsonResponse(commitErrorResponse(err), 502);
   }

@@ -172,7 +172,9 @@ tool's to control; adding and deleting events is disabled entirely for
 this entry. Saved descriptions live in `data/whole_school_overrides.json`
 (`{"<school event id>": "override text"}`, keyed by the id embedded in
 that event's own UID) and are applied by `scripts/build_ics.py` on the
-next build, same lag as every other change made through the tool.
+next build - triggered straight after a save, see the tool's "Publishing
+changes" section. An override whose event has vanished from the school's feed
+is pruned on that same build.
 
 ## Calendar preview (`docs/index.html`)
 
@@ -216,8 +218,10 @@ device timezone.
 ## How it works
 
 - `.github/workflows/update-calendar.yml` runs `scripts/build_ics.py` every 6
-  hours via GitHub Actions, and commits `docs/calendars/*.ics` if anything
-  changed.
+  hours via GitHub Actions - and immediately after any change made through
+  the class rep tool - and commits `docs/calendars/*.ics` if anything
+  changed (plus `data/whole_school_overrides.json` when stale overrides were
+  pruned, see below).
 - GitHub Pages serves `docs/` as a static site, so the feeds are published at
   `https://pete-naish.github.io/school-calendar-feed/calendars/<name>.ics`.
 - `docs/index.html` is a landing page listing every calendar with subscribe

@@ -110,8 +110,22 @@ written to `data/whole_school_overrides.json`
 (`{"<school event id>": "override text"}`) via `_shared/wholeSchoolOverrides.js`;
 clearing the box back to empty removes the override entirely (reverting to
 whatever the school's own feed says) rather than storing `""`, which
-`build_ics.py` applies on the next build - same ~6 hour lag as every other
-change made through this tool.
+`build_ics.py` applies on the next build (see "Publishing changes" below). An
+override whose school event has since disappeared from the school's feed
+(deleted, or deleted and recreated under a new id) is pruned from the file by
+`build_ics.py` on the next build.
+
+## Publishing changes
+
+Every add, edit or delete (in any calendar, including a Whole School
+description) commits to the repo and then dispatches the `Update calendar
+feed` GitHub Actions workflow (`triggerRebuild()` in `_shared/github.js`), so
+the change is in the published `.ics` within a few minutes rather than
+waiting for the 6-hourly scheduled run. The dispatch is best-effort: if it
+fails (typically the token lacking **Actions: Read and write**), the save
+still succeeds, the response carries `rebuild_triggered: false`, the save
+confirmation says to expect up to 6 hours, and the scheduled run publishes it
+as before. A save where every event was a duplicate doesn't trigger one.
 
 ## Deploying
 
@@ -124,7 +138,9 @@ change made through this tool.
      to a passcode you choose (see `.dev.vars.example` for the shape).
    - `ANTHROPIC_API_KEY` - an Anthropic API key.
    - `GITHUB_TOKEN` - a fine-grained GitHub PAT, scoped to only this repo,
-     with **Contents: Read and write** permission. Create one at
+     with **Contents: Read and write** and **Actions: Read and write**
+     permissions (Actions is what lets a save trigger a rebuild, see
+     "Publishing changes"). Create one at
      [github.com/settings/personal-access-tokens](https://github.com/settings/personal-access-tokens).
 3. Deploy. The tool will be live at the Pages project's URL (or a custom
    domain, if you attach one).

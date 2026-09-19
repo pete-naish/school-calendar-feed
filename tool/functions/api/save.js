@@ -1,7 +1,7 @@
 import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput } from "./_shared/validate.js";
-import { commitManualEvents, dedupeKey, generateEventId } from "./_shared/github.js";
+import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.js";
 import { commitErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
@@ -77,7 +77,14 @@ export async function onRequestPost({ request, env }) {
       `Add event(s) to ${calendar}`
     );
 
-    return jsonResponse({ saved: result.saved, skipped_duplicates: result.skippedDuplicates, commit_sha: result.commitSha });
+    // Every event a duplicate -> nothing appended, nothing new to publish.
+    const rebuildTriggered = result.saved > 0 ? await triggerRebuild(env) : false;
+    return jsonResponse({
+      saved: result.saved,
+      skipped_duplicates: result.skippedDuplicates,
+      commit_sha: result.commitSha,
+      rebuild_triggered: rebuildTriggered,
+    });
   } catch (err) {
     return jsonResponse(commitErrorResponse(err), 502);
   }

@@ -564,6 +564,31 @@ def load_whole_school_overrides() -> dict[str, str]:
         return json.load(f)
 
 
+def prune_whole_school_overrides(overrides: dict[str, str], raw_events: list[dict]) -> dict[str, str]:
+    """Drop overrides whose school event id no longer appears in the fetched
+    feed - the school deleted (or deleted and recreated, which gives it a new
+    id) the event, so the entry can never apply again and would otherwise sit
+    in the file forever.
+
+    An override for an event that's merely been reclassified into a class
+    calendar is kept: the event still exists and could be reclassified back.
+    An empty fetch prunes nothing, so a school-side outage returning [] can't
+    wipe every override."""
+    if not raw_events:
+        return overrides
+    live_ids = {str(raw["id"]) for raw in raw_events}
+    return {event_id: text for event_id, text in overrides.items() if event_id in live_ids}
+
+
+def save_whole_school_overrides(overrides: dict[str, str]) -> None:
+    # Same formatting as the class rep tool's own commits (2-space indent,
+    # trailing newline, non-ASCII left as-is) so a prune and a tool edit
+    # never produce a whitespace-only diff against each other.
+    with WHOLE_SCHOOL_OVERRIDES_PATH.open("w") as f:
+        json.dump(overrides, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+
 def make_calendar(name: str, events: list[Event]) -> Calendar:
     cal = Calendar()
     cal.add("prodid", f"-//{UID_DOMAIN}//stpauls-enfield//EN")
@@ -585,7 +610,12 @@ def make_calendar(name: str, events: list[Event]) -> Calendar:
 def main() -> None:
     raw_events = fetch_events()
     closure_dates = collect_closure_dates(raw_events)
-    whole_school_overrides = load_whole_school_overrides()
+    loaded_overrides = load_whole_school_overrides()
+    whole_school_overrides = prune_whole_school_overrides(loaded_overrides, raw_events)
+    if whole_school_overrides != loaded_overrides:
+        for stale_id in sorted(loaded_overrides.keys() - whole_school_overrides.keys()):
+            print(f"Pruned description override for school event {stale_id} (no longer in the feed)", file=sys.stderr)
+        save_whole_school_overrides(whole_school_overrides)
 
     seen_ids: set[int] = set()
     whole_school_events: list[Event] = []

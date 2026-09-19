@@ -400,7 +400,8 @@ async function handleSaveAll() {
   }
 
   const skipped = data.skipped_duplicates ? ` (${data.skipped_duplicates} duplicate skipped)` : "";
-  el.saveSuccess.textContent = `${data.saved} event(s) saved${skipped}. They'll appear in the calendar within 6 hours.`;
+  const wait = data.rebuild_triggered ? "within a few minutes" : "within 6 hours";
+  el.saveSuccess.textContent = `${data.saved} event(s) saved${skipped}. They'll appear in the calendar ${wait}.`;
   el.saveSuccess.hidden = false;
   el.draftCards.innerHTML = "";
   updateDraftControlsVisibility();
