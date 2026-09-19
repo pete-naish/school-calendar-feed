@@ -550,14 +550,36 @@
   font-weight: 600;
 }
 
+/* Titles wrap rather than truncate: month view clamps at three lines (the
+   ellipsis only shows for a rare longer title), week view has the height
+   to show them in full, and narrow screens - where a column is ~50px and
+   wrapping would give ragged chips - fall back to one line. The full
+   title is also on the chip's title attribute. */
 .cal-chip {
   font-size: 0.7rem;
+  line-height: 1.25;
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
   min-width: 0;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.cal-grid--week .cal-chip {
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .cal-chip,
+  .cal-grid--week .cal-chip {
+    display: block;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    text-overflow: ellipsis;
+  }
 }
 
 .cal-more {

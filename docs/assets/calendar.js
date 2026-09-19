@@ -511,6 +511,7 @@ function buildDayCell(cellDate, { isOtherMonth = false, maxChips = MAX_CHIPS_PER
     chip.style.background = `var(${inst.colorVar})`;
     chip.style.color = `var(${inst.colorVar}-text)`;
     chip.textContent = inst.title;
+    chip.title = inst.title;
     cell.appendChild(chip);
   }
   if (dayEvents.length > maxChips) {
