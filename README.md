@@ -39,16 +39,17 @@ JSON) ever has the prefix baked in. Whole-school events are never prefixed,
 since a parent only ever gets them from the one whole-school calendar.
 
 **All 16 calendars are always generated and published**, regardless of
-what's promoted on the landing page - `docs/index.html` currently only
-gives Whole School and Reception (RR/RGP) their own subscribe table for
-launch; the other 13 are listed under a collapsed "Coming Soon" section
-with no working links yet, and no toggle in the Preview Calendar either
-(see below). To launch a calendar, add its row to the relevant subscribe
-table in `docs/index.html`, remove its `<li>` from the Coming Soon list
-(it carries `data-webcal`/`data-ics` attributes with the values to reuse
-for the new row), and add its `code` to `LAUNCHED_CALENDARS` in
-`docs/assets/calendar.js` so it gets a Preview Calendar toggle too - no
-backend change needed, the `.ics` file has been there the whole time.
+what's launched on the landing page. `docs/index.html` has no per-calendar
+markup: `docs/assets/calendar.js` renders one rail row per code in
+`LAUNCHED_CALENDARS` (a preview checkbox), three platform buttons (Apple
+Calendar / Google Calendar / Outlook) that add whichever calendars are
+ticked - one feed per click, so several ticked fan out to a list - plus
+plain feed links in the facts strip, all with URLs derived from wherever
+the page is served, and names the rest in a one-line "coming soon" note.
+Currently launched:
+Whole School and Reception (RR/RGP). To launch a calendar, add its `code`
+to `LAUNCHED_CALENDARS` - no other change needed, the `.ics` file has been
+there the whole time.
 
 ### How classification works
 
@@ -185,27 +186,24 @@ next to "Today" re-fetches and redraws without a full page reload (via
 `loadAllCalendarData()`, shared with the initial load) - useful right after
 a class rep saves a new event, since the page itself has no way to know
 that happened otherwise.
-It's labelled "Preview Calendar" and lives in a collapsed-by-default
-`<details>`/`<summary>` below the subscribe tables (not above them) - a
-first-time visitor hits "Find your child's class" first and can grab a
-subscribe link immediately, with the interactive preview available lower
-down for anyone who wants to explore before committing, rather than 16
-toggles and a calendar grid being the first thing on the page. The preview
-only offers a toggle for a calendar that's actually launched below
-(`LAUNCHED_CALENDARS` in `calendar.js`) - a Coming Soon calendar has no
-subscribe link yet either, so a checkbox for it would be more confusing
-than useful; its `.ics` is still fetched and ready the moment it's
-un-hidden, nothing else needs to change to launch one. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
+It sits directly under the hero copy as the page's visual - a first-time
+visitor sees what they'd get before they pick a class. The class tiles in
+the calendar header are both the preview toggles and the subscribe
+actions, so there is no separate subscribe section; the hero's "Add a
+class to your calendar" button scrolls to them. Only launched calendars
+get a tile (`LAUNCHED_CALENDARS` in `calendar.js`); a not-yet-launched
+calendar's `.ics` is still fetched and ready the moment it's launched,
+nothing else needs to change. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
 anchor whose meaning depends on the active view (1st-of-month / that week's
 Monday / the exact day - see `normalizeAnchor()`); switching views keeps
 "today" in view when it's already visible, rather than always re-deriving
 from the current anchor. Each calendar has an on/off toggle, remembered
 per-browser in `localStorage` (default: Whole School + FOSPS on, classes
-off) - the active view, and whether the `<details>` itself is open or
-collapsed, are remembered the same way. Colors are one validated
-categorical hue per year group + FOSPS, "Whole School" as a neutral grey
-rather than a 9th generated hue (`node scripts/validate_palette.js` from the
-`dataviz` skill; see `docs/assets/calendar.css` for the values).
+off) - the active view is remembered the same way. Colors are one
+categorical OKLCH hue per year group + FOSPS at a shared lightness and
+chroma, with a lighter tint for the second class in each year, and
+"Everyone" (whole school) as a neutral grey rather than a 9th hue (see
+`docs/assets/calendar.css` for the values and contrast notes).
 
 Because `ical.js`'s own offset math for an `add_missing_timezones()`-style
 (RDATE-list) `VTIMEZONE` doesn't reliably resolve the correct side of a DST

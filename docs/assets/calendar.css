@@ -1,63 +1,85 @@
-/* Categorical palette (validated: node scripts/validate_palette.js, dataviz skill) -
-   one hue per year group + FOSPS (8 slots), "Whole School" is a neutral grey
-   rather than a 9th generated hue, since it's structurally the "everyone" bucket
-   rather than a peer category. */
+/* Categorical palette, built in OKLCH. Reception wears the school colours
+   from the crest: RR the red, RGP the yellow (dark text). The other year
+   groups and FOSPS sit on one ring at the same lightness (0.53) and chroma
+   (0.12; teal sits just past the sRGB edge and is gamut-mapped), keeping
+   clear of red and yellow, so every chip carries the same visual weight and
+   white text clears 4.5:1. "Everyone" (whole school) is a neutral grey
+   rather than another hue, since it's structurally the "everyone" bucket,
+   not a peer category. */
 :root {
-  --cal-neutral: #52514e;
-  --cal-1: #2a78d6; /* Reception */
-  --cal-2: #eb6834; /* Year 1 */
-  --cal-3: #1baf7a; /* Year 2 */
-  --cal-4: #eda100; /* Year 3 */
-  --cal-5: #e87ba4; /* Year 4 */
-  --cal-6: #008300; /* Year 5 */
-  --cal-7: #4a3aa7; /* Year 6 */
-  --cal-8: #e34948; /* FOSPS */
-  --cal-surface: #f7f7f7;
+  --cal-neutral: #171717; /* Everyone: the page ink, same as the checkbox */
+  --cal-1: oklch(0.53 0.19 28);  /* Reception RR - school red (#e02225, darkened for white text) */
+  --cal-2: oklch(0.53 0.12 235); /* Year 1 - blue */
+  --cal-3: oklch(0.53 0.12 160); /* Year 2 - green */
+  --cal-4: oklch(0.53 0.12 305); /* Year 3 - violet */
+  --cal-5: oklch(0.53 0.12 55);  /* Year 4 - orange */
+  --cal-6: oklch(0.53 0.12 195); /* Year 5 - teal */
+  --cal-7: oklch(0.53 0.12 270); /* Year 6 - indigo */
+  --cal-8: oklch(0.53 0.12 340); /* FOSPS - magenta */
+  --cal-surface: #f2f2f2;
   --cal-surface-alt: #ffffff;
-  --cal-border: #dddddd;
+  --cal-surface-weekend: #fafafa;
+  --cal-border: #ebebeb;
   --cal-muted: #666666;
-  --cal-fg: #1a1a1a;
-  --cal-today-ring: #1a1a1a;
-  --link-color: #1a5fb4; /* 6.3:1 vs white - the default browser link blue was ~4:1 and unreadable in dark mode */
+  --cal-fg: #171717;
+  --cal-today-ring: #171717;
+  --cal-focus: #0070f3;
+  --link-color: #1a5fb4;
 
-  /* Per-slot chip TEXT color - not a blanket white. Computed via WCAG
-     contrast (whichever of near-black/white wins against that slot's own
-     hex, light and dark computed separately since the hexes differ between
-     modes); a couple of slots land in the high 3s/low 4s even at best,
-     which is what you get from a hue-first categorical palette - acceptable
-     for a small chip label that's never the only way to read the event
-     (title is always in the day-detail panel too). */
+  /* Chip text: white on every solid in light mode (all sit at L 0.53). */
   --chip-text-dark: #14140f;
   --chip-text-light: #ffffff;
   --cal-neutral-text: var(--chip-text-light);
   --cal-1-text: var(--chip-text-light);
-  --cal-2-text: var(--chip-text-dark);
-  --cal-3-text: var(--chip-text-dark);
-  --cal-4-text: var(--chip-text-dark);
-  --cal-5-text: var(--chip-text-dark);
+  --cal-2-text: var(--chip-text-light);
+  --cal-3-text: var(--chip-text-light);
+  --cal-4-text: var(--chip-text-light);
+  --cal-5-text: var(--chip-text-light);
   --cal-6-text: var(--chip-text-light);
   --cal-7-text: var(--chip-text-light);
-  --cal-8-text: var(--chip-text-dark);
+  --cal-8-text: var(--chip-text-light);
+
+  /* Second class in each year group: a lighter tint of the year's hue,
+     mixed in OKLCH so the step in lightness is even across hues. The two
+     classes stay recognisably one year while telling apart in the grid
+     and the rail. Dark text on every tint (they land around L 0.78). */
+  --cal-1-b: color-mix(in oklch, var(--cal-1) 55%, white);
+  --cal-2-b: color-mix(in oklch, var(--cal-2) 55%, white);
+  --cal-3-b: color-mix(in oklch, var(--cal-3) 55%, white);
+  --cal-4-b: color-mix(in oklch, var(--cal-4) 55%, white);
+  --cal-5-b: color-mix(in oklch, var(--cal-5) 55%, white);
+  --cal-6-b: color-mix(in oklch, var(--cal-6) 55%, white);
+  --cal-7-b: color-mix(in oklch, var(--cal-7) 55%, white);
+  --cal-1-b: oklch(0.87 0.17 98); /* Reception RGP - school yellow (#f6eb41, deepened a touch so the dot reads on white) */
+  --cal-1-b-text: var(--chip-text-dark);
+  --cal-2-b-text: var(--chip-text-dark);
+  --cal-3-b-text: var(--chip-text-dark);
+  --cal-4-b-text: var(--chip-text-dark);
+  --cal-5-b-text: var(--chip-text-dark);
+  --cal-6-b-text: var(--chip-text-dark);
+  --cal-7-b-text: var(--chip-text-dark);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --cal-neutral: #c3c2b7;
-    --cal-1: #3987e5;
-    --cal-2: #d95926;
-    --cal-3: #199e70;
-    --cal-4: #c98500;
-    --cal-5: #d55181;
-    --cal-6: #008300;
-    --cal-7: #9085e9;
-    --cal-8: #e66767;
+  :root:not([data-theme="light"]) {
+    --cal-neutral: #ededed;
+    --cal-1: oklch(0.72 0.17 28);
+    --cal-2: oklch(0.74 0.13 235);
+    --cal-3: oklch(0.74 0.13 160);
+    --cal-4: oklch(0.74 0.13 305);
+    --cal-5: oklch(0.74 0.13 55);
+    --cal-6: oklch(0.74 0.13 195);
+    --cal-7: oklch(0.74 0.13 270);
+    --cal-8: oklch(0.74 0.13 340);
     --cal-surface: #1a1a1a;
-    --cal-surface-alt: #222222;
-    --cal-border: #3a3a3a;
-    --cal-muted: #a0a0a0;
+    --cal-surface-alt: #0a0a0a;
+    --cal-surface-weekend: #111111;
+    --cal-border: #2e2e2e;
+    --cal-muted: #a1a1a1;
     --cal-fg: #ededed;
     --cal-today-ring: #ededed;
-    --link-color: #8ab4f8; /* 8.6:1 vs #16161a */
+    --cal-focus: #52a8ff;
+    --link-color: #8ab4f8;
 
     --cal-neutral-text: var(--chip-text-dark);
     --cal-1-text: var(--chip-text-dark);
@@ -65,44 +87,238 @@
     --cal-3-text: var(--chip-text-dark);
     --cal-4-text: var(--chip-text-dark);
     --cal-5-text: var(--chip-text-dark);
-    --cal-6-text: var(--chip-text-light);
+    --cal-6-text: var(--chip-text-dark);
     --cal-7-text: var(--chip-text-dark);
     --cal-8-text: var(--chip-text-dark);
   }
 }
+:root[data-theme="dark"] {
+    --cal-neutral: #ededed;
+    --cal-1: oklch(0.72 0.17 28);
+    --cal-2: oklch(0.74 0.13 235);
+    --cal-3: oklch(0.74 0.13 160);
+    --cal-4: oklch(0.74 0.13 305);
+    --cal-5: oklch(0.74 0.13 55);
+    --cal-6: oklch(0.74 0.13 195);
+    --cal-7: oklch(0.74 0.13 270);
+    --cal-8: oklch(0.74 0.13 340);
+    --cal-surface: #1a1a1a;
+    --cal-surface-alt: #0a0a0a;
+    --cal-surface-weekend: #111111;
+    --cal-border: #2e2e2e;
+    --cal-muted: #a1a1a1;
+    --cal-fg: #ededed;
+    --cal-today-ring: #ededed;
+    --cal-focus: #52a8ff;
+    --link-color: #8ab4f8;
 
-#calendar-preview {
-  margin-top: 2rem;
+    --cal-neutral-text: var(--chip-text-dark);
+    --cal-1-text: var(--chip-text-dark);
+    --cal-2-text: var(--chip-text-dark);
+    --cal-3-text: var(--chip-text-dark);
+    --cal-4-text: var(--chip-text-dark);
+    --cal-5-text: var(--chip-text-dark);
+    --cal-6-text: var(--chip-text-dark);
+    --cal-7-text: var(--chip-text-dark);
+    --cal-8-text: var(--chip-text-dark);
+  }
+
+/* No box: the calendar sits on the page canvas. A narrow rail on the left
+   holds the calendar list (the calendar-app layout); the toolbar and grid
+   take the rest. Spacing and alignment do the separating; only the grid
+   draws lines. */
+.cal-card {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+  background: var(--cal-surface-alt);
 }
 
-.cal-toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1rem;
-  margin: 0.8rem 0 1.2rem;
-  padding: 0;
-  list-style: none;
+.cal-rail {
+  display: grid;
+  gap: 1.25rem;
+  padding-top: 0.25rem;
 }
 
-.cal-toggle-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.cal-toggle-group-label {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.cal-rail h2 {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--cal-muted);
 }
 
-.cal-toggle {
+.cal-rail-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--cal-muted);
+  max-width: 22ch;
+  text-wrap: pretty;
+}
+
+.cal-main {
+  min-width: 0;
+}
+
+@media (max-width: 800px) {
+  .cal-card {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .cal-rail-note {
+    max-width: none;
+  }
+}
+
+/* One row per launched calendar: a real, visible checkbox (preview on/off
+   and, below, what the platform buttons act on) tinted in the calendar's
+   colour so it doubles as the legend, and its name. */
+.cal-tiles {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+}
+
+.cal-tile {
+  min-width: 0;
+}
+
+.cal-tile-toggle {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.88rem;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--cal-fg);
   cursor: pointer;
+  user-select: none;
+}
+
+.cal-tile-toggle input {
+  appearance: auto;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--tile-color, var(--cal-fg));
+  cursor: pointer;
+}
+
+.cal-tile-toggle input:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 2px;
+}
+
+.cal-tile-toggle .mono {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 500;
+}
+
+/* Platform buttons: one per calendar app, acting on the ticked calendars.
+   Soft-surface, no border. A single ticked calendar makes each a direct
+   link; several make it a disclosure listing one link per calendar. */
+.cal-add-group {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cal-add-buttons {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+}
+
+.cal-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  padding: 0 0.75rem 0 0.6rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--cal-surface);
+  color: var(--cal-fg);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
+}
+
+.cal-add::before {
+  content: "+";
+  font-size: 1rem;
+  line-height: 1;
+  margin-top: -1px;
+}
+
+.cal-add:hover,
+.cal-add[aria-expanded="true"] {
+  background: var(--cal-border);
+}
+
+.cal-add[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
+.cal-add:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 2px;
+}
+
+.cal-add-list {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.25rem 0 0 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.cal-add-list p {
+  margin: 0 0 0.15rem;
+  color: var(--cal-muted);
+}
+
+.cal-add-list a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--cal-fg);
+  font-weight: 500;
+  text-decoration: none;
+  min-height: 1.75rem;
+}
+
+.cal-add-list a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Plain feed addresses in the facts strip, for apps not covered above. */
+#ics-links a {
+  color: inherit;
+}
+
+#ics-links a + a::before {
+  content: " · ";
+  color: var(--cal-muted);
+}
+
+@media (max-width: 800px) {
+  /* Stacked above the toolbar: buttons in a row where they fit. */
+  .cal-add-buttons {
+    grid-template-columns: repeat(auto-fit, minmax(10rem, max-content));
+  }
 }
 
 .cal-dot {
@@ -123,26 +339,61 @@
 .dot-year6 { background: var(--cal-7); }
 .dot-fosps { background: var(--cal-8); }
 
+/* --- Toolbar --- */
 .cal-nav {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-bottom: 0.6rem;
+  gap: 0.5rem 1rem;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+
+.cal-nav-dates,
+.cal-nav-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .cal-nav button {
-  background: var(--cal-surface-alt);
-  border: 1px solid var(--cal-border);
+  background: transparent;
+  border: 0;
   color: var(--cal-fg);
   border-radius: 6px;
-  padding: 0.3rem 0.7rem;
+  height: 2rem;
+  padding: 0 0.75rem;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.cal-nav button:hover {
+  background: var(--cal-surface);
+}
+
+.cal-nav button:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 2px;
+}
+
+#cal-prev,
+#cal-next {
+  width: 2rem;
+  padding: 0;
+  text-align: center;
+  font-size: 1.1rem;
 }
 
 #cal-month-label {
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
   /* Fixed, not min-width: day labels ("Wednesday, 17 September 2026") are
      much longer than month labels ("September 2026") - with only a
      min-width the box still grows/shrinks with the text, which shoves the
@@ -152,35 +403,54 @@
   text-align: center;
 }
 
-#cal-today {
-  margin-left: auto;
+@media (max-width: 600px) {
+  #cal-month-label {
+    width: auto;
+    flex: 1;
+    order: -1;
+    flex-basis: 100%;
+    text-align: left;
+  }
 }
 
+/* Segmented control on a soft surface; the active segment is filled. */
 .cal-view-switch {
   display: flex;
-  border: 1px solid var(--cal-border);
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--cal-surface);
+}
+
+.cal-nav .cal-view-switch .view-button {
+  background: transparent;
+  color: var(--cal-muted);
+  height: calc(2rem - 4px);
+  padding: 0 0.75rem;
   border-radius: 6px;
-  overflow: hidden;
 }
 
-.cal-view-switch .view-button {
-  background: var(--cal-surface-alt);
-  border: none;
-  border-radius: 0;
-  border-left: 1px solid var(--cal-border);
+.cal-nav .cal-view-switch .view-button:hover {
   color: var(--cal-fg);
-  padding: 0.3rem 0.7rem;
-  cursor: pointer;
-  font-size: 0.85rem;
+  background: transparent;
 }
 
-.cal-view-switch .view-button:first-child {
-  border-left: none;
-}
-
-.cal-view-switch .view-button.active {
+.cal-nav .cal-view-switch .view-button.active {
   background: var(--cal-fg);
   color: var(--cal-surface-alt);
+}
+
+.cal-nav .cal-view-switch .view-button:focus-visible {
+  outline-offset: -2px;
+}
+
+/* --- Grid --- */
+.cal-card-body {
+  padding: 0;
+}
+
+.cal-status {
+  margin: 0 0 0.75rem;
 }
 
 /* #calendar-grid[hidden] must out-rank .cal-grid's own `display: grid` -
@@ -202,7 +472,7 @@
   gap: 1px;
   background: var(--cal-border);
   border: 1px solid var(--cal-border);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   width: 100%;
   box-sizing: border-box;
@@ -211,46 +481,52 @@
 .cal-weekday {
   background: var(--cal-surface);
   color: var(--cal-muted);
-  font-size: 0.7rem;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 500;
   text-align: center;
-  padding: 0.3rem 0;
+  padding: 0.45rem 0;
 }
 
 .cal-day {
   background: var(--cal-surface-alt);
-  min-height: 4.5rem;
+  min-height: 5.5rem;
   min-width: 0;
-  padding: 0.25rem;
+  padding: 0.35rem;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   box-sizing: border-box;
   overflow: hidden;
+  transition: background-color 150ms ease;
+}
+
+@media (max-width: 600px) {
+  .cal-day {
+    min-height: 4rem;
+    padding: 0.25rem;
+  }
 }
 
 .cal-day:focus-visible {
   /* calendar.css's own token (not index.html's --link-color) - keeps this
      stylesheet self-contained rather than reaching into the host page's
      namespace. */
-  outline: 2px solid var(--cal-today-ring);
+  outline: 2px solid var(--cal-focus);
   outline-offset: -2px;
 }
 
 /* Week view: same 7-column grid, just one row and more vertical room per
    day since there are only 7 cells to fit instead of 42. */
 .cal-grid--week .cal-day {
-  min-height: 12rem;
+  min-height: 14rem;
 }
 
 /* Day view: a single day's events, full width, no truncation - reuses the
    same .day-event row markup as the day-detail dialog. */
-.cal-day-agenda {
-  border: 1px solid var(--cal-border);
-  border-radius: 8px;
-  padding: 0 1rem;
-  background: var(--cal-surface-alt);
+.cal-day:nth-child(7n + 6),
+.cal-day:nth-child(7n) {
+  background: var(--cal-surface-weekend);
 }
 
 .cal-day:hover {
@@ -279,8 +555,8 @@
 }
 
 .cal-chip {
-  font-size: 0.68rem;
-  padding: 0.05rem 0.3rem;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
   border-radius: 4px;
   min-width: 0;
   white-space: nowrap;
@@ -293,46 +569,180 @@
   color: var(--cal-muted);
 }
 
+/* Day dialog: a floating sheet (shadow earned, no border), weekday label
+   over the date, an x to close, then the event rows. */
 #day-dialog {
-  border: 1px solid var(--cal-border);
-  border-radius: 10px;
-  padding: 1.2rem;
-  max-width: 420px;
-  width: 90vw;
+  width: min(28rem, calc(100vw - 2rem));
+  max-height: min(80vh, 40rem);
+  padding: 1.25rem 1.5rem 1.5rem;
+  border: 0;
+  border-radius: 12px;
   color: var(--cal-fg);
   background: var(--cal-surface-alt);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 #day-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.32);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #day-dialog[open] {
+    animation: dialog-in 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+.day-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+#day-dialog h3 {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--cal-fg);
+}
+
+.day-dialog-weekday {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--cal-muted);
+}
+
+#day-dialog-close {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  margin: -0.25rem -0.5rem 0 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cal-muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+#day-dialog-close:hover {
+  background: var(--cal-surface);
+  color: var(--cal-fg);
+}
+
+#day-dialog-close:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 2px;
+}
+
+/* Event rows: time column, body, and a bar in the calendar's colour. */
+.day-events {
+  display: grid;
+  gap: 0.25rem;
 }
 
 .day-event {
-  padding: 0.6rem 0;
-  border-top: 1px solid var(--cal-border);
+  position: relative;
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0 1rem;
+  padding: 0.6rem 0 0.6rem 1rem;
 }
 
-.day-event:first-child {
-  border-top: none;
-}
-
-.day-event-title {
-  font-weight: 600;
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
+.day-event::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--event-color, var(--cal-fg));
 }
 
 .day-event-time {
-  font-size: 0.82rem;
+  display: grid;
+  align-content: start;
+  gap: 0.1rem;
+  padding-top: 0.15rem;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  color: var(--cal-muted);
+}
+
+.day-event-time span:first-child {
+  color: var(--cal-fg);
+  font-weight: 500;
+}
+
+.day-event-body {
+  min-width: 0;
+}
+
+.day-event-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--cal-fg);
+  text-wrap: pretty;
+}
+
+.day-event-meta {
+  margin-top: 0.1rem;
+  font-size: 0.8125rem;
   color: var(--cal-muted);
 }
 
 .day-event-desc {
-  font-size: 0.85rem;
-  margin-top: 0.2rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--cal-fg);
+  text-wrap: pretty;
 }
 
-#day-dialog-close {
-  margin-top: 0.8rem;
+.day-event-link {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cal-fg);
+  text-decoration: underline;
+  text-decoration-color: var(--cal-border);
+  text-underline-offset: 0.2em;
+}
+
+.day-event-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Day view agenda on the page reuses the rows with no sheet around them. */
+.cal-day-agenda {
+  display: grid;
+  gap: 0.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-add,
+  .cal-ics,
+  .cal-nav button,
+  .cal-day {
+    transition: none;
+  }
 }
