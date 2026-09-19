@@ -128,13 +128,13 @@
     }
     .theme-toggle:hover { background: var(--code-bg); color: var(--fg); }
     .theme-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-    /* Show the icon for the mode you would switch to: moon in light, sun in dark. */
-    .theme-toggle .icon-sun { display: none; }
-    :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
-    :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+    /* Show the icon for the current mode: sun in light, moon in dark. */
+    .theme-toggle .icon-moon { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
+    :root[data-theme="dark"] .theme-toggle .icon-sun { display: none; }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: block; }
-      :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: none; }
+      :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: block; }
+      :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: none; }
     }
     .eyebrow img { width: auto; height: 1.75rem; }
     .hero-copy .hero-top + h1 { margin-top: var(--s4); }
@@ -228,8 +228,8 @@
 
     <main>
       <dl class="facts">
-        <div><dt>Source</dt><dd>The school's own <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">public calendar</a>, checked every six hours. Free, no account.</dd></div>
-        <div><dt>Adding a calendar</dt><dd>Your calendar opens the subscription for confirmation. Once added, new dates sync automatically.</dd></div>
+        <div><dt>Source</dt><dd>Whole School events come from the school's own <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">public calendar</a>, checked every six hours. Class calendars are updated by Class Reps. This calendar is provided free of charge as a convenience. Humans can make mistakes.</dd></div>
+        <div><dt>Adding a calendar</dt><dd>Your calendar app opens the subscription for confirmation. Once added, new dates sync automatically.</dd></div>
         <div><dt>Other apps</dt><dd>Paste a plain feed address into any calendar app that can subscribe by URL: <span id="ics-links"></span></dd></div>
       </dl>
     </main>

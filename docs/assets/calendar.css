@@ -1,21 +1,16 @@
-/* Categorical palette, built in OKLCH. Reception wears the school colours
-   from the crest: RR the red, RGP the yellow (dark text). The other year
-   groups and FOSPS sit on one ring at the same lightness (0.53) and chroma
-   (0.12; teal sits just past the sRGB edge and is gamut-mapped), keeping
-   clear of red and yellow, so every chip carries the same visual weight and
-   white text clears 4.5:1. "Everyone" (whole school) is a neutral grey
-   rather than another hue, since it's structurally the "everyone" bucket,
-   not a peer category. */
+/* Categorical palette: one hue per year group + FOSPS (8 slots). "Everyone"
+   (whole school) is a neutral grey rather than a 9th hue, since it's
+   structurally the "everyone" bucket, not a peer category. */
 :root {
   --cal-neutral: #171717; /* Everyone: the page ink, same as the checkbox */
-  --cal-1: oklch(0.53 0.19 28);  /* Reception RR - school red (#e02225, darkened for white text) */
-  --cal-2: oklch(0.53 0.12 235); /* Year 1 - blue */
-  --cal-3: oklch(0.53 0.12 160); /* Year 2 - green */
-  --cal-4: oklch(0.53 0.12 305); /* Year 3 - violet */
-  --cal-5: oklch(0.53 0.12 55);  /* Year 4 - orange */
-  --cal-6: oklch(0.53 0.12 195); /* Year 5 - teal */
-  --cal-7: oklch(0.53 0.12 270); /* Year 6 - indigo */
-  --cal-8: oklch(0.53 0.12 340); /* FOSPS - magenta */
+  --cal-1: #2a78d6; /* Reception */
+  --cal-2: #eb6834; /* Year 1 */
+  --cal-3: #1baf7a; /* Year 2 */
+  --cal-4: #eda100; /* Year 3 */
+  --cal-5: #e87ba4; /* Year 4 */
+  --cal-6: #008300; /* Year 5 */
+  --cal-7: #4a3aa7; /* Year 6 */
+  --cal-8: #e34948; /* FOSPS */
   --cal-surface: #f2f2f2;
   --cal-surface-alt: #ffffff;
   --cal-surface-weekend: #fafafa;
@@ -26,23 +21,25 @@
   --cal-focus: #0070f3;
   --link-color: #1a5fb4;
 
-  /* Chip text: white on every solid in light mode (all sit at L 0.53). */
+  /* Per-slot chip TEXT colour, not a blanket white: whichever of
+     near-black/white has the better WCAG contrast against that slot's own
+     hex. */
   --chip-text-dark: #14140f;
   --chip-text-light: #ffffff;
   --cal-neutral-text: var(--chip-text-light);
   --cal-1-text: var(--chip-text-light);
-  --cal-2-text: var(--chip-text-light);
-  --cal-3-text: var(--chip-text-light);
-  --cal-4-text: var(--chip-text-light);
-  --cal-5-text: var(--chip-text-light);
+  --cal-2-text: var(--chip-text-dark);
+  --cal-3-text: var(--chip-text-dark);
+  --cal-4-text: var(--chip-text-dark);
+  --cal-5-text: var(--chip-text-dark);
   --cal-6-text: var(--chip-text-light);
   --cal-7-text: var(--chip-text-light);
-  --cal-8-text: var(--chip-text-light);
+  --cal-8-text: var(--chip-text-dark);
 
   /* Second class in each year group: a lighter tint of the year's hue,
      mixed in OKLCH so the step in lightness is even across hues. The two
      classes stay recognisably one year while telling apart in the grid
-     and the rail. Dark text on every tint (they land around L 0.78). */
+     and the rail. Dark text on every tint. */
   --cal-1-b: color-mix(in oklch, var(--cal-1) 55%, white);
   --cal-2-b: color-mix(in oklch, var(--cal-2) 55%, white);
   --cal-3-b: color-mix(in oklch, var(--cal-3) 55%, white);
@@ -50,7 +47,6 @@
   --cal-5-b: color-mix(in oklch, var(--cal-5) 55%, white);
   --cal-6-b: color-mix(in oklch, var(--cal-6) 55%, white);
   --cal-7-b: color-mix(in oklch, var(--cal-7) 55%, white);
-  --cal-1-b: oklch(0.87 0.17 98); /* Reception RGP - school yellow (#f6eb41, deepened a touch so the dot reads on white) */
   --cal-1-b-text: var(--chip-text-dark);
   --cal-2-b-text: var(--chip-text-dark);
   --cal-3-b-text: var(--chip-text-dark);
@@ -63,14 +59,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --cal-neutral: #ededed;
-    --cal-1: oklch(0.72 0.17 28);
-    --cal-2: oklch(0.74 0.13 235);
-    --cal-3: oklch(0.74 0.13 160);
-    --cal-4: oklch(0.74 0.13 305);
-    --cal-5: oklch(0.74 0.13 55);
-    --cal-6: oklch(0.74 0.13 195);
-    --cal-7: oklch(0.74 0.13 270);
-    --cal-8: oklch(0.74 0.13 340);
+    --cal-1: #3987e5;
+    --cal-2: #d95926;
+    --cal-3: #199e70;
+    --cal-4: #c98500;
+    --cal-5: #d55181;
+    --cal-6: #008300;
+    --cal-7: #9085e9;
+    --cal-8: #e66767;
     --cal-surface: #1a1a1a;
     --cal-surface-alt: #0a0a0a;
     --cal-surface-weekend: #111111;
@@ -87,21 +83,21 @@
     --cal-3-text: var(--chip-text-dark);
     --cal-4-text: var(--chip-text-dark);
     --cal-5-text: var(--chip-text-dark);
-    --cal-6-text: var(--chip-text-dark);
+    --cal-6-text: var(--chip-text-light);
     --cal-7-text: var(--chip-text-dark);
     --cal-8-text: var(--chip-text-dark);
   }
 }
 :root[data-theme="dark"] {
     --cal-neutral: #ededed;
-    --cal-1: oklch(0.72 0.17 28);
-    --cal-2: oklch(0.74 0.13 235);
-    --cal-3: oklch(0.74 0.13 160);
-    --cal-4: oklch(0.74 0.13 305);
-    --cal-5: oklch(0.74 0.13 55);
-    --cal-6: oklch(0.74 0.13 195);
-    --cal-7: oklch(0.74 0.13 270);
-    --cal-8: oklch(0.74 0.13 340);
+    --cal-1: #3987e5;
+    --cal-2: #d95926;
+    --cal-3: #199e70;
+    --cal-4: #c98500;
+    --cal-5: #d55181;
+    --cal-6: #008300;
+    --cal-7: #9085e9;
+    --cal-8: #e66767;
     --cal-surface: #1a1a1a;
     --cal-surface-alt: #0a0a0a;
     --cal-surface-weekend: #111111;
@@ -118,7 +114,7 @@
     --cal-3-text: var(--chip-text-dark);
     --cal-4-text: var(--chip-text-dark);
     --cal-5-text: var(--chip-text-dark);
-    --cal-6-text: var(--chip-text-dark);
+    --cal-6-text: var(--chip-text-light);
     --cal-7-text: var(--chip-text-dark);
     --cal-8-text: var(--chip-text-dark);
   }
@@ -736,6 +732,13 @@
 .cal-day-agenda {
   display: grid;
   gap: 0.25rem;
+}
+
+/* Same tie-break as #calendar-grid[hidden]: .cal-day-agenda's own display
+   would otherwise beat the UA's [hidden] and leave the agenda showing under
+   the grid after switching back to Week / Month. */
+#calendar-day-agenda[hidden] {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

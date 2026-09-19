@@ -18,7 +18,7 @@ const GROUPS = [
   { label: "Year 5", dot: "dot-year5", colorVar: "--cal-6", classes: [{ code: "5l", label: "5L" }, { code: "5hp", label: "5HP" }] },
   { label: "Year 6", dot: "dot-year6", colorVar: "--cal-7", classes: [{ code: "6bt", label: "6BT" }, { code: "6r", label: "6R" }] },
 ];
-const WHOLE_SCHOOL = { code: "whole-school", label: "Everyone", dot: "dot-whole", colorVar: "--cal-neutral" };
+const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School", dot: "dot-whole", colorVar: "--cal-neutral" };
 const FOSPS = { code: "fosps", label: "FOSPS", dot: "dot-fosps", colorVar: "--cal-8" };
 
 // The first class in a year group takes the year's hue, the second a
