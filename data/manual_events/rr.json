@@ -1,1 +1,19 @@
-[]
+[
+  {
+    "id": "8cab38222311",
+    "title": "PE Day 👟 – Wear PE Kit",
+    "date": "2026-09-03",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": null,
+    "location": null,
+    "url": null,
+    "recurrence": {
+      "freq": "WEEKLY",
+      "interval": 1,
+      "until": "2027-01-28"
+    },
+    "exceptions": []
+  }
+]
