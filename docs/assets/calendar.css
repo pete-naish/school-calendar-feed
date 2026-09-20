@@ -721,7 +721,8 @@
   text-wrap: pretty;
 }
 
-.day-event-meta {
+.day-event-meta,
+.day-event-location {
   margin-top: 0.1rem;
   font-size: 0.8125rem;
   color: var(--cal-muted);

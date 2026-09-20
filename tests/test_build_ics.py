@@ -113,7 +113,7 @@ def test_safe_url(raw_url, expected):
 
 # --------------------------------------------------------------------------
 # build_event() - school-API-sourced events: per-calendar title prefixing,
-# and the whole-school description-override mechanism (see
+# and the whole-school description/location override mechanism (see
 # load_whole_school_overrides() / WHOLE_SCHOOL_OVERRIDES_PATH).
 # --------------------------------------------------------------------------
 
@@ -153,35 +153,75 @@ def test_load_whole_school_overrides_missing_file_returns_empty(tmp_path, monkey
     assert build_ics.load_whole_school_overrides() == {}
 
 
+def test_build_event_location_override_sets_location():
+    raw = {"id": 6, "title": "INSET DAY", "allDay": True, "start": "2026-09-02"}
+    event = build_ics.build_event(raw, location_override="School hall")
+    assert str(event["location"]) == "School hall"
+
+
+def test_build_event_without_location_override_has_no_location():
+    raw = {"id": 7, "title": "INSET DAY", "allDay": True, "start": "2026-09-02"}
+    assert "location" not in build_ics.build_event(raw)
+
+
+def test_build_event_location_and_description_overrides_are_independent():
+    raw = {"id": 8, "title": "Some Event", "allDay": True, "start": "2026-09-23", "desc": "Original text"}
+    event = build_ics.build_event(raw, location_override="Main playground")
+    assert str(event["description"]) == "Original text"  # description override not set -> school's text stays
+    assert str(event["location"]) == "Main playground"
+
+
 def test_load_whole_school_overrides_reads_json(tmp_path, monkeypatch):
     path = tmp_path / "overrides.json"
-    path.write_text('{"857": "Updated description"}')
+    path.write_text('{"857": {"description": "Updated description", "location": "School hall"}}')
     monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", path)
-    assert build_ics.load_whole_school_overrides() == {"857": "Updated description"}
+    assert build_ics.load_whole_school_overrides() == {
+        "857": {"description": "Updated description", "location": "School hall"}
+    }
+
+
+def test_load_whole_school_overrides_reads_legacy_string_entries(tmp_path, monkeypatch):
+    # Before locations existed an entry was just "<id>": "<description>".
+    path = tmp_path / "overrides.json"
+    path.write_text('{"857": "Updated description", "858": {"location": "Church"}}')
+    monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", path)
+    assert build_ics.load_whole_school_overrides() == {
+        "857": {"description": "Updated description"},
+        "858": {"location": "Church"},
+    }
+
+
+def test_load_whole_school_overrides_ignores_unrecognised_entries(tmp_path, monkeypatch):
+    path = tmp_path / "overrides.json"
+    path.write_text('{"857": {"colour": "red", "location": 5}, "858": 12, "859": {"location": "Hall"}}')
+    monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", path)
+    assert build_ics.load_whole_school_overrides() == {"859": {"location": "Hall"}}
 
 
 def test_prune_whole_school_overrides_drops_ids_missing_from_feed():
-    overrides = {"857": "kept", "999": "school deleted this event"}
+    overrides = {"857": {"description": "kept"}, "999": {"location": "school deleted this event"}}
     raw_events = [{"id": 857}, {"id": 858}]
-    assert build_ics.prune_whole_school_overrides(overrides, raw_events) == {"857": "kept"}
+    assert build_ics.prune_whole_school_overrides(overrides, raw_events) == {"857": {"description": "kept"}}
 
 
 def test_prune_whole_school_overrides_keeps_all_when_feed_has_them():
-    overrides = {"857": "a", "858": "b"}
+    overrides = {"857": {"description": "a"}, "858": {"location": "b"}}
     assert build_ics.prune_whole_school_overrides(overrides, [{"id": 857}, {"id": 858}]) == overrides
 
 
 def test_prune_whole_school_overrides_empty_feed_prunes_nothing():
     # A school-side outage returning [] must not wipe every saved override.
-    overrides = {"857": "a"}
+    overrides = {"857": {"description": "a"}}
     assert build_ics.prune_whole_school_overrides(overrides, []) == overrides
 
 
 def test_save_whole_school_overrides_matches_tool_format(tmp_path, monkeypatch):
     path = tmp_path / "overrides.json"
     monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", path)
-    build_ics.save_whole_school_overrides({"857": "Parking – use the side gate"})
-    assert path.read_text() == '{\n  "857": "Parking – use the side gate"\n}\n'
+    build_ics.save_whole_school_overrides({"857": {"description": "Parking – use the side gate", "location": "Car park"}})
+    assert path.read_text() == (
+        '{\n  "857": {\n    "description": "Parking – use the side gate",\n    "location": "Car park"\n  }\n}\n'
+    )
 
 
 # --------------------------------------------------------------------------
@@ -208,6 +248,19 @@ def test_manual_event_fosps_prefix_is_uppercased():
     raw = {"id": "m2", "title": "AGM", "date": "2026-10-05"}
     events = build_ics.build_manual_event(raw, "fosps", set())
     assert str(events[0]["summary"]) == "FOSPS: AGM"
+
+
+def test_manual_event_location_is_published():
+    raw = {"id": "m3", "title": "Bake sale", "date": "2026-10-09", "location": "School hall, St Paul's"}
+    events = build_ics.build_manual_event(raw, "fosps", set())
+    assert str(events[0]["location"]) == "School hall, St Paul's"
+    ical_bytes = build_ics.make_calendar("test", events).to_ical()
+    assert b"LOCATION:School hall\\, St Paul's" in ical_bytes  # comma escaped per RFC 5545
+
+
+def test_manual_event_without_location_has_no_location():
+    raw = {"id": "m4", "title": "PE Kit", "date": "2026-09-16", "location": None}
+    assert "location" not in build_ics.build_manual_event(raw, "rr", set())[0]
 
 
 def test_recurring_event_uses_tzid_not_utc():
@@ -327,6 +380,17 @@ def test_moved_exception_excludes_original_and_adds_new_event():
     # stably linked to, the parent series' own UID.
     assert str(moved_event["uid"]) == "manual-pe1-2026-10-20@school-calendar-feed"
     assert str(base_event["uid"]) != str(moved_event["uid"])
+
+
+def test_moved_exception_inherits_parent_location():
+    raw = {
+        **WEEKLY_PE_BASE,
+        "location": "Sports hall",
+        "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"}],
+    }
+    base_event, moved_event = build_ics.build_manual_event(raw, "5hp", set())
+    assert str(base_event["location"]) == "Sports hall"
+    assert str(moved_event["location"]) == "Sports hall"
 
 
 def test_moved_exception_inherits_parent_time_if_unspecified():

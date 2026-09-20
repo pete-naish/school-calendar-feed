@@ -1,4 +1,4 @@
-import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateExtractedEvents } from "./_shared/validate.js";
 import { getNextTermEndDate } from "./_shared/termEnd.js";
@@ -28,9 +28,9 @@ export async function onRequestPost({ request, env }) {
   }
   // Whole School has nothing to extract into - this tool can only edit an
   // existing event's description there, never add new ones.
-  if (isDescriptionOnlyCalendar(calendar)) {
+  if (isWholeSchoolCalendar(calendar)) {
     return jsonResponse(
-      { error: "not_allowed", message: "Whole School events can't be added here - only their description can be edited." },
+      { error: "not_allowed", message: "Whole School events can't be added here - only their description and location can be edited." },
       403
     );
   }
@@ -73,7 +73,9 @@ export async function onRequestPost({ request, env }) {
           `other Monday"), set recurrence.freq (DAILY/WEEKLY/MONTHLY) and recurrence.interval (2 for ` +
           `"every other/fortnightly", otherwise 1). Never set recurrence unless the text explicitly says ` +
           `the event repeats - do not assume a one-off event repeats just because it sounds routine. ` +
-          `Never guess how long it repeats for - that is filled in separately; always leave recurrence.until unset.`,
+          `Never guess how long it repeats for - that is filled in separately; always leave recurrence.until unset. ` +
+          `If the text says where an event takes place ("in the hall", "at the Rec"), set location to that ` +
+          `place as short plain text; otherwise leave it null - never guess a location.`,
         messages: [{ role: "user", content: trimmedText }],
         tool_choice: { type: "tool", name: "record_events" },
         tools: [
@@ -97,6 +99,10 @@ export async function onRequestPost({ request, env }) {
                       time: { type: ["string", "null"], description: "24h HH:MM, or null if all-day/unspecified" },
                       end_time: { type: ["string", "null"] },
                       description: { type: ["string", "null"] },
+                      location: {
+                        type: ["string", "null"],
+                        description: "Where the event takes place, as short plain text, only if the text says so, else null",
+                      },
                       url: { type: ["string", "null"] },
                       recurrence: {
                         type: ["object", "null"],

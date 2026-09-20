@@ -11,8 +11,8 @@ const YEAR_GROUPS = [
   { label: "Year 6", classes: [{ code: "6bt", label: "6BT" }, { code: "6r", label: "6R" }] },
 ];
 const FOSPS = { code: "fosps", label: "FOSPS" };
-// Restricted entry - description-editing only, see calendars.js's
-// WHOLE_SCHOOL and isDescriptionOnlyCalendar() on the server side.
+// Restricted entry - description/location editing only, see calendars.js's
+// WHOLE_SCHOOL and isWholeSchoolCalendar() on the server side.
 const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School" };
 
 const RECURRENCE_OPTIONS = {
@@ -101,7 +101,7 @@ function init() {
 }
 
 function blankEvent() {
-  return { title: "", date: "", end_date: null, time: null, end_time: null, description: null, url: null, recurrence: null };
+  return { title: "", date: "", end_date: null, time: null, end_time: null, description: null, location: null, url: null, recurrence: null };
 }
 
 function localValidationError(value) {
@@ -227,6 +227,7 @@ function fillCardFields(card, event) {
   card.querySelector(".field-time").value = event.time || "";
   card.querySelector(".field-end-time").value = event.end_time || "";
   card.querySelector(".field-description").value = event.description || "";
+  card.querySelector(".field-location").value = event.location || "";
   card.querySelector(".field-url").value = event.url || "";
   card.querySelector(".field-recurrence").value = recurrenceToSelectValue(event.recurrence);
   card.querySelector(".field-recurrence-until").value = (event.recurrence && event.recurrence.until) || "";
@@ -243,6 +244,7 @@ function readCardFields(card) {
     time: card.querySelector(".field-time").value || null,
     end_time: card.querySelector(".field-end-time").value || null,
     description: card.querySelector(".field-description").value.trim() || null,
+    location: card.querySelector(".field-location").value.trim() || null,
     url: card.querySelector(".field-url").value.trim() || null,
     recurrence,
     exceptions: getCardExceptions(card),
@@ -418,7 +420,8 @@ function formatEventDate(iso) {
 // title/date/recurrence/etc all come from the school's own feed and can't
 // be changed here, so this renders a much simpler read-mostly card (see
 // #whole-school-event-template) instead of the full event-card-template
-// used everywhere else, with only a description textarea + one save button.
+// used everywhere else, with only description + location fields and one
+// save button.
 function renderWholeSchoolEvents(events) {
   el.existingLoading.hidden = true;
   el.existingCards.innerHTML = "";
@@ -429,28 +432,47 @@ function renderWholeSchoolEvents(events) {
     node.querySelector(".ws-title").textContent = event.title;
     node.querySelector(".ws-date").textContent = formatEventDate(event.date);
     node.querySelector(".field-description").value = event.description || "";
+    node.querySelector(".field-location").value = event.location || "";
 
+    // What the server last had, to send back only the fields a rep actually
+    // changed - saving a location alone must not also store the school's
+    // current description as an override (which would then stop following
+    // the school's own edits to it).
+    const saved = { description: (event.description || "").trim(), location: event.location || "" };
     const saveButton = node.querySelector(".card-save-button");
-    saveButton.addEventListener("click", () => handleUpdateWholeSchoolDescription(node, event.id, saveButton));
+    saveButton.addEventListener("click", () => handleUpdateWholeSchoolEvent(node, event.id, saveButton, saved));
 
     el.existingCards.appendChild(node);
   }
 }
 
-async function handleUpdateWholeSchoolDescription(card, id, button) {
+async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
   const errorEl = card.querySelector(".field-error");
   errorEl.hidden = true;
   const description = card.querySelector(".field-description").value.trim();
+  const location = card.querySelector(".field-location").value.replace(/\s+/g, " ").trim();
+
+  const changes = {};
+  if (description !== saved.description) changes.description = description;
+  if (location !== saved.location) changes.location = location;
+
+  const originalText = button.textContent;
+  if (Object.keys(changes).length === 0) {
+    button.textContent = "No changes";
+    setTimeout(() => {
+      button.textContent = originalText;
+    }, 2000);
+    return;
+  }
 
   button.disabled = true;
-  const originalText = button.textContent;
   button.textContent = "Saving…";
 
   const { ok, data } = await apiCall("/api/events-update", {
     calendar: state.calendar,
     passcode: state.passcode,
     id,
-    description,
+    ...changes,
   });
 
   button.disabled = false;
@@ -460,6 +482,7 @@ async function handleUpdateWholeSchoolDescription(card, id, button) {
     button.textContent = originalText;
     return;
   }
+  Object.assign(saved, changes);
   button.textContent = "Saved ✓";
   setTimeout(() => {
     button.textContent = originalText;

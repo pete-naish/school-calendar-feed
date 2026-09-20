@@ -1,4 +1,4 @@
-import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { commitManualEvents, triggerRebuild } from "./_shared/github.js";
 import { commitErrorResponse } from "./_shared/errors.js";
@@ -25,9 +25,9 @@ export async function onRequestPost({ request, env }) {
   }
   // Whole School events aren't stored here at all (they come from the
   // school's own feed) - nothing to delete via this tool.
-  if (isDescriptionOnlyCalendar(calendar)) {
+  if (isWholeSchoolCalendar(calendar)) {
     return jsonResponse(
-      { error: "not_allowed", message: "Whole School events can't be deleted here - only their description can be edited." },
+      { error: "not_allowed", message: "Whole School events can't be deleted here - only their description and location can be edited." },
       403
     );
   }

@@ -202,7 +202,7 @@ function displayTitle(summary, cal) {
   return stripped || summary;
 }
 
-function expandInstance(cal, summary, description, url, startTime, endTime) {
+function expandInstance(cal, summary, description, location, url, startTime, endTime) {
   const allDay = startTime.isDate;
   const dayKeys = [];
 
@@ -235,6 +235,7 @@ function expandInstance(cal, summary, description, url, startTime, endTime) {
     calendarLabel: cal.groupLabel ? `${cal.groupLabel} ${cal.label}` : cal.label,
     title: displayTitle(summary, cal),
     description: description || null,
+    location: location || null,
     url: url || null,
     allDay,
     startJs,
@@ -263,7 +264,9 @@ async function loadCalendarInstances(cal) {
 
     if (!event.isRecurring()) {
       if (event.endDate.compare(WINDOW_START) < 0 || event.startDate.compare(WINDOW_END) > 0) continue;
-      instances.push(expandInstance(cal, event.summary, event.description, url, event.startDate, event.endDate));
+      instances.push(
+        expandInstance(cal, event.summary, event.description, event.location, url, event.startDate, event.endDate)
+      );
       continue;
     }
 
@@ -276,7 +279,15 @@ async function loadCalendarInstances(cal) {
       if (next.compare(WINDOW_START) < 0) continue;
       const details = event.getOccurrenceDetails(next);
       instances.push(
-        expandInstance(cal, details.item.summary, details.item.description, url, details.startDate, details.endDate)
+        expandInstance(
+          cal,
+          details.item.summary,
+          details.item.description,
+          details.item.location,
+          url,
+          details.startDate,
+          details.endDate
+        )
       );
     }
   }
@@ -609,7 +620,7 @@ function render() {
   }
 }
 
-// One event: time column, then title / calendar / description / link, with
+// One event: time column, then title / calendar / location / description / link, with
 // a bar in the calendar's colour down the left. Shared by the day dialog and
 // the Day view agenda.
 function renderEventRow(inst) {
@@ -642,6 +653,13 @@ function renderEventRow(inst) {
   meta.className = "day-event-meta";
   meta.textContent = inst.calendarLabel;
   body.appendChild(meta);
+
+  if (inst.location) {
+    const place = document.createElement("div");
+    place.className = "day-event-location";
+    place.textContent = inst.location;
+    body.appendChild(place);
+  }
 
   if (inst.description) {
     const desc = document.createElement("p");

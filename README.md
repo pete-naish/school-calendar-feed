@@ -110,6 +110,7 @@ looks like:
   "time": "19:30",
   "end_time": "21:00",
   "description": "Annual general meeting, all welcome.",
+  "location": "School hall",
   "url": "https://example.com/fosps-agm",
   "recurrence": null,
   "exceptions": []
@@ -119,10 +120,12 @@ looks like:
 `id` should be a short unique string (the tool generates one automatically;
 if adding an entry by hand, any unique value works) - it's what lets an event
 be edited later without becoming a "new" entry in subscribers' calendar apps.
-`end_date`/`time`/`end_time`/`description`/`url`/`recurrence`/`exceptions`
+`end_date`/`time`/`end_time`/`description`/`location`/`url`/`recurrence`/`exceptions`
 are all optional (omit, set `null`, or `[]`).
 
 - Omit `time` for an all-day event.
+- `location` is plain text (becomes the event's iCalendar `LOCATION`, which
+  calendar apps show and can open in a map).
 - Set `end_date` for a multi-day event (its last day, inclusive) - otherwise
   it's a single-day event.
 - `recurrence` is `{"freq": "DAILY"|"WEEKLY"|"MONTHLY", "interval": 1, "until": "2027-04-01"}`
@@ -158,7 +161,7 @@ clock change. `RRULE`'s `UNTIL` and school-API-sourced (never recurring)
 events are unaffected and stay UTC, per RFC 5545 (`UNTIL` must always be UTC
 when `DTSTART` has a time component).
 
-### Whole School event descriptions
+### Whole School event descriptions and locations
 
 Whole-school events (inset days, holidays, whole-school services, etc)
 aren't hand-entered at all - see "How classification works" above - they
@@ -166,13 +169,14 @@ come straight from the school's own API on every 6-hourly build, so
 there's no `data/manual_events/whole-school.json` to edit. [The class rep
 tool](tool/README.md) still has a **Whole School** calendar entry with its
 own passcode, but it can only edit an already-published event's
-*description* (e.g. adding parking or kit notes to an inset day) - never
-its title, date, or whether it exists at all, since none of that is this
-tool's to control; adding and deleting events is disabled entirely for
-this entry. Saved descriptions live in `data/whole_school_overrides.json`
-(`{"<school event id>": "override text"}`, keyed by the id embedded in
-that event's own UID) and are applied by `scripts/build_ics.py` on the
-next build - triggered straight after a save, see the tool's "Publishing
+*description* (e.g. adding parking or kit notes to an inset day) and add a
+*location* (the school's feed has none) - never its title, date, or whether
+it exists at all, since none of that is this tool's to control; adding and
+deleting events is disabled entirely for this entry. Saved edits live in
+`data/whole_school_overrides.json`
+(`{"<school event id>": {"description": "...", "location": "..."}}`, either
+key optional, keyed by the id embedded in that event's own UID) and are
+applied by `scripts/build_ics.py` on the next build - triggered straight after a save, see the tool's "Publishing
 changes" section. An override whose event has vanished from the school's feed
 is pruned on that same build.
 

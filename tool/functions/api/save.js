@@ -1,4 +1,4 @@
-import { isValidCalendar, isDescriptionOnlyCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput } from "./_shared/validate.js";
 import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.js";
@@ -27,9 +27,9 @@ export async function onRequestPost({ request, env }) {
   // Whole School events come entirely from the school's own feed - this
   // tool can only edit an existing one's description (see events-update.js),
   // never add new ones.
-  if (isDescriptionOnlyCalendar(calendar)) {
+  if (isWholeSchoolCalendar(calendar)) {
     return jsonResponse(
-      { error: "not_allowed", message: "Whole School events can't be added here - only their description can be edited." },
+      { error: "not_allowed", message: "Whole School events can't be added here - only their description and location can be edited." },
       403
     );
   }

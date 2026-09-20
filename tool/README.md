@@ -10,7 +10,7 @@ existing 6-hourly schedule.
 
 A separate **Whole School** calendar entry (its own passcode) offers a much
 more restricted mode: editing an already-published whole-school event's
-*description* only - see "Whole School events" below.
+*description* and *location* only - see "Whole School events" below.
 
 No framework, no build step: plain HTML/CSS/JS frontend + plain JS
 Cloudflare Pages Functions. Deploys via Cloudflare's zero-build-command git
@@ -61,7 +61,7 @@ integration.
   - `events-list.js` / `events-update.js` / `events-delete.js` - list,
     amend, or remove an already-saved event by its stable `id`. For the
     Whole School entry, `events-list.js` and `events-update.js` instead
-    read/write a description override (see below); `events-delete.js`
+    read/write a description/location override (see below); `events-delete.js`
     rejects it outright, same as `save.js`.
 - `functions/api/_shared/` - `calendars.js` (the 16 valid calendar codes -
   14 classes + FOSPS mirror `YEAR_GROUPS` in `scripts/build_ics.py` and are
@@ -83,19 +83,21 @@ integration.
   (lists current whole-school events the same way - by reading the
   published `.ics` - rather than re-implementing `build_ics.py`'s
   classification logic in JS), `wholeSchoolOverrides.js` (commits a
-  description override to `data/whole_school_overrides.json`).
+  description/location override to `data/whole_school_overrides.json`).
 
 ## Whole School events
 
 The **Whole School** entry in the calendar picker is deliberately much more
 restricted than every other calendar: it can only edit an already-published
 whole-school event's *description* (e.g. adding parking or kit notes to an
-inset day) - adding, deleting, or editing anything else about an event
-(title, date, recurrence, ...) is disabled both in the UI (a simpler
-read-mostly card with just a description box - no other fields, no "Add
-events" section at all) and re-checked server-side in every endpoint
-(`save.js`/`events-delete.js`/`parse.js` reject this calendar outright;
-`events-update.js` accepts only a `description`).
+inset day) and *location* (the school's feed never has one, so this adds
+rather than replaces) - adding, deleting, or editing anything else about an
+event (title, date, recurrence, ...) is disabled both in the UI (a simpler
+read-mostly card with just description and location boxes - no other
+fields, no "Add events" section at all) and re-checked server-side in every
+endpoint (`save.js`/`events-delete.js`/`parse.js` reject this calendar
+outright; `events-update.js` accepts only a `description` and/or
+`location`).
 
 This is a structurally different data source from every other calendar:
 whole-school events aren't hand-entered at all (there's no
@@ -105,12 +107,17 @@ school's own API on every 6-hourly `scripts/build_ics.py` run.
 `whole-school.ics` (`_shared/wholeSchool.js`), recovering each event's
 stable id from its `UID` (`stpauls-<id>@school-calendar-feed`) and merging
 in any not-yet-published override so a rep sees their own recent edit
-immediately rather than the stale pre-edit text. A saved description is
-written to `data/whole_school_overrides.json`
-(`{"<school event id>": "override text"}`) via `_shared/wholeSchoolOverrides.js`;
-clearing the box back to empty removes the override entirely (reverting to
-whatever the school's own feed says) rather than storing `""`, which
-`build_ics.py` applies on the next build (see "Publishing changes" below). An
+immediately rather than the stale pre-edit text. Saved edits are written to
+`data/whole_school_overrides.json`
+(`{"<school event id>": {"description": "...", "location": "..."}}`, either
+key optional; an older bare-string entry is still read as a description) via
+`_shared/wholeSchoolOverrides.js`. The tool sends only the fields a rep
+actually changed, so adding a location doesn't also pin the description to
+the school's current text. Clearing a box back to empty removes that field's
+override entirely (a description reverts to whatever the school's own feed
+says; a location just disappears) rather than storing `""`, and an entry with
+nothing left is dropped. `build_ics.py` applies these on the next build (see
+"Publishing changes" below). An
 override whose school event has since disappeared from the school's feed
 (deleted, or deleted and recreated under a new id) is pruned from the file by
 `build_ics.py` on the next build.
@@ -147,7 +154,7 @@ as before. A save where every event was a duplicate doesn't trigger one.
 4. Distribute each calendar's passcode to that class's rep (or FOSPS) - how
    you do this (a shared spreadsheet, individual messages, etc) is up to
    you; the tool has no built-in distribution mechanism. Keep the Whole
-   School passcode separately, for whoever's trusted to add descriptions to
+   School passcode separately, for whoever's trusted to add descriptions and locations to
    whole-school events (e.g. the school office) - see "Whole School events"
    below.
 

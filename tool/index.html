@@ -32,7 +32,7 @@
         <button id="switch-calendar-button" class="link-button">Switch calendar</button>
       </div>
 
-      <p id="whole-school-notice" class="hint" hidden>Only the description can be edited here — titles, dates, and which events appear at all come from the school's own calendar feed and can't be changed in this tool.</p>
+      <p id="whole-school-notice" class="hint" hidden>Only the description and location can be edited here — titles, dates, and which events appear at all come from the school's own calendar feed and can't be changed in this tool.</p>
 
       <section id="add-section">
         <h3>Add events</h3>
@@ -122,6 +122,9 @@
           <button type="button" class="secondary-button exception-add-button">+ Add exception</button>
         </div>
       </div>
+      <label>Location <span class="optional">(optional)</span>
+        <input type="text" class="field-location" placeholder="e.g. School hall">
+      </label>
       <label>Description
         <textarea class="field-description" rows="2"></textarea>
       </label>
@@ -140,12 +143,15 @@
     <div class="event-card whole-school-card">
       <h4 class="ws-title"></h4>
       <p class="ws-date hint"></p>
+      <label>Location <span class="optional">(optional)</span>
+        <input type="text" class="field-location" placeholder="e.g. School hall">
+      </label>
       <label>Description
         <textarea class="field-description" rows="3"></textarea>
       </label>
       <p class="field-error error" hidden></p>
       <div class="card-actions">
-        <button type="button" class="card-save-button">Save description</button>
+        <button type="button" class="card-save-button">Save changes</button>
       </div>
     </div>
   </template>

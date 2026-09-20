@@ -6,6 +6,15 @@ function cleanOptionalString(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+// A location is a single line of plain text: whitespace runs (including any
+// pasted newlines) collapse to one space. Also used for the Whole School
+// location override (events-update.js).
+export function cleanOptionalLocation(value) {
+  if (typeof value !== "string") return null;
+  const collapsed = value.replace(/\s+/g, " ").trim();
+  return collapsed || null;
+}
+
 function cleanOptionalTime(value) {
   return typeof value === "string" && TIME_RE.test(value) ? value : null;
 }
@@ -77,6 +86,7 @@ function commonFields(item) {
     time: cleanOptionalTime(item.time),
     end_time: cleanOptionalTime(item.end_time),
     description: cleanOptionalString(item.description),
+    location: cleanOptionalLocation(item.location),
     url: cleanOptionalUrl(item.url),
     recurrence: cleanRecurrence(item.recurrence),
     exceptions: cleanExceptions(item.exceptions),

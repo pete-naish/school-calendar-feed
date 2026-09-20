@@ -50,12 +50,17 @@ SCHOOL_NAME = "St Paul's Enfield"
 UID_DOMAIN = "school-calendar-feed"
 CALENDARS_DIR = Path(__file__).resolve().parent.parent / "docs" / "calendars"
 MANUAL_EVENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "manual_events"
-# Description-only overrides for whole-school events, set via the class rep
-# tool's restricted "Whole School" calendar entry (see tool/README.md) -
-# {"<school event id>": "override description"}. Whole-school events
-# otherwise come entirely from the school's own API on every build, so this
-# is the only piece of them that's ever hand-edited/persisted.
+# Description/location overrides for whole-school events, set via the class
+# rep tool's restricted "Whole School" calendar entry (see tool/README.md) -
+# {"<school event id>": {"description": "...", "location": "..."}}, either
+# key optional. (An older bare-string entry, "<id>": "description", is still
+# read as {"description": ...}.) Whole-school events otherwise come entirely
+# from the school's own API on every build, so these are the only pieces of
+# them that are ever hand-edited/persisted. The school's feed has no
+# location at all, so a location override adds one rather than replacing one.
 WHOLE_SCHOOL_OVERRIDES_PATH = Path(__file__).resolve().parent.parent / "data" / "whole_school_overrides.json"
+
+_OVERRIDE_FIELDS = ("description", "location")
 
 LONDON = ZoneInfo("Europe/London")
 UTC = timezone.utc
@@ -331,7 +336,12 @@ def _parse_timed(raw: dict) -> tuple[datetime, datetime]:
     return start_dt.astimezone(UTC), end_dt.astimezone(UTC)
 
 
-def build_event(raw: dict, code: str | None = None, description_override: str | None = None) -> Event:
+def build_event(
+    raw: dict,
+    code: str | None = None,
+    description_override: str | None = None,
+    location_override: str | None = None,
+) -> Event:
     """`code` prefixes the published title with that calendar's code (e.g.
     "RR: PE Kit") - only class/FOSPS calendars pass this; whole-school
     events (code=None) are never prefixed, since a parent only ever sees a
@@ -340,7 +350,8 @@ def build_event(raw: dict, code: str | None = None, description_override: str | 
     see WHOLE_SCHOOL_OVERRIDES_PATH) replaces the school's own description
     outright when set, including clearing it entirely if set to "" - both
     are display-only changes to the published .ics; the source data (title,
-    raw description) is never touched."""
+    raw description) is never touched. `location_override` (also whole-school
+    only) sets LOCATION, which the school's own feed never provides."""
     event = Event()
     event.add("uid", f"stpauls-{raw['id']}@{UID_DOMAIN}")
     title = _clean(raw.get("title"))
@@ -351,6 +362,9 @@ def build_event(raw: dict, code: str | None = None, description_override: str | 
     desc = description_override if description_override is not None else _clean(raw.get("desc"))
     if desc:
         event.add("description", desc)
+
+    if location_override:
+        event.add("location", location_override)
 
     url = _safe_url(raw.get("url"))
     if url:
@@ -400,6 +414,8 @@ def _build_moved_exception_event(raw: dict, exception: dict, code: str) -> Event
     desc = raw.get("description")
     if desc:
         event.add("description", desc)
+    if raw.get("location"):
+        event.add("location", raw["location"])
     url = _safe_url(raw.get("url"))
     if url:
         event.add("url", url)
@@ -440,6 +456,9 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
     desc = raw.get("description")
     if desc:
         event.add("description", desc)
+
+    if raw.get("location"):
+        event.add("location", raw["location"])
 
     url = _safe_url(raw.get("url"))
     if url:
@@ -557,14 +576,29 @@ def load_manual_events(code: str) -> list[dict]:
         return json.load(f)
 
 
-def load_whole_school_overrides() -> dict[str, str]:
+def _normalize_override(value: object) -> dict[str, str]:
+    """One override entry as {"description"?, "location"?}. Accepts the older
+    bare-string form (a description) and ignores anything unrecognised, so a
+    hand-edited file can't break the build."""
+    if isinstance(value, str):
+        return {"description": value}
+    if isinstance(value, dict):
+        return {key: value[key] for key in _OVERRIDE_FIELDS if isinstance(value.get(key), str)}
+    return {}
+
+
+def load_whole_school_overrides() -> dict[str, dict[str, str]]:
     if not WHOLE_SCHOOL_OVERRIDES_PATH.exists():
         return {}
     with WHOLE_SCHOOL_OVERRIDES_PATH.open() as f:
-        return json.load(f)
+        loaded = json.load(f)
+    normalized = {event_id: _normalize_override(value) for event_id, value in loaded.items()}
+    return {event_id: override for event_id, override in normalized.items() if override}
 
 
-def prune_whole_school_overrides(overrides: dict[str, str], raw_events: list[dict]) -> dict[str, str]:
+def prune_whole_school_overrides(
+    overrides: dict[str, dict[str, str]], raw_events: list[dict]
+) -> dict[str, dict[str, str]]:
     """Drop overrides whose school event id no longer appears in the fetched
     feed - the school deleted (or deleted and recreated, which gives it a new
     id) the event, so the entry can never apply again and would otherwise sit
@@ -577,10 +611,10 @@ def prune_whole_school_overrides(overrides: dict[str, str], raw_events: list[dic
     if not raw_events:
         return overrides
     live_ids = {str(raw["id"]) for raw in raw_events}
-    return {event_id: text for event_id, text in overrides.items() if event_id in live_ids}
+    return {event_id: override for event_id, override in overrides.items() if event_id in live_ids}
 
 
-def save_whole_school_overrides(overrides: dict[str, str]) -> None:
+def save_whole_school_overrides(overrides: dict[str, dict[str, str]]) -> None:
     # Same formatting as the class rep tool's own commits (2-space indent,
     # trailing newline, non-ASCII left as-is) so a prune and a tool edit
     # never produce a whitespace-only diff against each other.
@@ -614,7 +648,7 @@ def main() -> None:
     whole_school_overrides = prune_whole_school_overrides(loaded_overrides, raw_events)
     if whole_school_overrides != loaded_overrides:
         for stale_id in sorted(loaded_overrides.keys() - whole_school_overrides.keys()):
-            print(f"Pruned description override for school event {stale_id} (no longer in the feed)", file=sys.stderr)
+            print(f"Pruned override for school event {stale_id} (no longer in the feed)", file=sys.stderr)
         save_whole_school_overrides(whole_school_overrides)
 
     seen_ids: set[int] = set()
@@ -628,8 +662,13 @@ def main() -> None:
 
         bucket, class_codes = classify_event(_clean(raw.get("title")))
         if bucket == "whole-school":
+            override = whole_school_overrides.get(str(raw["id"]), {})
             whole_school_events.append(
-                build_event(raw, description_override=whole_school_overrides.get(str(raw["id"])))
+                build_event(
+                    raw,
+                    description_override=override.get("description"),
+                    location_override=override.get("location"),
+                )
             )
         else:
             # A separate Event per class code (not one object appended to
