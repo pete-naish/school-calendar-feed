@@ -1,4 +1,4 @@
-import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput } from "./_shared/validate.js";
 import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.js";
@@ -37,55 +37,86 @@ export async function onRequestPost({ request, env }) {
     return jsonResponse({ error: "no_events" }, 400);
   }
 
-  const validated = [];
+  // An event flagged `year_group` is for every class in this calendar's year
+  // (e.g. RR and RGP): it's stored once, in the year's shared file, rather
+  // than copied into each class's own. The flag is a request field only -
+  // validateEventInput() drops it, so it's never written into the event.
+  const group = yearGroupFor(calendar);
+  const own = [];
+  const shared = [];
   const errors = [];
   events.forEach((event, index) => {
     const result = validateEventInput(event);
-    if (result.valid) {
-      validated.push(result.event);
-    } else {
+    if (!result.valid) {
       errors.push({ index, error: result.error });
+    } else if (event && event.year_group === true) {
+      if (group) {
+        shared.push(result.event);
+      } else {
+        errors.push({ index, error: "Only a class calendar can add an event for its whole year" });
+      }
+    } else {
+      own.push(result.event);
     }
   });
   if (errors.length > 0) {
     return jsonResponse({ error: "validation_failed", errors }, 400);
   }
 
-  const newKeys = await Promise.all(validated.map((e) => dedupeKey(calendar, e.title, e.date)));
+  // Each batch is its own commit. If the second fails after the first
+  // succeeded the rep just retries: whatever already saved is skipped as a
+  // duplicate (same file + title + date), so nothing is doubled.
+  const batches = [
+    { file: calendar, events: own },
+    ...(group ? [{ file: group.key, events: shared }] : []),
+  ].filter((batch) => batch.events.length > 0);
 
+  let saved = 0;
+  let skippedDuplicates = 0;
+  let commitSha;
   try {
-    const result = await commitManualEvents(
-      env,
-      calendar,
-      async (current) => {
-        const currentKeys = new Set(
-          await Promise.all(current.map((e) => dedupeKey(calendar, e.title, e.date)))
-        );
-        const toAppend = [];
-        let skippedDuplicates = 0;
-        validated.forEach((event, index) => {
-          const key = newKeys[index];
-          if (currentKeys.has(key)) {
-            skippedDuplicates += 1;
-            return;
-          }
-          currentKeys.add(key); // guard against duplicates within the same batch too
-          toAppend.push({ id: generateEventId(), ...event });
-        });
-        return { events: [...current, ...toAppend], saved: toAppend.length, skippedDuplicates };
-      },
-      `Add event(s) to ${calendar}`
-    );
-
-    // Every event a duplicate -> nothing appended, nothing new to publish.
-    const rebuildTriggered = result.saved > 0 ? await triggerRebuild(env) : false;
-    return jsonResponse({
-      saved: result.saved,
-      skipped_duplicates: result.skippedDuplicates,
-      commit_sha: result.commitSha,
-      rebuild_triggered: rebuildTriggered,
-    });
+    for (const batch of batches) {
+      const result = await appendEvents(env, batch.file, batch.events);
+      saved += result.saved;
+      skippedDuplicates += result.skippedDuplicates;
+      commitSha = result.commitSha || commitSha;
+    }
   } catch (err) {
     return jsonResponse(commitErrorResponse(err), 502);
   }
+
+  // Every event a duplicate -> nothing appended, nothing new to publish.
+  const rebuildTriggered = saved > 0 ? await triggerRebuild(env) : false;
+  return jsonResponse({
+    saved,
+    skipped_duplicates: skippedDuplicates,
+    commit_sha: commitSha,
+    rebuild_triggered: rebuildTriggered,
+  });
+}
+
+// Appends `validated` events to one data/manual_events/<file>.json, skipping
+// any that duplicate an event already in it (same file + title + date).
+async function appendEvents(env, file, validated) {
+  const newKeys = await Promise.all(validated.map((e) => dedupeKey(file, e.title, e.date)));
+  return commitManualEvents(
+    env,
+    file,
+    async (current) => {
+      const currentKeys = new Set(await Promise.all(current.map((e) => dedupeKey(file, e.title, e.date))));
+      const toAppend = [];
+      let skippedDuplicates = 0;
+      validated.forEach((event, index) => {
+        const key = newKeys[index];
+        if (currentKeys.has(key)) {
+          skippedDuplicates += 1;
+          return;
+        }
+        currentKeys.add(key); // guard against duplicates within the same batch too
+        toAppend.push({ id: generateEventId(), ...event });
+      });
+      return { events: [...current, ...toAppend], saved: toAppend.length, skippedDuplicates };
+    },
+    `Add event(s) to ${file}`
+  );
 }

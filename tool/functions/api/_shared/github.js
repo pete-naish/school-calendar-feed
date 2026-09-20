@@ -1,3 +1,5 @@
+import { yearGroupFor } from "./calendars.js";
+
 const REPO = "pete-naish/school-calendar-feed";
 const BRANCH = "main";
 const API_BASE = "https://api.github.com";
@@ -174,6 +176,21 @@ export async function triggerRebuild(env) {
     console.error("Rebuild dispatch failed:", err);
   }
   return false;
+}
+
+// Applies `mutatorFn` (which must return `{ error: "not_found" }` without
+// writing when the event isn't in the file it's given) to whichever file
+// holds an already-saved event: the class's own, else its year group's shared
+// file (data/manual_events/<year key>.json). Used by update and delete, which
+// only know an event's id.
+export async function commitEventById(env, calendar, mutatorFn, commitMessage) {
+  const group = yearGroupFor(calendar);
+  const files = group ? [calendar, group.key] : [calendar];
+  for (const file of files) {
+    const result = await commitManualEvents(env, file, mutatorFn, commitMessage);
+    if (result.error !== "not_found") return result;
+  }
+  return { error: "not_found" };
 }
 
 // calendar-events-specific wrapper around commitJsonFile - keeps the

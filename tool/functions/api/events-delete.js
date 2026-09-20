@@ -1,6 +1,6 @@
 import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
-import { commitManualEvents, triggerRebuild } from "./_shared/github.js";
+import { commitEventById, triggerRebuild } from "./_shared/github.js";
 import { commitErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
@@ -36,7 +36,9 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    const result = await commitManualEvents(
+    // The event is in this class's own file or its year group's shared one;
+    // deleting a shared event removes it from every class in the year.
+    const result = await commitEventById(
       env,
       calendar,
       async (current) => {

@@ -92,6 +92,14 @@ scrapable calendar at all) are entered by hand into
 `data/manual_events/5hp.json`, `data/manual_events/fosps.json`), merged into
 that calendar's `.ics` alongside anything from the school API.
 
+An event for a whole year group (e.g. a Reception trip for both RR and RGP)
+is stored once, in `data/manual_events/<year key>.json` - `reception.json`,
+`year1.json` ... `year6.json` (the `key` of each entry in `YEAR_GROUPS` in
+`scripts/build_ics.py`) - the same format as a class file. Every class in that
+year builds those events into its own feed (each with its own `RR:` / `RGP:`
+title prefix), so editing or deleting one changes it for the whole year. The
+file is optional; the class rep tool creates it on first use.
+
 The primary way to add these is **[the class rep tool](tool/README.md)** - a
 password-protected web app where a class rep pastes free text (a WhatsApp
 message, newsletter paragraph, etc) and has it turned into structured events

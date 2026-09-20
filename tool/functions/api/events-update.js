@@ -1,7 +1,7 @@
 import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput, cleanOptionalLocation } from "./_shared/validate.js";
-import { commitManualEvents, triggerRebuild } from "./_shared/github.js";
+import { commitEventById, triggerRebuild } from "./_shared/github.js";
 import { commitWholeSchoolOverride } from "./_shared/wholeSchoolOverrides.js";
 import { commitErrorResponse } from "./_shared/errors.js";
 
@@ -57,7 +57,8 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    const result = await commitManualEvents(
+    // The event is in this class's own file or its year group's shared one.
+    const result = await commitEventById(
       env,
       calendar,
       async (current) => {

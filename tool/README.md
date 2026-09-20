@@ -55,7 +55,18 @@ integration.
     separately (see `termEnd.js` below) as a suggestion the rep still
     reviews before saving. Nothing is persisted at this step.
   - `save.js` - bulk-creates the reviewed events (from `parse.js`, or typed
-    in manually), skipping any that duplicate an already-saved event
+    in manually). On a class calendar a draft can be ticked **"Add to all of
+    Year 1 (1MS and 1T)"**: those events are stored once, in the year's shared
+    `data/manual_events/<year key>.json` (e.g. `year1.json`), rather than
+    copied into each class's file, and `build_ics.py` builds them into every
+    class of the year. `events-list.js` shows a class both its own events and
+    its year's shared ones (the latter flagged and marked "Shared with ..."
+    in the UI), and `events-update.js` / `events-delete.js` look for an
+    event's id in the class's own file, then its year's - so any class in the
+    year can edit or delete a shared event, for all of them, but a class from
+    another year can't touch it. Not offered on FOSPS or Whole School. An
+    already-saved event can't change scope here (delete and re-add it).
+    Duplicates of an already-saved event are skipped
     (same calendar + title + date). Rejected outright for the Whole School
     entry (see below).
   - `events-list.js` / `events-update.js` / `events-delete.js` - list,

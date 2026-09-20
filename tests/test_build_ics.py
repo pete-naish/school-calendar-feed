@@ -263,6 +263,40 @@ def test_manual_event_without_location_has_no_location():
     assert "location" not in build_ics.build_manual_event(raw, "rr", set())[0]
 
 
+def test_load_class_manual_events_merges_the_year_groups_shared_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", tmp_path)
+    (tmp_path / "1ms.json").write_text('[{"id": "own1", "title": "1MS only", "date": "2026-10-01"}]')
+    (tmp_path / "1t.json").write_text('[{"id": "own2", "title": "1T only", "date": "2026-10-02"}]')
+    (tmp_path / "year1.json").write_text('[{"id": "shared1", "title": "Trip", "date": "2026-10-03"}]')
+    ms = [raw["id"] for raw in build_ics.load_class_manual_events("1ms", "year1")]
+    t = [raw["id"] for raw in build_ics.load_class_manual_events("1t", "year1")]
+    assert ms == ["own1", "shared1"]
+    assert t == ["own2", "shared1"]
+
+
+def test_load_class_manual_events_tolerates_missing_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", tmp_path)
+    assert build_ics.load_class_manual_events("rr", "reception") == []
+
+
+def test_shared_year_event_is_built_per_class_with_its_own_prefix():
+    raw = {"id": "shared1", "title": "Trip to the farm", "date": "2026-10-03"}
+    ms = build_ics.build_manual_event(raw, "1ms", set())[0]
+    t = build_ics.build_manual_event(raw, "1t", set())[0]
+    assert str(ms["summary"]) == "1MS: Trip to the farm"
+    assert str(t["summary"]) == "1T: Trip to the farm"
+    # Same id -> same UID in each class's own feed, like a school year-group event.
+    assert str(ms["uid"]) == str(t["uid"]) == "manual-shared1@school-calendar-feed"
+
+
+def test_year_group_keys_do_not_collide_with_class_codes():
+    # data/manual_events/<key>.json holds a year's shared events next to the
+    # per-class <code>.json files, so the two namespaces must stay disjoint.
+    keys = {group["key"].lower() for group in build_ics.YEAR_GROUPS}
+    codes = {cls["code"].lower() for group in build_ics.YEAR_GROUPS for cls in group["classes"]}
+    assert keys.isdisjoint(codes | {"fosps", "whole-school"})
+
+
 def test_recurring_event_uses_tzid_not_utc():
     """Regression test for the DST bug fixed this session: a UTC DTSTART
     makes an RRULE repeat at a fixed UTC instant rather than the same local

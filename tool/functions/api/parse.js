@@ -103,7 +103,6 @@ export async function onRequestPost({ request, env }) {
                         type: ["string", "null"],
                         description: "Where the event takes place, as short plain text, only if the text says so, else null",
                       },
-                      url: { type: ["string", "null"] },
                       recurrence: {
                         type: ["object", "null"],
                         description:

@@ -1,4 +1,4 @@
-import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { getManualEventsFile, getJsonFile, retryable } from "./_shared/github.js";
 import { fetchWholeSchoolEvents } from "./_shared/wholeSchool.js";
@@ -49,8 +49,15 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    const { events } = await retryable(() => getManualEventsFile(env, calendar));
-    const sorted = [...events].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    // A class also lists its year group's shared events (flagged so the tool
+    // can show they apply to every class in the year) - the same events, from
+    // the same file, its sibling class's rep sees.
+    const group = yearGroupFor(calendar);
+    const [own, shared] = await retryable(() =>
+      Promise.all([getManualEventsFile(env, calendar), group ? getManualEventsFile(env, group.key) : { events: [] }])
+    );
+    const events = [...own.events, ...shared.events.map((e) => ({ ...e, year_group: true }))];
+    const sorted = events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     return jsonResponse({ events: sorted });
   } catch (err) {
     return jsonResponse(readErrorResponse(err), 502);

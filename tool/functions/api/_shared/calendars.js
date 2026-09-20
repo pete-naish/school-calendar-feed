@@ -84,6 +84,14 @@ export const ALL_CALENDARS = [
   { ...FOSPS, yearLabel: "Friends of St Paul's" },
 ];
 
+// The year group a class calendar belongs to, or null for FOSPS / Whole
+// School. An event added for "all of Year 1" is stored once, in
+// data/manual_events/<group.key>.json (e.g. year1.json), and
+// scripts/build_ics.py builds it into every class of that year.
+export function yearGroupFor(code) {
+  return YEAR_GROUPS.find((group) => group.classes.some((cls) => cls.code === code)) || null;
+}
+
 export function isValidCalendar(code) {
   return typeof code === "string" && ALL_CALENDARS.some((c) => c.code === code);
 }

@@ -63,6 +63,11 @@
       <label>Title
         <input type="text" class="field-title" required>
       </label>
+      <label class="checkbox-label field-year-group-label" hidden>
+        <input type="checkbox" class="field-year-group">
+        <span class="field-year-group-text"></span>
+      </label>
+      <p class="year-group-note hint" hidden></p>
       <div class="field-row">
         <label>Start date
           <input type="date" class="field-date" required>
@@ -128,7 +133,9 @@
       <label>Description
         <textarea class="field-description" rows="2"></textarea>
       </label>
-      <label>Link
+      <!-- Hidden for now, not removed: readCardFields() still reads it, so saving
+           an event that already has a link keeps that link. -->
+      <label hidden>Link
         <input type="url" class="field-url" placeholder="https://…">
       </label>
       <p class="field-error error" hidden></p>

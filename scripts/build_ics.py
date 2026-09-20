@@ -576,6 +576,15 @@ def load_manual_events(code: str) -> list[dict]:
         return json.load(f)
 
 
+def load_class_manual_events(code: str, year_key: str) -> list[dict]:
+    """A class's own manual events plus its year group's shared ones
+    (data/manual_events/<year key>.json, e.g. year1.json - what the class rep
+    tool writes when an event is added for "all of Year 1"). Every class in
+    the year builds the shared events into its own feed, so one edit or
+    delete in the tool changes them for all of them."""
+    return [*load_manual_events(code), *load_manual_events(year_key)]
+
+
 def _normalize_override(value: object) -> dict[str, str]:
     """One override entry as {"description"?, "location"?}. Accepts the older
     bare-string form (a description) and ignores anything unrecognised, so a
@@ -689,7 +698,7 @@ def main() -> None:
             code = cls["code"]
             events = class_events[code] + [
                 event
-                for raw in load_manual_events(code)
+                for raw in load_class_manual_events(code, group["key"])
                 for event in build_manual_event(raw, code, closure_dates)
             ]
             cal = make_calendar(f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})", events)

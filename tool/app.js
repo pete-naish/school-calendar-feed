@@ -100,6 +100,39 @@ function init() {
   el.saveAllButton.addEventListener("click", handleSaveAll);
 }
 
+// The year group the signed-in calendar belongs to ({label, classes}), or
+// undefined for FOSPS / Whole School. Events for "all of Year 1" are shared
+// by every class in the year (see functions/api/_shared/calendars.js's
+// yearGroupFor()).
+function currentYearGroup() {
+  return YEAR_GROUPS.find((g) => g.classes.some((c) => c.code === state.calendar));
+}
+
+function yearGroupDescription(group) {
+  return `all of ${group.label} (${group.classes.map((c) => c.label).join(" and ")})`;
+}
+
+// A new event on a class calendar can be ticked as "all of Year 1", saving it
+// once for every class in the year. An already-saved event can't switch
+// scope here: a shared one shows a note instead of the tick box (editing or
+// deleting it changes it for the whole year), and a class-only one shows
+// neither.
+function setupYearGroupControls(card, { saved = false, shared = false } = {}) {
+  const group = currentYearGroup();
+  const toggle = card.querySelector(".field-year-group-label");
+  const note = card.querySelector(".year-group-note");
+  toggle.hidden = true;
+  note.hidden = true;
+  if (!group) return;
+  if (shared) {
+    note.textContent = `Shared with ${yearGroupDescription(group)} - editing or deleting it changes it for every class.`;
+    note.hidden = false;
+  } else if (!saved) {
+    card.querySelector(".field-year-group-text").textContent = `Add to ${yearGroupDescription(group)}`;
+    toggle.hidden = false;
+  }
+}
+
 function blankEvent() {
   return { title: "", date: "", end_date: null, time: null, end_time: null, description: null, location: null, url: null, recurrence: null };
 }
@@ -246,6 +279,7 @@ function readCardFields(card) {
     description: card.querySelector(".field-description").value.trim() || null,
     location: card.querySelector(".field-location").value.trim() || null,
     url: card.querySelector(".field-url").value.trim() || null,
+    year_group: card.querySelector(".field-year-group").checked,
     recurrence,
     exceptions: getCardExceptions(card),
   };
@@ -357,6 +391,7 @@ function addDraftCard(event) {
   const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
   fillCardFields(node, event);
   wireRecurrenceToggle(node);
+  setupYearGroupControls(node);
   node.querySelector(".card-save-button").hidden = true; // drafts save via "Save all", not individually
   node.querySelector(".card-remove-button").addEventListener("click", () => {
     node.remove();
@@ -499,6 +534,7 @@ function renderExistingEvents(events) {
     fillCardFields(node, event);
     wireRecurrenceToggle(node);
     wireExceptionsSection(node, event.exceptions);
+    setupYearGroupControls(node, { saved: true, shared: Boolean(event.year_group) });
 
     const saveButton = node.querySelector(".card-save-button");
     saveButton.hidden = false;
