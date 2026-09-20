@@ -53,7 +53,12 @@ integration.
     sets `recurrence.freq`/`interval` - it's never allowed to guess how
     long a series runs for (`recurrence.until`), so that gets filled in
     separately (see `termEnd.js` below) as a suggestion the rep still
-    reviews before saving. Nothing is persisted at this step.
+    reviews before saving. Extracted titles come back in Title Case: the model
+    is asked for it, and `_shared/titleCase.js` then fixes any lowercase words
+    (keeping acronyms, class codes and anything already capitalised as they
+    are - it never lowercases an ALL-CAPS title, since it can't tell a shouted
+    heading from an acronym). Titles a rep types or edits are left as written.
+    Nothing is persisted at this step.
   - `save.js` - bulk-creates the reviewed events (from `parse.js`, or typed
     in manually). On a class calendar a draft can be ticked **"Add to all of
     Year 1 (1MS and 1T)"**: those events are stored once, in the year's shared

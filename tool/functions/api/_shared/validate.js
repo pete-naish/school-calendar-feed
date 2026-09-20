@@ -1,3 +1,5 @@
+import { toTitleCase } from "./titleCase.js";
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const RECUR_FREQ = new Set(["DAILY", "WEEKLY", "MONTHLY"]);
@@ -117,7 +119,9 @@ export function validateExtractedEvents(input) {
       end_date = null;
     }
     events.push({
-      title: item.title.trim(),
+      // Extracted titles are Title Case (see titleCase.js); a title a rep
+      // types or edits themselves (validateEventInput below) is left as is.
+      title: toTitleCase(item.title.trim()),
       date: item.date,
       end_date,
       ...commonFields(item),

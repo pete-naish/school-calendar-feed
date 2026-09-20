@@ -75,7 +75,12 @@ export async function onRequestPost({ request, env }) {
           `the event repeats - do not assume a one-off event repeats just because it sounds routine. ` +
           `Never guess how long it repeats for - that is filled in separately; always leave recurrence.until unset. ` +
           `If the text says where an event takes place ("in the hall", "at the Rec"), set location to that ` +
-          `place as short plain text; otherwise leave it null - never guess a location.`,
+          `place as short plain text; otherwise leave it null - never guess a location. ` +
+          `Write every event title in Title Case ("Bake Sale in the School Hall", not "bake sale in the ` +
+          `school hall" or "BAKE SALE"): capitalise the main words, keep short articles, conjunctions and ` +
+          `prepositions (a, the, and, of, in, to...) lowercase unless they start or end the title, and keep ` +
+          `acronyms and class codes in capitals (PE, INSET, FOSPS, AGM, RR, 5HP). Only change the ` +
+          `capitalisation of the wording in the text - never reword or shorten a title.`,
         messages: [{ role: "user", content: trimmedText }],
         tool_choice: { type: "tool", name: "record_events" },
         tools: [
