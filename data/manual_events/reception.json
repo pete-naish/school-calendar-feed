@@ -1,0 +1,32 @@
+[
+  {
+    "id": "972a9f578853",
+    "title": "PE Day 👟 – Wear PE Kit",
+    "date": "2026-09-03",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": null,
+    "location": null,
+    "url": null,
+    "recurrence": {
+      "freq": "WEEKLY",
+      "interval": 1,
+      "until": "2027-01-28"
+    },
+    "exceptions": []
+  },
+  {
+    "id": "212eb1c1e278",
+    "title": "Reception Parent / Carer Drinks",
+    "date": "2026-10-02",
+    "end_date": null,
+    "time": "19:30",
+    "end_time": "23:30",
+    "description": null,
+    "location": "The King's Head, 1 The Green, N21 1BB",
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
+  }
+]
