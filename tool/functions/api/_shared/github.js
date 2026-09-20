@@ -187,7 +187,9 @@ export async function commitEventById(env, calendar, mutatorFn, commitMessage) {
   const group = yearGroupFor(calendar);
   const files = group ? [calendar, group.key] : [calendar];
   for (const file of files) {
-    const result = await commitManualEvents(env, file, mutatorFn, commitMessage);
+    // The mutator is also told which file it's editing, so a caller can tell
+    // a class's own event from its year group's shared one.
+    const result = await commitManualEvents(env, file, (events) => mutatorFn(events, file), commitMessage);
     if (result.error !== "not_found") return result;
   }
   return { error: "not_found" };

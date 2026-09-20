@@ -1,4 +1,4 @@
-import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
+import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput, cleanOptionalLocation } from "./_shared/validate.js";
 import { commitEventById, triggerRebuild } from "./_shared/github.js";
@@ -7,6 +7,27 @@ import { commitErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
+}
+
+// An exception's `classes` scope only means something on a year group's shared
+// event, and only for that year's classes. On a class's own event it's
+// redundant (the event is only ever built into that one calendar), so it's
+// removed. On a shared one, codes outside the caller's year are dropped, and
+// an exception left naming none of them is dropped too rather than silently
+// widening into a year-wide one the rep never asked for.
+function scopeExceptions(event, calendar, file) {
+  const group = file === calendar ? null : yearGroupFor(calendar);
+  const allowed = new Set(group ? group.classes.map((cls) => cls.code) : []);
+  const exceptions = (event.exceptions || []).flatMap((exc) => {
+    if (!exc.classes) return [exc];
+    if (!group) {
+      const { classes: _redundant, ...unscoped } = exc;
+      return [unscoped];
+    }
+    const classes = exc.classes.filter((code) => allowed.has(code));
+    return classes.length > 0 ? [{ ...exc, classes }] : [];
+  });
+  return { ...event, exceptions };
 }
 
 export async function onRequestPost({ request, env }) {
@@ -61,11 +82,11 @@ export async function onRequestPost({ request, env }) {
     const result = await commitEventById(
       env,
       calendar,
-      async (current) => {
+      async (current, file) => {
         const index = current.findIndex((e) => e.id === id);
         if (index === -1) return { error: "not_found" };
         const updated = [...current];
-        updated[index] = { id, ...validated.event };
+        updated[index] = { id, ...scopeExceptions(validated.event, calendar, file) };
         return { events: updated };
       },
       `Update event in ${calendar}`

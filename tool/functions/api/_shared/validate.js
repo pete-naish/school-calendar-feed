@@ -1,4 +1,5 @@
 import { toTitleCase } from "./titleCase.js";
+import { YEAR_GROUPS } from "./calendars.js";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -59,6 +60,18 @@ const EXCEPTION_ACTIONS = new Set(["cancelled", "moved"]);
 // one exception shouldn't lose every other exception on the card.
 // Meaningless without `recurrence`, but harmless to carry through either
 // way; scripts/build_ics.py only applies them when recurrence is present.
+//
+// An exception on a year group's shared event can be scoped to some of its
+// classes with `classes` (class codes, e.g. ["rr"]); absent means every
+// class. Unknown codes are dropped here - events-update.js narrows it to
+// the caller's own year group, since this doesn't know which one that is.
+const CLASS_CODES = new Set(YEAR_GROUPS.flatMap((group) => group.classes.map((cls) => cls.code)));
+
+function cleanExceptionClasses(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((code) => typeof code === "string" && CLASS_CODES.has(code)))];
+}
+
 function cleanExceptions(value) {
   if (!Array.isArray(value)) return [];
   const cleaned = [];
@@ -66,8 +79,13 @@ function cleanExceptions(value) {
     if (!item || typeof item !== "object") continue;
     const date = cleanOptionalDate(item.date);
     if (!date || !EXCEPTION_ACTIONS.has(item.action)) continue;
+    const classes = cleanExceptionClasses(item.classes);
+    // A scope naming only unknown classes is bogus - drop the exception
+    // rather than let it turn into a year-wide one.
+    if (Array.isArray(item.classes) && item.classes.length > 0 && classes.length === 0) continue;
+    const scope = classes.length > 0 ? { classes } : {};
     if (item.action === "cancelled") {
-      cleaned.push({ date, action: "cancelled" });
+      cleaned.push({ date, action: "cancelled", ...scope });
       continue;
     }
     const new_date = cleanOptionalDate(item.new_date);
@@ -78,6 +96,7 @@ function cleanExceptions(value) {
       new_date,
       new_time: cleanOptionalTime(item.new_time),
       new_end_time: cleanOptionalTime(item.new_end_time),
+      ...scope,
     });
   }
   return cleaned;

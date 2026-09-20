@@ -18,7 +18,11 @@ each event, and writes out:
                                   calendars. An event tied to one specific
                                   class appears only in that class's calendar.
                                   Also includes hand/AI-entered events from
-                                  data/manual_events/<code>.json.
+                                  data/manual_events/<code>.json, plus the
+                                  year's shared events from <year key>.json
+                                  (a recurring one's `exceptions` may carry a
+                                  `classes` list, limiting that exception to
+                                  those classes - e.g. ["rr"] - else all).
 - calendars/fosps.ics          - Friends of St Paul's events. Not published
                                   by the school API at all; sourced from
                                   data/manual_events/fosps.json, maintained by
@@ -502,7 +506,16 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
 
     moved_events: list[Event] = []
     exception_by_date: dict[date, dict] = {}
-    for exc in raw.get("exceptions") or []:
+    # An exception on a year group's shared event may be scoped to some of
+    # its classes (`classes`, e.g. ["rr"] when only RR's class trip clashes
+    # with PE); without it, it applies to every class. Unscoped ones go in
+    # first so a class-specific exception for the same date overrides them.
+    applicable = [
+        exc
+        for exc in raw.get("exceptions") or []
+        if not exc.get("classes") or code.lower() in [str(c).lower() for c in exc["classes"]]
+    ]
+    for exc in sorted(applicable, key=lambda e: bool(e.get("classes"))):
         try:
             exception_by_date[date.fromisoformat(exc["date"])] = exc
         except (KeyError, ValueError):

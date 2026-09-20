@@ -130,7 +130,7 @@ function setupYearGroupControls(card, { saved = false, shared = false } = {}) {
   note.hidden = true;
   if (!group) return;
   if (shared) {
-    note.textContent = `Shared with ${yearGroupDescription(group)} - editing or deleting it changes it for every class.`;
+    note.textContent = `Shared with ${yearGroupDescription(group)} - editing or deleting it changes it for every class (an exception can be limited to one class, though).`;
     note.hidden = false;
   } else if (!saved) {
     card.querySelector(".field-year-group-text").textContent = `Add to ${yearGroupDescription(group)}`;
@@ -308,11 +308,33 @@ function setCardExceptions(card, exceptions) {
   renderExceptionsList(card);
 }
 
+// " (RR only)" for an exception scoped to some of the year's classes; nothing
+// for one that applies to every class (or on a class's own, unshared event).
+function exceptionScopeText(exc) {
+  const group = currentYearGroup();
+  if (!group || !exc.classes || exc.classes.length === 0) return "";
+  const labels = exc.classes.map((code) => group.classes.find((c) => c.code === code)?.label || code.toUpperCase());
+  return ` (${labels.join(" and ")} only)`;
+}
+
 function formatExceptionSummary(exc) {
   const fmt = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  if (exc.action === "cancelled") return `${fmt(exc.date)}: cancelled`;
+  const scope = exceptionScopeText(exc);
+  if (exc.action === "cancelled") return `${fmt(exc.date)}: cancelled${scope}`;
   const timeText = exc.new_time ? ` at ${exc.new_time}${exc.new_end_time ? `–${exc.new_end_time}` : ""}` : "";
-  return `${fmt(exc.date)}: moved to ${fmt(exc.new_date)}${timeText}`;
+  return `${fmt(exc.date)}: moved to ${fmt(exc.new_date)}${timeText}${scope}`;
+}
+
+// Whether two same-date exceptions would clash: both unscoped (every class),
+// or both scoped with a class in common. An unscoped one alongside a
+// class-specific one is deliberate and fine - the build lets the specific one
+// win (e.g. PE moved for the whole year, but cancelled for RR's class trip).
+function exceptionScopesClash(a, b) {
+  const aScoped = a.classes?.length > 0;
+  const bScoped = b.classes?.length > 0;
+  if (!aScoped && !bScoped) return true;
+  if (aScoped && bScoped) return a.classes.some((code) => b.classes.includes(code));
+  return false;
 }
 
 function renderExceptionsList(card) {
@@ -335,7 +357,10 @@ function renderExceptionsList(card) {
   });
 }
 
-function wireExceptionsSection(card, initialExceptions) {
+// `shared` is true for an event shared by the whole year group: its
+// exceptions can then be limited to one class (e.g. only RR's class trip
+// clashes with the shared PE) via an "Applies to" choice.
+function wireExceptionsSection(card, initialExceptions, { shared = false } = {}) {
   card.dataset.exceptions = JSON.stringify(initialExceptions || []);
   renderExceptionsList(card);
 
@@ -355,6 +380,16 @@ function wireExceptionsSection(card, initialExceptions) {
   actionSelect.addEventListener("change", syncMoveFieldsVisibility);
   syncMoveFieldsVisibility();
 
+  const scopeRow = card.querySelector(".exception-scope-row");
+  const scopeSelect = card.querySelector(".exception-scope");
+  const group = currentYearGroup();
+  if (shared && group) {
+    scopeSelect.innerHTML = "";
+    scopeSelect.add(new Option(`All of ${group.label} (${group.classes.map((c) => c.label).join(" and ")})`, ""));
+    for (const cls of group.classes) scopeSelect.add(new Option(`${cls.label} only`, cls.code));
+    scopeRow.hidden = false;
+  }
+
   const dateInput = card.querySelector(".exception-date");
   const newDateInput = card.querySelector(".exception-new-date");
   const newTimeInput = card.querySelector(".exception-new-time");
@@ -362,12 +397,21 @@ function wireExceptionsSection(card, initialExceptions) {
 
   card.querySelector(".exception-add-button").addEventListener("click", () => {
     if (!dateInput.value) return;
+    const errorEl = card.querySelector(".field-error");
+    errorEl.hidden = true;
     const exception = { date: dateInput.value, action: actionSelect.value };
+    if (!scopeRow.hidden && scopeSelect.value) exception.classes = [scopeSelect.value];
     if (exception.action === "moved") {
       if (!newDateInput.value) return;
       exception.new_date = newDateInput.value;
       exception.new_time = newTimeInput.value || null;
       exception.new_end_time = newEndTimeInput.value || null;
+    }
+    const clash = getCardExceptions(card).find((e) => e.date === exception.date && exceptionScopesClash(e, exception));
+    if (clash) {
+      errorEl.textContent = `There's already an exception on that date${exceptionScopeText(clash)} - remove it first to change it.`;
+      errorEl.hidden = false;
+      return;
     }
     setCardExceptions(card, [...getCardExceptions(card), exception]);
     dateInput.value = "";
@@ -538,7 +582,7 @@ function renderExistingEvents(events) {
     const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
     fillCardFields(node, event);
     wireRecurrenceToggle(node);
-    wireExceptionsSection(node, event.exceptions);
+    wireExceptionsSection(node, event.exceptions, { shared: Boolean(event.year_group) });
     setupYearGroupControls(node, { saved: true, shared: Boolean(event.year_group) });
 
     const saveButton = node.querySelector(".card-save-button");

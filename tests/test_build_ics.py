@@ -450,3 +450,58 @@ def test_rebuild_is_idempotent_for_moved_exceptions():
     first = build_ics.build_manual_event(raw, "5hp", set())
     second = build_ics.build_manual_event(raw, "5hp", set())
     assert str(first[1]["uid"]) == str(second[1]["uid"])
+
+
+# --------------------------------------------------------------------------
+# Exceptions scoped to some classes of a year group's shared event (e.g. only
+# RR's class trip clashes with the shared weekly PE)
+# --------------------------------------------------------------------------
+
+def _ical_for(raw, code):
+    return build_ics.make_calendar("test", build_ics.build_manual_event(raw, code, set())).to_ical()
+
+
+def test_class_scoped_cancel_only_applies_to_that_class():
+    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled", "classes": ["rr"]}]}
+    assert b"EXDATE;TZID=Europe/London:20261020T090000" in _ical_for(raw, "rr")
+    assert b"EXDATE" not in _ical_for(raw, "rgp")
+
+
+def test_class_scoped_move_only_creates_a_moved_event_for_that_class():
+    raw = {
+        **WEEKLY_PE_BASE,
+        "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21", "classes": ["rgp"]}],
+    }
+    assert len(build_ics.build_manual_event(raw, "rgp", set())) == 2
+    rr_events = build_ics.build_manual_event(raw, "rr", set())
+    assert len(rr_events) == 1
+    assert b"EXDATE" not in build_ics.make_calendar("test", rr_events).to_ical()
+
+
+def test_unscoped_exception_applies_to_every_class():
+    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled"}]}
+    for code in ("rr", "rgp"):
+        assert b"EXDATE;TZID=Europe/London:20261020T090000" in _ical_for(raw, code)
+
+
+def test_empty_classes_list_means_every_class():
+    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled", "classes": []}]}
+    assert b"EXDATE" in _ical_for(raw, "rgp")
+
+
+def test_class_scope_match_is_case_insensitive():
+    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled", "classes": ["RR"]}]}
+    assert b"EXDATE" in _ical_for(raw, "rr")
+
+
+def test_class_specific_exception_overrides_unscoped_one_on_same_date():
+    # PE is moved for the whole year, but RR's class trip cancels it outright.
+    raw = {
+        **WEEKLY_PE_BASE,
+        "exceptions": [
+            {"date": "2026-10-20", "action": "cancelled", "classes": ["rr"]},
+            {"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"},
+        ],
+    }
+    assert len(build_ics.build_manual_event(raw, "rr", set())) == 1  # cancelled, no moved event
+    assert len(build_ics.build_manual_event(raw, "rgp", set())) == 2  # the year-wide move

@@ -44,7 +44,13 @@ integration.
   iCalendar `EXDATE` on the series plus, for a move, a genuinely separate
   one-off event with its own stable UID. Only available on an
   already-saved event (not a draft/extraction-review card) - there's no
-  series yet to override.
+  series yet to override. On an event shared by the whole year (see
+  `save.js` below) an exception can be limited to one class with an
+  **Applies to** choice (e.g. only RR's class trip clashes with the shared
+  PE): saved as `classes: ["rr"]` on the exception, absent meaning every
+  class. Where the same date has both a year-wide and a class-specific
+  exception, the class-specific one wins for that class; two that would clash
+  (both year-wide, or sharing a class) are refused.
 - `functions/api/*.js` - Cloudflare Pages Functions (file-based routing:
   `functions/api/parse.js` becomes `POST /api/parse`, etc). Each endpoint
   re-validates the calendar code and passcode independently.
@@ -68,7 +74,8 @@ integration.
     its year's shared ones (the latter flagged and marked "Shared with ..."
     in the UI), and `events-update.js` / `events-delete.js` look for an
     event's id in the class's own file, then its year's - so any class in the
-    year can edit or delete a shared event, for all of them, but a class from
+    year can edit or delete a shared event, for all of them (bar a class-scoped
+    exception, which only affects the classes it names), but a class from
     another year can't touch it. Not offered on FOSPS or Whole School. An
     already-saved event can't change scope here (delete and re-add it).
     Duplicates of an already-saved event are skipped
