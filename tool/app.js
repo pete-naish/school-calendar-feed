@@ -93,6 +93,11 @@ function init() {
 
   el.calendarSelect.addEventListener("change", updateLoginButtonState);
   el.passcodeInput.addEventListener("input", updateLoginButtonState);
+  el.passcodeInput.addEventListener("keydown", (e) => {
+    // Same guard as the button: no calendar picked yet (or a login already
+    // in flight) leaves it disabled, and Enter must respect that too.
+    if (e.key === "Enter" && !el.loginButton.disabled) handleLogin();
+  });
   el.loginButton.addEventListener("click", handleLogin);
   el.switchCalendarButton.addEventListener("click", handleSwitchCalendar);
   el.extractButton.addEventListener("click", handleExtract);
