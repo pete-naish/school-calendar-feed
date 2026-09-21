@@ -120,7 +120,10 @@ read-mostly card with just description and location boxes - no other
 fields, no "Add events" section at all) and re-checked server-side in every
 endpoint (`save.js`/`events-delete.js`/`parse.js` reject this calendar
 outright; `events-update.js` accepts only a `description` and/or
-`location`).
+`location`). It also only accepts an id that's in the published `whole-school.ics` (as a
+class's school-event edit only accepts one in its own feed), and
+`commitWholeSchoolOverride()` refuses anything but a numeric school event id,
+so nothing else can become a key in `data/whole_school_overrides.json`.
 
 This is a structurally different data source from every other calendar:
 whole-school events aren't hand-entered at all (there's no

@@ -8,6 +8,14 @@
 import { commitJsonFile } from "./github.js";
 
 const OVERRIDES_PATH = "data/whole_school_overrides.json";
+
+// A school event's id is the school API's own numeric one (see the UID in
+// wholeSchool.js). Nothing else may become a key in the overrides file.
+const SCHOOL_EVENT_ID = /^\d{1,12}$/;
+
+export function isSchoolEventId(id) {
+  return typeof id === "string" && SCHOOL_EVENT_ID.test(id);
+}
 const FIELDS = ["description", "location"];
 
 // One entry as {description?, location?}. An older entry was a bare string
@@ -48,6 +56,7 @@ export function applyOverrides(events, overrides) {
 // changes, which isn't what clearing the box means), and leaves the event
 // with no location. An entry with no fields left is dropped entirely.
 export async function commitWholeSchoolOverride(env, id, changes, label = "Whole School event") {
+  if (!isSchoolEventId(id)) return { error: "invalid_id", message: "That isn't a school event id." };
   return commitJsonFile(
     env,
     OVERRIDES_PATH,

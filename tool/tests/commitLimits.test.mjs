@@ -13,6 +13,18 @@ afterEach(() => {
 
 const b64 = (data) => Buffer.from(`${JSON.stringify(data, null, 2)}\n`).toString("base64");
 
+// The published whole-school feed, holding school event 859 (whole-school edits
+// are only accepted for an event in it).
+const WHOLE_SCHOOL_ICS = [
+  "BEGIN:VCALENDAR",
+  "BEGIN:VEVENT",
+  "UID:stpauls-859@school-calendar-feed",
+  "SUMMARY:Inset Day",
+  "DTSTART;VALUE=DATE:20261007",
+  "END:VEVENT",
+  "END:VCALENDAR",
+].join("\r\n");
+
 // A fake GitHub holding one JSON file; records every PUT.
 function fakeGithub(fileData) {
   const puts = [];
@@ -22,6 +34,7 @@ function fakeGithub(fileData) {
       return new Response(JSON.stringify({ commit: { sha: "abc123" } }), { status: 200 });
     }
     if (String(url).includes("/actions/workflows/")) return new Response(null, { status: 204 });
+    if (String(url).endsWith("/calendars/whole-school.ics")) return new Response(WHOLE_SCHOOL_ICS, { status: 200 });
     return new Response(JSON.stringify({ content: b64(fileData), sha: "sha1" }), { status: 200 });
   };
   return puts;
