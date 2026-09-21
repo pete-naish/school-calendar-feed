@@ -1,4 +1,4 @@
-import ICAL from "https://cdn.jsdelivr.net/npm/ical.js@2.2.1/dist/ical.min.js";
+import ICAL from "./vendor/ical.min.js";
 
 // Mirrors YEAR_GROUPS in scripts/build_ics.py (and the two JS copies in
 // tool/functions/api/_shared/calendars.js and tool/app.js) - keep all four

@@ -255,9 +255,11 @@ device timezone.
   interactive preview calendar described above.
   Its fonts (Geist, under the SIL Open Font License) are served from
   `docs/assets/fonts/` rather than Google Fonts, so a visitor's browser makes
-  no request to Google; `tests/test_public_site.py` fails if the page starts
-  loading anything from another host (bar the one known exception, ical.js
-  from a CDN, which it lists).
+  no request to Google. The one script it needs, ical.js, is vendored in
+  `docs/assets/vendor/` (unmodified, with its licence and a record of where
+  it came from - see the README there) rather than loaded from a CDN. The page
+  makes no request to any other host, and `tests/test_public_site.py` fails if
+  that changes.
 - `tool/` is a separately-deployed (Cloudflare Pages) web app - see
   [tool/README.md](tool/README.md) - that commits to `data/manual_events/`
   directly; it doesn't itself rebuild the `.ics` files, it just feeds the

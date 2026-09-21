@@ -6,6 +6,7 @@ reason; this keeps it that way."""
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,12 +17,9 @@ DOCS = Path(__file__).resolve().parent.parent / "docs"
 INDEX = (DOCS / "index.html").read_text()
 CSS = (DOCS / "assets" / "calendar.css").read_text()
 JS = (DOCS / "assets" / "calendar.js").read_text()
-FONTS = DOCS / "assets" / "fonts"
-
-# Hosts the page is still known to load something from. Empty is the goal.
-# ical.js is imported from a CDN on line 1 of calendar.js: it should be
-# vendored into docs/assets/ like the fonts (then delete this entry).
-KNOWN_THIRD_PARTY_LOADS = {"cdn.jsdelivr.net": "ical.js, imported at the top of calendar.js"}
+ASSETS = DOCS / "assets"
+FONTS = ASSETS / "fonts"
+VENDOR = ASSETS / "vendor"
 
 
 def _absolute_hosts(urls):
@@ -62,17 +60,17 @@ def test_no_google_fonts_anywhere():
         assert "fonts.gstatic.com" not in text, name
 
 
-def test_page_loads_nothing_from_third_parties_beyond_the_known_ones():
+def test_page_loads_nothing_from_third_parties():
+    """Not fonts, not scripts (ical.js is vendored in assets/vendor/), nothing."""
     for name, hosts in _loaded_hosts().items():
-        unexpected = hosts - set(KNOWN_THIRD_PARTY_LOADS)
-        assert not unexpected, f"{name} loads from {sorted(unexpected)}"
+        assert not hosts, f"{name} loads from {sorted(hosts)}"
 
 
-def test_known_third_party_list_has_no_stale_entries():
-    """Once ical.js is vendored, this fails until its entry is removed above."""
-    actually_loaded = set().union(*_loaded_hosts().values())
-    stale = set(KNOWN_THIRD_PARTY_LOADS) - actually_loaded
-    assert not stale, f"no longer loaded, remove from KNOWN_THIRD_PARTY_LOADS: {sorted(stale)}"
+def test_the_scanner_would_notice_a_cdn_import():
+    """Guards the check above against a regex that quietly finds nothing."""
+    js = 'import ICAL from "https://cdn.jsdelivr.net/npm/ical.js@2.2.1/dist/ical.min.js";'
+    found = re.findall(r"\bimport\s*(?:[\w*{}\s,]+from\s*)?\(?\s*[\"']([^\"']+)", js)
+    assert _absolute_hosts(found) == {"cdn.jsdelivr.net"}
 
 
 FONT_FACES = re.findall(r"@font-face\s*\{(.*?)\}", CSS, re.S)
@@ -121,3 +119,34 @@ def test_the_font_licence_ships_with_the_fonts():
     licence = (FONTS / "OFL.txt").read_text()
     assert "SIL Open Font License" in licence
     assert "Geist" in licence.splitlines()[0]
+
+
+# --- vendored ical.js ---
+
+
+def test_every_module_import_in_calendar_js_is_a_local_file():
+    specifiers = re.findall(r"^import\b[^;]*?from\s*[\"']([^\"']+)[\"']", JS, re.M)
+    assert "./vendor/ical.min.js" in specifiers
+    for specifier in specifiers:
+        assert specifier.startswith("./"), f"{specifier} isn't a local import"
+        assert (ASSETS / specifier).is_file(), f"{specifier} is missing"
+
+
+def test_vendored_ical_js_is_the_recorded_unmodified_file():
+    recorded = re.search(r"SHA-256 of `ical\.min\.js`: `([0-9a-f]{64})`", (VENDOR / "README.md").read_text())
+    assert recorded, "vendor/README.md must record the file's SHA-256"
+    actual = hashlib.sha256((VENDOR / "ical.min.js").read_bytes()).hexdigest()
+    assert actual == recorded.group(1), "ical.min.js was edited - if that was deliberate, update its record in vendor/README.md"
+
+
+def test_vendored_ical_js_is_an_es_module_with_a_default_export():
+    """calendar.js does `import ICAL from ...`, which needs one."""
+    source = (VENDOR / "ical.min.js").read_text()
+    assert re.search(r"export\s*\{[^}]*\bas default\b", source)
+    assert source.startswith("/* This Source Code Form is subject to the terms of the Mozilla Public")
+
+
+def test_the_vendored_licence_and_provenance_ship_with_it():
+    assert "Mozilla Public License Version 2.0" in (VENDOR / "ical.js-LICENSE.txt").read_text()
+    readme = (VENDOR / "README.md").read_text()
+    assert "ical.js 2.2.1" in readme and "sha512-" in readme
