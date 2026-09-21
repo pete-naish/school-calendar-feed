@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import sys
 from datetime import date, datetime, time as dt_time, timedelta, timezone
@@ -210,6 +211,17 @@ _UNKNOWN_CLASS_CODE_PATTERN = re.compile(r"\b([1-6][A-Z]{1,3}|R[A-Z]{1,3})\b")
 _CLOSURE_KEYWORDS = re.compile(r"\bINSET\b|\bHALF TERM\b|\bHOLIDAY\b", re.IGNORECASE)
 _RECUR_FREQ_MAP = {"DAILY": DAILY, "WEEKLY": WEEKLY, "MONTHLY": MONTHLY}
 
+# Things a person should look at, found while building. Each is printed as a
+# WARNING and also kept here, so main() can write them to a report (see
+# write_build_report() and scripts/build_report.py) instead of leaving them in
+# a log nobody reads. main() clears it at the start of every build.
+BUILD_PROBLEMS: list[dict[str, str]] = []
+
+
+def _note_problem(kind: str, message: str, **details: str) -> None:
+    BUILD_PROBLEMS.append({"kind": kind, "message": message, **details})
+    print(f"WARNING: {message}", file=sys.stderr)
+
 
 def classify_event(title: str) -> tuple[str, set[str]]:
     """Return (bucket, class_codes) for an event title.
@@ -242,12 +254,15 @@ def classify_event(title: str) -> tuple[str, set[str]]:
         year_key = YEAR_NUMBER_TO_KEY.get(lead)
         if year_key:
             matched_years.add(year_key)
-            print(
-                f"WARNING: unrecognised class code '{token}' in event "
+            _note_problem(
+                "unrecognised_class_code",
+                f"unrecognised class code '{token}' in event "
                 f"{title!r} - treating as {YEAR_LABEL[year_key]}, added to "
                 f"both of its class calendars. Add it to the CLASS config "
                 f"in scripts/build_ics.py if it's a real/new class label.",
-                file=sys.stderr,
+                token=token,
+                title=title,
+                treated_as=YEAR_LABEL[year_key],
             )
 
     if matched_years and not _YEAR_RANGE_PATTERN.search(title):
@@ -648,10 +663,13 @@ def build_manual_events(raws: list[dict], code: str, closure_dates: set[date]) -
             events.extend(build_manual_event(raw, code, closure_dates))
         except Exception as exc:  # noqa: BLE001 - any failure to build is skipped, never fatal
             label = raw.get("id") or raw.get("title") if isinstance(raw, dict) else raw
-            print(
-                f"WARNING: skipped a manual event in {code.lower()}.ics that couldn't be built "
+            _note_problem(
+                "skipped_manual_event",
+                f"skipped a manual event in {code.lower()}.ics that couldn't be built "
                 f"({label!r}): {type(exc).__name__}: {exc}",
-                file=sys.stderr,
+                calendar=f"{code.lower()}.ics",
+                event=str(label),
+                error=f"{type(exc).__name__}: {exc}",
             )
     return events
 
@@ -738,8 +756,28 @@ def make_calendar(name: str, events: list[Event]) -> Calendar:
     return cal
 
 
+def write_build_report(path: str, calendar_counts: dict[str, int]) -> None:
+    """Writes BUILD_PROBLEMS and how many events each calendar got as JSON, for
+    scripts/build_report.py. Best-effort: a report that can't be written must
+    never stop the feeds being published."""
+    try:
+        Path(path).write_text(
+            json.dumps({"problems": BUILD_PROBLEMS, "calendars": calendar_counts}, indent=2) + "\n"
+        )
+    except OSError as exc:
+        print(f"WARNING: couldn't write the build report to {path}: {exc}", file=sys.stderr)
+
+
 def main() -> None:
+    BUILD_PROBLEMS.clear()
+    calendar_counts: dict[str, int] = {}
     raw_events = fetch_events()
+    if not raw_events:
+        _note_problem(
+            "school_feed_empty",
+            "the school's calendar API returned no events - every school-sourced event "
+            "will be missing from the published feeds",
+        )
     closure_dates = collect_closure_dates(raw_events)
     loaded_overrides = load_whole_school_overrides()
     whole_school_overrides = prune_whole_school_overrides(loaded_overrides, raw_events)
@@ -777,6 +815,7 @@ def main() -> None:
 
     cal = make_calendar(f"{SCHOOL_NAME} — Whole School", whole_school_events)
     (CALENDARS_DIR / "whole-school.ics").write_bytes(cal.to_ical())
+    calendar_counts["whole-school.ics"] = len(whole_school_events)
     print(f"Wrote {len(whole_school_events)} events to whole-school.ics", file=sys.stderr)
 
     for group in YEAR_GROUPS:
@@ -787,12 +826,18 @@ def main() -> None:
             )
             cal = make_calendar(f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})", events)
             (CALENDARS_DIR / f"{code.lower()}.ics").write_bytes(cal.to_ical())
+            calendar_counts[f"{code.lower()}.ics"] = len(events)
             print(f"Wrote {len(events)} events to {code.lower()}.ics", file=sys.stderr)
 
     fosps_events = build_manual_events(load_manual_events("fosps"), "fosps", closure_dates)
     cal = make_calendar(f"{SCHOOL_NAME} — Friends of St Paul's (FOSPS)", fosps_events)
     (CALENDARS_DIR / "fosps.ics").write_bytes(cal.to_ical())
+    calendar_counts["fosps.ics"] = len(fosps_events)
     print(f"Wrote {len(fosps_events)} events to fosps.ics", file=sys.stderr)
+
+    report_path = os.environ.get("BUILD_REPORT_PATH")
+    if report_path:
+        write_build_report(report_path, calendar_counts)
 
 
 if __name__ == "__main__":

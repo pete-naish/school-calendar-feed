@@ -248,6 +248,16 @@ device timezone.
   read-only permissions. `.github/dependabot.yml` opens a weekly pull request
   for newer Actions and Python requirements, so the pins get bumped - and the
   tests run against them - instead of going stale.
+- Problems the build finds - an event it couldn't build (skipped, so **missing
+  from the feeds**), a class label it doesn't recognise (see "How
+  classification works" above), or the school's calendar coming back empty - go to the run's
+  summary and to a single open issue, "Calendar build problems": opened when the
+  first one appears (that's your one notification), edited quietly while they
+  last, and closed by the first clean build. `build_ics.py` writes them to the
+  JSON file named by `BUILD_REPORT_PATH`, `scripts/build_report.py` turns that
+  into Markdown, and the workflow's last step does the rest. It runs after the
+  push and is allowed to fail, so reporting can never stop the feeds
+  publishing.
 - GitHub Pages serves `docs/` as a static site, so the feeds are published at
   `https://pete-naish.github.io/school-calendar-feed/calendars/<name>.ics`.
 - `docs/index.html` is a landing page listing every calendar with subscribe
