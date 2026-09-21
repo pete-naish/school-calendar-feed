@@ -34,6 +34,21 @@
 
       <p id="whole-school-notice" class="hint" hidden>Only the description and location can be edited here — titles, dates, and which events appear at all come from the school's own calendar feed and can't be changed in this tool.</p>
 
+      <section id="week-section">
+        <button id="week-list-button" class="secondary-button">What's on this week</button>
+        <p id="week-list-error" class="error" hidden></p>
+        <div id="week-list-panel" hidden>
+          <div class="week-nav">
+            <button id="week-prev-button" class="secondary-button" aria-label="Previous week">‹</button>
+            <span id="week-list-label"></span>
+            <button id="week-next-button" class="secondary-button" aria-label="Next week">›</button>
+          </div>
+          <textarea id="week-list-output" rows="12" aria-label="This week's list"></textarea>
+          <button id="week-copy-button">Copy for WhatsApp</button>
+          <p class="hint">Built from the published calendar, so an edit saved just now can take a few minutes to show. You can tweak the text before copying.</p>
+        </div>
+      </section>
+
       <section id="add-section">
         <h3>Add events</h3>
         <p class="hint">Paste a WhatsApp message, newsletter paragraph, or anything describing one or more events.</p>

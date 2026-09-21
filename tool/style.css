@@ -172,6 +172,7 @@ button.link-button {
   margin-top: 1.5rem;
 }
 
+#week-section,
 #add-section,
 #existing-section {
   margin-top: 2rem;
@@ -288,4 +289,21 @@ button.link-button {
 .card-remove-button.confirm {
   background: var(--error);
   color: #fff;
+}
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0 0.6rem;
+  font-weight: 600;
+}
+
+.week-nav button {
+  margin-top: 0;
+  padding: 0.3rem 0.8rem;
+}
+
+#week-list-output {
+  line-height: 1.4;
 }

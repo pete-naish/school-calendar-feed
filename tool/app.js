@@ -40,6 +40,7 @@ const ALL_CALENDARS = [
 const state = {
   calendar: null,
   passcode: null,
+  weekStart: null, // Monday (YYYY-MM-DD) of the week showing in the weekly list
 };
 
 const el = {
@@ -68,6 +69,14 @@ const el = {
   existingCards: document.getElementById("existing-cards"),
   schoolEventsNotice: document.getElementById("school-events-notice"),
   cardTemplate: document.getElementById("event-card-template"),
+  weekListButton: document.getElementById("week-list-button"),
+  weekListError: document.getElementById("week-list-error"),
+  weekListPanel: document.getElementById("week-list-panel"),
+  weekListLabel: document.getElementById("week-list-label"),
+  weekListOutput: document.getElementById("week-list-output"),
+  weekPrevButton: document.getElementById("week-prev-button"),
+  weekNextButton: document.getElementById("week-next-button"),
+  weekCopyButton: document.getElementById("week-copy-button"),
 };
 
 function init() {
@@ -104,6 +113,10 @@ function init() {
   el.extractButton.addEventListener("click", handleExtract);
   el.addManualCardButton.addEventListener("click", () => addDraftCard(blankEvent()));
   el.saveAllButton.addEventListener("click", handleSaveAll);
+  el.weekListButton.addEventListener("click", () => handleWeekList());
+  el.weekPrevButton.addEventListener("click", () => handleWeekList(-7));
+  el.weekNextButton.addEventListener("click", () => handleWeekList(7));
+  el.weekCopyButton.addEventListener("click", handleCopyWeekList);
 }
 
 // The year group the signed-in calendar belongs to ({label, classes}), or
@@ -221,6 +234,10 @@ function handleSwitchCalendar() {
   el.draftCards.innerHTML = "";
   el.existingCards.innerHTML = "";
   el.saveSuccess.hidden = true;
+  el.weekListPanel.hidden = true;
+  el.weekListError.hidden = true;
+  el.weekListOutput.value = "";
+  state.weekStart = null;
   el.appSection.hidden = true;
   el.addSection.hidden = false;
   el.wholeSchoolNotice.hidden = true;
@@ -495,6 +512,55 @@ async function handleSaveAll() {
 
   const listResult = await apiCall("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
   if (listResult.ok) renderExistingEvents(listResult.data.events);
+}
+
+// The "What's on this week" WhatsApp list. No argument: this week (or next,
+// on a Sunday - the server decides). `shiftDays` (-7/+7) steps from the week
+// already showing.
+async function handleWeekList(shiftDays) {
+  el.weekListError.hidden = true;
+  const buttons = [el.weekListButton, el.weekPrevButton, el.weekNextButton];
+  buttons.forEach((b) => (b.disabled = true));
+
+  const body = { calendar: state.calendar, passcode: state.passcode };
+  if (shiftDays && state.weekStart) body.week_start = shiftIsoDate(state.weekStart, shiftDays);
+  const { ok, data } = await apiCall("/api/week", body);
+
+  buttons.forEach((b) => (b.disabled = false));
+  if (!ok) {
+    el.weekListError.textContent = (data && (data.message || data.error)) || "Couldn't build the list - try again.";
+    el.weekListError.hidden = false;
+    return;
+  }
+  state.weekStart = data.week_start;
+  el.weekListLabel.textContent = `${formatEventDate(data.week_start)} – ${formatEventDate(data.week_end)}`;
+  el.weekListOutput.value = data.text;
+  el.weekListPanel.hidden = false;
+}
+
+function shiftIsoDate(iso, days) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+async function handleCopyWeekList() {
+  const text = el.weekListOutput.value;
+  const originalText = el.weekCopyButton.textContent;
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(text);
+    copied = true;
+  } catch {
+    // Clipboard API unavailable or blocked (e.g. plain http) - fall back to
+    // selecting the text and the legacy copy command.
+    el.weekListOutput.select();
+    copied = document.execCommand("copy");
+  }
+  el.weekCopyButton.textContent = copied ? "Copied ✓" : "Press Ctrl/Cmd+C to copy";
+  setTimeout(() => {
+    el.weekCopyButton.textContent = originalText;
+  }, 2000);
 }
 
 function formatEventDate(iso) {

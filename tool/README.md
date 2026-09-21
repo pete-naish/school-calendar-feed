@@ -163,6 +163,31 @@ must be in that class's published feed, so a class passcode can't edit some
 other class's or a whole-school event. There is no delete: like Whole School
 events, their existence is the school's call.
 
+## Weekly list ("What's on this week")
+
+Every calendar entry (Whole School included) has a **What's on this week**
+button that builds the Sunday WhatsApp message: the calendar's own events
+plus the whole-school ones for one Monday-Sunday week, grouped by day
+(`*bold*` day headings, `•` bullets, then location and description). The text
+lands in an editable box with a **Copy for WhatsApp** button, and the ‹ ›
+arrows step to other weeks. The default week is this one - or, on a Sunday
+(London time), the coming one.
+
+`/api/week` (`functions/api/week.js`, logic in `_shared/weekList.js`) reads
+the *published* `<calendar>.ics` and `whole-school.ics` rather than the source
+JSON, so it shows what parents' calendar apps show - closure days, cancelled
+and moved occurrences, and description/location edits are already applied -
+but an edit saved just now only appears once the triggered rebuild has
+published (a few minutes). `_shared/ics.js` reads only what `build_ics.py`
+writes: recurrences are `DAILY`/`WEEKLY`/`MONTHLY` with `INTERVAL` and
+`UNTIL`, skipped days are `EXDATE`s, and a moved occurrence is a separate
+one-off event, so a week's occurrences are worked out with plain
+London-calendar-date arithmetic (no ical.js, no time-zone maths). School
+descriptions contain raw HTML, which is stripped. Whole-school events are
+marked "— Whole School" in a class's list.
+
+Tests: `node --test "tool/tests/*.test.mjs"` (no dependencies; also run in CI).
+
 ## Publishing changes
 
 Every add, edit or delete (in any calendar, including a Whole School

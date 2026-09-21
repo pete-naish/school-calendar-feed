@@ -15,12 +15,9 @@
 // - stable across rebuilds, and what description/location overrides are
 // keyed by (see wholeSchoolOverrides.js).
 
-const CALENDARS_URL = "https://pete-naish.github.io/school-calendar-feed/calendars";
-const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
+import { fetchIcsText, unescapeIcsText } from "./ics.js";
 
-function unescapeIcsText(text) {
-  return text.replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
-}
+const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 
 // Splits on VEVENT boundaries and reads each property independently per
 // block (not assuming a fixed property order), same approach as
@@ -56,12 +53,7 @@ function extractEvents(icsText) {
 }
 
 async function fetchSchoolEvents(icsFile, { titlePrefix = "" } = {}) {
-  // No cf.cacheTtl here (unlike termEnd.js's 1hr cache) - a rep loading
-  // this page wants to see genuinely current events/descriptions, not a
-  // stale edge-cached copy from earlier in the day.
-  const resp = await fetch(`${CALENDARS_URL}/${icsFile}`);
-  if (!resp.ok) throw new Error(`Fetch ${icsFile} failed: ${resp.status}`);
-  const text = await resp.text();
+  const text = await fetchIcsText(icsFile);
   return extractEvents(text)
     .map((e) => (titlePrefix && e.title.startsWith(titlePrefix) ? { ...e, title: e.title.slice(titlePrefix.length) } : e))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
