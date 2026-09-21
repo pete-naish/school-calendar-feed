@@ -337,6 +337,11 @@ def _safe_url(url: str | None) -> str | None:
     rep tool's own validation (tool/functions/api/_shared/validate.js)."""
     if not url:
         return None
+    # A CR/LF (or any control character) is never part of a real link, and
+    # icalendar refuses to serialise a URL containing one - which would abort
+    # the whole build - so treat it as no URL at all.
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in url):
+        return None
     try:
         parsed = urlparse(url)
     except ValueError:
@@ -632,6 +637,25 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
     return [event, *moved_events]
 
 
+def build_manual_events(raws: list[dict], code: str, closure_dates: set[date]) -> list[Event]:
+    """build_manual_event() for each stored event, skipping (and logging) any
+    that can't be built - a malformed date, say, from a hand-edited file or a
+    value the class rep tool let through. One bad event must not stop every
+    calendar publishing, so it's dropped from its own feed only."""
+    events: list[Event] = []
+    for raw in raws:
+        try:
+            events.extend(build_manual_event(raw, code, closure_dates))
+        except Exception as exc:  # noqa: BLE001 - any failure to build is skipped, never fatal
+            label = raw.get("id") or raw.get("title") if isinstance(raw, dict) else raw
+            print(
+                f"WARNING: skipped a manual event in {code.lower()}.ics that couldn't be built "
+                f"({label!r}): {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+    return events
+
+
 def load_manual_events(code: str) -> list[dict]:
     path = MANUAL_EVENTS_DIR / f"{code.lower()}.json"
     if not path.exists():
@@ -758,20 +782,14 @@ def main() -> None:
     for group in YEAR_GROUPS:
         for cls in group["classes"]:
             code = cls["code"]
-            events = class_events[code] + [
-                event
-                for raw in load_class_manual_events(code, group["key"])
-                for event in build_manual_event(raw, code, closure_dates)
-            ]
+            events = class_events[code] + build_manual_events(
+                load_class_manual_events(code, group["key"]), code, closure_dates
+            )
             cal = make_calendar(f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})", events)
             (CALENDARS_DIR / f"{code.lower()}.ics").write_bytes(cal.to_ical())
             print(f"Wrote {len(events)} events to {code.lower()}.ics", file=sys.stderr)
 
-    fosps_events = [
-        event
-        for raw in load_manual_events("fosps")
-        for event in build_manual_event(raw, "fosps", closure_dates)
-    ]
+    fosps_events = build_manual_events(load_manual_events("fosps"), "fosps", closure_dates)
     cal = make_calendar(f"{SCHOOL_NAME} — Friends of St Paul's (FOSPS)", fosps_events)
     (CALENDARS_DIR / "fosps.ics").write_bytes(cal.to_ical())
     print(f"Wrote {len(fosps_events)} events to fosps.ics", file=sys.stderr)

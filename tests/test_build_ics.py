@@ -113,6 +113,11 @@ SAFE_URL_CASES = [
     ("", None),
     ("http://example.com", "http://example.com"),
     ("https://example.com/page?x=1", "https://example.com/page?x=1"),
+    # A control character makes icalendar raise while serialising, which
+    # would fail the whole build - so the URL is dropped instead.
+    ("http://example.com/a\r\nX-EVIL:1", None),
+    ("http://example.com/a\nb", None),
+    ("http://example.com/\x00", None),
 ]
 
 
@@ -635,3 +640,57 @@ def test_moved_exception_keeps_parent_end_when_only_the_date_moves():
     moved_event = build_ics.build_manual_event(raw, "5hp", set())[1]
     assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 9, 0, tzinfo=build_ics.LONDON)
     assert moved_event["dtend"].dt == datetime(2026, 10, 21, 10, 30, tzinfo=build_ics.LONDON)
+
+
+# --------------------------------------------------------------------------
+# One event that can't be built must not stop every calendar publishing.
+# --------------------------------------------------------------------------
+
+BAD_MANUAL_EVENTS = {
+    "impossible date": {"id": "bad", "title": "Bad", "date": "2026-02-30"},
+    "impossible end date": {"id": "bad", "title": "Bad", "date": "2026-10-01", "end_date": "2026-13-01"},
+    "impossible repeat-until": {
+        "id": "bad",
+        "title": "Bad",
+        "date": "2026-10-01",
+        "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-02-30"},
+    },
+    "impossible move destination": {
+        "id": "bad",
+        "title": "Bad",
+        "date": "2026-10-01",
+        "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-12-01"},
+        "exceptions": [{"date": "2026-10-08", "action": "moved", "new_date": "2026-11-31"}],
+    },
+    "bad time": {"id": "bad", "title": "Bad", "date": "2026-10-01", "time": "25:99"},
+    "missing title": {"id": "bad", "date": "2026-10-01"},
+    "not an object": "oops",
+}
+GOOD_MANUAL_EVENT = {"id": "good", "title": "Good", "date": "2026-10-02"}
+
+
+@pytest.mark.parametrize("bad", BAD_MANUAL_EVENTS.values(), ids=BAD_MANUAL_EVENTS.keys())
+def test_build_manual_events_skips_an_event_that_cannot_be_built(bad, capsys):
+    events = build_ics.build_manual_events([bad, GOOD_MANUAL_EVENT], "5hp", set())
+    assert [str(e["uid"]) for e in events] == [f"manual-good@{build_ics.UID_DOMAIN}"]
+    assert "WARNING: skipped a manual event in 5hp.ics" in capsys.readouterr().err
+
+
+def test_build_manual_events_builds_every_good_event():
+    other = {"id": "other", "title": "Other", "date": "2026-10-03"}
+    assert len(build_ics.build_manual_events([GOOD_MANUAL_EVENT, other], "5hp", set())) == 2
+
+
+def test_main_still_publishes_every_calendar_when_a_manual_event_is_bad(tmp_path, monkeypatch, capsys):
+    manual = tmp_path / "manual"
+    manual.mkdir()
+    (manual / "5hp.json").write_text(json.dumps([BAD_MANUAL_EVENTS["impossible date"], GOOD_MANUAL_EVENT]))
+    (manual / "year5.json").write_text(json.dumps([BAD_MANUAL_EVENTS["bad time"]]))
+    (manual / "fosps.json").write_text(json.dumps([BAD_MANUAL_EVENTS["impossible repeat-until"], GOOD_MANUAL_EVENT]))
+    cals = _build_with_overrides(tmp_path, monkeypatch, [], {})
+
+    assert len(cals) == 16  # whole school, 14 classes, FOSPS
+    for name in ("5hp.ics", "fosps.ics"):
+        assert [str(e["uid"]) for e in cals[name].walk("VEVENT")] == [f"manual-good@{build_ics.UID_DOMAIN}"]
+    assert list(cals["5l.ics"].walk("VEVENT")) == []  # year5.json's bad event is skipped there too
+    assert capsys.readouterr().err.count("WARNING: skipped a manual event") == 4  # 5hp, 5hp+5l (year5), fosps

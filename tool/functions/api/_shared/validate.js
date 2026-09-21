@@ -22,8 +22,17 @@ function cleanOptionalTime(value) {
   return typeof value === "string" && TIME_RE.test(value) ? value : null;
 }
 
+// A YYYY-MM-DD that is also a real calendar day: "2026-02-30" has the right
+// shape but isn't one, and scripts/build_ics.py can't build an event on it.
+function isRealDate(value) {
+  if (typeof value !== "string" || !DATE_RE.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
+}
+
 function cleanOptionalDate(value) {
-  return typeof value === "string" && DATE_RE.test(value) ? value : null;
+  return isRealDate(value) ? value : null;
 }
 
 // Rejects anything but http(s) - this value is later set as an <a href> on
@@ -32,6 +41,9 @@ function cleanOptionalDate(value) {
 function cleanOptionalUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
   const trimmed = value.trim();
+  // Control characters (a pasted line break, say) are never part of a real
+  // link, and one in the published .ics makes the whole feed fail to build.
+  if (/[\x00-\x1f\x7f]/.test(trimmed)) return null;
   let parsed;
   try {
     parsed = new URL(trimmed);
@@ -128,7 +140,7 @@ export function validateExtractedEvents(input) {
       warnings.push("Dropped an event with no title");
       continue;
     }
-    if (typeof item.date !== "string" || !DATE_RE.test(item.date)) {
+    if (!isRealDate(item.date)) {
       warnings.push(`Dropped "${item.title}" - couldn't resolve a date`);
       continue;
     }
@@ -156,7 +168,7 @@ export function validateEventInput(event) {
   if (!event || typeof event.title !== "string" || !event.title.trim()) {
     return { valid: false, error: "Title is required" };
   }
-  if (typeof event.date !== "string" || !DATE_RE.test(event.date)) {
+  if (!isRealDate(event.date)) {
     return { valid: false, error: "A valid date (YYYY-MM-DD) is required" };
   }
   const end_date = cleanOptionalDate(event.end_date);
