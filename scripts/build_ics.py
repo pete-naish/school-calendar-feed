@@ -415,11 +415,28 @@ def build_event(
     return event
 
 
-def _single_day_dtstart_dtend(target_date: date, time_str: str | None, end_time_str: str | None):
+def _timed_duration(raw: dict) -> timedelta:
+    """How long a timed manual event lasts: its start-to-end span, or the
+    default hour when it has no end time (or one that isn't after its start)."""
+    if raw.get("time") and raw.get("end_time"):
+        start = datetime.strptime(raw["time"], "%H:%M")
+        end = datetime.strptime(raw["end_time"], "%H:%M")
+        if end > start:
+            return end - start
+    return timedelta(hours=1)
+
+
+def _single_day_dtstart_dtend(
+    target_date: date,
+    time_str: str | None,
+    end_time_str: str | None,
+    default_duration: timedelta = timedelta(hours=1),
+):
     """DTSTART/DTEND for a single-day event on `target_date` - the same
     time-of-day rules build_manual_event uses for a non-multi-day event,
     factored out so a moved recurrence exception (always single-day, since
-    it's one occurrence of an otherwise-single-day series) can reuse it."""
+    it's one occurrence of an otherwise-single-day series) can reuse it.
+    `default_duration` is the length when there's a start time but no end."""
     if time_str:
         start_dt = datetime.combine(target_date, datetime.strptime(time_str, "%H:%M").time()).replace(tzinfo=LONDON)
         if end_time_str:
@@ -427,7 +444,7 @@ def _single_day_dtstart_dtend(target_date: date, time_str: str | None, end_time_
                 tzinfo=LONDON
             )
         else:
-            end_dt = start_dt + timedelta(hours=1)
+            end_dt = start_dt + default_duration
         return start_dt, end_dt
     return target_date, target_date + timedelta(days=1)
 
@@ -456,12 +473,12 @@ def _build_moved_exception_event(raw: dict, exception: dict, code: str) -> Event
     new_time = exception.get("new_time")
     new_end_time = exception.get("new_end_time")
     if not new_time:
-        # Only the date moved: the occurrence keeps its own time and end. (A
-        # new start with no new end mustn't inherit the parent's end - that
-        # could fall before the new start - so it gets the usual one hour.)
+        # Only the date moved: the occurrence keeps its own time and end.
         new_time = raw.get("time")
         new_end_time = new_end_time or raw.get("end_time")
-    dtstart, dtend = _single_day_dtstart_dtend(new_date, new_time, new_end_time)
+    # A new start with no new end keeps the event's length rather than
+    # inheriting its end time, which could fall before the new start.
+    dtstart, dtend = _single_day_dtstart_dtend(new_date, new_time, new_end_time, _timed_duration(raw))
     event.add("dtstart", dtstart)
     event.add("dtend", dtend)
 

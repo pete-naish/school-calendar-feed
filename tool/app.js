@@ -276,36 +276,50 @@ async function handleExtract() {
   el.pasteTextarea.value = "";
 }
 
-// A timed event with no end time is published as lasting an hour
-// (scripts/build_ics.py), so an empty end time is shown as that: "09:00" ->
-// "10:00". Null when the hour would run past midnight - that can't be written
-// as a same-day time - so the field stays empty and the build's default applies.
-function oneHourAfter(time) {
+const DEFAULT_MINUTES = 60;
+
+// "09:00" + 60 -> "10:00". Null when that runs past midnight - it can't be
+// written as a same-day time - so the field stays empty and the build works
+// the end out itself.
+function addMinutes(time, minutes) {
   const [h, m] = time.split(":").map(Number);
-  return h < 23 ? `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}` : null;
+  const total = h * 60 + m + minutes;
+  if (total >= 24 * 60) return null;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
-// Fills `endInput` an hour after `startInput` now, and keeps it there as the
-// start changes - until the rep sets a different end time, which is left
+// A timed event's length in minutes: start to end, or the default hour when
+// it has no end time (the build publishes it that way, scripts/build_ics.py).
+function eventMinutes(start, end) {
+  if (!start || !end) return DEFAULT_MINUTES;
+  const toMinutes = (t) => t.split(":").reduce((h, m) => h * 60 + Number(m));
+  return toMinutes(end) > toMinutes(start) ? toMinutes(end) - toMinutes(start) : DEFAULT_MINUTES;
+}
+
+// Fills `endInput` `minutes()` after `startInput` now, and keeps it there as
+// the start changes - until the rep sets a different end time, which is left
 // alone. `skip()` says when there's no such default to show (a multi-day
 // event with no end time runs to the end of its last day instead).
-function wireDefaultEndTime(startInput, endInput, skip = () => false) {
-  let lastStart = startInput.value;
+function wireDefaultEndTime(startInput, endInput, { minutes = () => DEFAULT_MINUTES, skip = () => false } = {}) {
+  let lastStart = "";
+  let lastMinutes = minutes();
   const sync = () => {
     const start = startInput.value;
-    const untouched = !endInput.value || endInput.value === (lastStart && oneHourAfter(lastStart));
+    const untouched = !endInput.value || endInput.value === (lastStart && addMinutes(lastStart, lastMinutes));
     lastStart = start;
-    if (untouched) endInput.value = (start && !skip() && oneHourAfter(start)) || "";
+    lastMinutes = minutes();
+    if (untouched) endInput.value = (start && !skip() && addMinutes(start, lastMinutes)) || "";
   };
   startInput.addEventListener("input", sync);
-  lastStart = "";
   sync();
 }
 
 function wireCardDefaultEndTime(card) {
   const date = card.querySelector(".field-date");
   const endDate = card.querySelector(".field-end-date");
-  wireDefaultEndTime(card.querySelector(".field-time"), card.querySelector(".field-end-time"), () => endDate.value && endDate.value !== date.value);
+  wireDefaultEndTime(card.querySelector(".field-time"), card.querySelector(".field-end-time"), {
+    skip: () => endDate.value && endDate.value !== date.value,
+  });
 }
 
 function fillCardFields(card, event) {
@@ -444,7 +458,11 @@ function wireExceptionsSection(card, initialExceptions, { shared = false } = {})
   const newDateInput = card.querySelector(".exception-new-date");
   const newTimeInput = card.querySelector(".exception-new-time");
   const newEndTimeInput = card.querySelector(".exception-new-end-time");
-  wireDefaultEndTime(newTimeInput, newEndTimeInput);
+  // A moved occurrence keeps the event's own length, so a new start with no
+  // new end doesn't quietly shorten (or lengthen) it.
+  wireDefaultEndTime(newTimeInput, newEndTimeInput, {
+    minutes: () => eventMinutes(card.querySelector(".field-time").value, card.querySelector(".field-end-time").value),
+  });
 
   card.querySelector(".exception-add-button").addEventListener("click", () => {
     if (!dateInput.value) return;

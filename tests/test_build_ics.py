@@ -594,9 +594,9 @@ def test_class_specific_exception_overrides_unscoped_one_on_same_date():
     assert len(build_ics.build_manual_event(raw, "rgp", set())) == 2  # the year-wide move
 
 
-def test_moved_exception_with_new_time_but_no_end_gets_the_default_hour():
+def test_moved_exception_with_new_time_but_no_end_keeps_the_original_length():
     # The parent's 09:00-10:30 end mustn't carry over to a moved 14:00 start
-    # (that would end before it begins) - a new start with no end is an hour.
+    # (that would end before it begins) - the event's 90 minutes do.
     raw = {
         **WEEKLY_PE_BASE,
         "end_time": "10:30",
@@ -604,7 +604,26 @@ def test_moved_exception_with_new_time_but_no_end_gets_the_default_hour():
     }
     moved_event = build_ics.build_manual_event(raw, "5hp", set())[1]
     assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 14, 0, tzinfo=build_ics.LONDON)
+    assert moved_event["dtend"].dt == datetime(2026, 10, 21, 15, 30, tzinfo=build_ics.LONDON)
+
+
+def test_moved_exception_with_new_time_and_a_parent_with_no_end_gets_an_hour():
+    raw = {
+        **{k: v for k, v in WEEKLY_PE_BASE.items() if k != "end_time"},
+        "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21", "new_time": "14:00"}],
+    }
+    moved_event = build_ics.build_manual_event(raw, "5hp", set())[1]
     assert moved_event["dtend"].dt == datetime(2026, 10, 21, 15, 0, tzinfo=build_ics.LONDON)
+
+
+def test_moved_exception_can_run_past_midnight_when_the_original_length_does():
+    raw = {
+        **WEEKLY_PE_BASE,
+        "end_time": "11:00",
+        "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21", "new_time": "23:00"}],
+    }
+    moved_event = build_ics.build_manual_event(raw, "5hp", set())[1]
+    assert moved_event["dtend"].dt == datetime(2026, 10, 22, 1, 0, tzinfo=build_ics.LONDON)
 
 
 def test_moved_exception_keeps_parent_end_when_only_the_date_moves():
