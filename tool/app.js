@@ -276,6 +276,38 @@ async function handleExtract() {
   el.pasteTextarea.value = "";
 }
 
+// A timed event with no end time is published as lasting an hour
+// (scripts/build_ics.py), so an empty end time is shown as that: "09:00" ->
+// "10:00". Null when the hour would run past midnight - that can't be written
+// as a same-day time - so the field stays empty and the build's default applies.
+function oneHourAfter(time) {
+  const [h, m] = time.split(":").map(Number);
+  return h < 23 ? `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}` : null;
+}
+
+// Fills `endInput` an hour after `startInput` now, and keeps it there as the
+// start changes - until the rep sets a different end time, which is left
+// alone. `skip()` says when there's no such default to show (a multi-day
+// event with no end time runs to the end of its last day instead).
+function wireDefaultEndTime(startInput, endInput, skip = () => false) {
+  let lastStart = startInput.value;
+  const sync = () => {
+    const start = startInput.value;
+    const untouched = !endInput.value || endInput.value === (lastStart && oneHourAfter(lastStart));
+    lastStart = start;
+    if (untouched) endInput.value = (start && !skip() && oneHourAfter(start)) || "";
+  };
+  startInput.addEventListener("input", sync);
+  lastStart = "";
+  sync();
+}
+
+function wireCardDefaultEndTime(card) {
+  const date = card.querySelector(".field-date");
+  const endDate = card.querySelector(".field-end-date");
+  wireDefaultEndTime(card.querySelector(".field-time"), card.querySelector(".field-end-time"), () => endDate.value && endDate.value !== date.value);
+}
+
 function fillCardFields(card, event) {
   card.querySelector(".field-title").value = event.title || "";
   card.querySelector(".field-date").value = event.date || "";
@@ -412,6 +444,7 @@ function wireExceptionsSection(card, initialExceptions, { shared = false } = {})
   const newDateInput = card.querySelector(".exception-new-date");
   const newTimeInput = card.querySelector(".exception-new-time");
   const newEndTimeInput = card.querySelector(".exception-new-end-time");
+  wireDefaultEndTime(newTimeInput, newEndTimeInput);
 
   card.querySelector(".exception-add-button").addEventListener("click", () => {
     if (!dateInput.value) return;
@@ -457,6 +490,7 @@ function updateDraftControlsVisibility() {
 function addDraftCard(event) {
   const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
   fillCardFields(node, event);
+  wireCardDefaultEndTime(node);
   wireRecurrenceToggle(node);
   setupYearGroupControls(node);
   node.querySelector(".card-save-button").hidden = true; // drafts save via "Save all", not individually
@@ -677,6 +711,7 @@ function renderExistingEvents(events) {
     }
     const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
     fillCardFields(node, event);
+    wireCardDefaultEndTime(node);
     wireRecurrenceToggle(node);
     wireExceptionsSection(node, event.exceptions, { shared: Boolean(event.year_group) });
     setupYearGroupControls(node, { saved: true, shared: Boolean(event.year_group) });
