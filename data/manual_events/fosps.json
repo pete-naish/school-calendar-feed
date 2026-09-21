@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "1a4e2f2ddd1f",
+    "title": "AGM and Executive Election",
+    "date": "2026-10-08",
+    "end_date": null,
+    "time": "20:00",
+    "end_time": null,
+    "description": null,
+    "location": "School Hall",
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
+  }
+]
