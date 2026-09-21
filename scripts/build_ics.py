@@ -453,8 +453,14 @@ def _build_moved_exception_event(raw: dict, exception: dict, code: str) -> Event
         event.add("url", url)
 
     new_date = date.fromisoformat(exception["new_date"])
-    new_time = exception.get("new_time") or raw.get("time")
-    new_end_time = exception.get("new_end_time") or raw.get("end_time")
+    new_time = exception.get("new_time")
+    new_end_time = exception.get("new_end_time")
+    if not new_time:
+        # Only the date moved: the occurrence keeps its own time and end. (A
+        # new start with no new end mustn't inherit the parent's end - that
+        # could fall before the new start - so it gets the usual one hour.)
+        new_time = raw.get("time")
+        new_end_time = new_end_time or raw.get("end_time")
     dtstart, dtend = _single_day_dtstart_dtend(new_date, new_time, new_end_time)
     event.add("dtstart", dtstart)
     event.add("dtend", dtend)
