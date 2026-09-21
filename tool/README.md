@@ -90,7 +90,7 @@ integration.
   14 classes + FOSPS mirror `YEAR_GROUPS` in `scripts/build_ics.py` and are
   kept in sync by hand; the 16th, `whole-school`, is the restricted entry
   below and isn't mirrored from anywhere, since it has no
-  `data/manual_events/` file at all), `auth.js` (passcode check), `github.js`
+  `data/manual_events/` file at all), `auth.js` (passcode check, in constant time), `github.js`
   (GitHub Contents API get/commit for any JSON file in the repo, retrying a
   concurrent-edit conflict, a GitHub 5xx, or a network failure), `validate.js`
   (sanitizes/validates event data from both the LLM and the frontend form -
