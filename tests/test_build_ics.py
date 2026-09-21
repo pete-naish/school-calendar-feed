@@ -146,6 +146,34 @@ def test_build_event_keeps_school_description_with_no_override():
     assert str(event["description"]) == "Original text"
 
 
+def test_build_event_turns_school_html_description_into_plain_text():
+    raw = {
+        "id": 10,
+        "title": "Last Day of Autumn Term",
+        "allDay": True,
+        "start": "2026-12-18",
+        "desc": "<p>Reception     1:15pm<br />Year 1 and 3 1:20pm<br />Year 5 and 6 1:30pm</p>",
+    }
+    event = build_ics.build_event(raw)
+    assert str(event["description"]) == "Reception 1:15pm\nYear 1 and 3 1:20pm\nYear 5 and 6 1:30pm"
+
+
+@pytest.mark.parametrize(
+    "desc, expected",
+    [
+        ("<p>R/KS1 AM</p><p>KS2 PM</p>", "R/KS1 AM\nKS2 PM"),
+        ("<p>Tom &amp; Jerry&nbsp;night</p>", "Tom & Jerry night"),
+        ("<p>Use &lt;b&gt; literally</p>", "Use <b> literally"),
+        ('<p>See <a href="https://example.com">the site</a></p>', "See the site"),
+        ("Plain text\r\n\r\nstays", "Plain text\nstays"),
+        ("<p></p>", ""),
+        (None, ""),
+    ],
+)
+def test_clean_description(desc, expected):
+    assert build_ics._clean_description(desc) == expected
+
+
 def test_build_event_override_replaces_school_description():
     raw = {"id": 4, "title": "Nasal Flu Spray", "allDay": True, "start": "2026-09-23", "desc": "<p>Whole School</p>"}
     event = build_ics.build_event(raw, description_override="Updated by the office")

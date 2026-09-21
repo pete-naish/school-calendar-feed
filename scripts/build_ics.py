@@ -313,6 +313,21 @@ def _clean(text: str | None) -> str:
     return html.unescape((text or "").strip())
 
 
+def _clean_description(text: str | None) -> str:
+    """The school's `desc` is an HTML fragment ("<p>Reception 1:15pm<br />
+    Year 1 1:20pm</p>"), but calendar apps and the preview page show
+    DESCRIPTION as plain text, so tags would appear literally. Turn <br> and
+    the end of block elements into line breaks, drop every other tag, and
+    unescape entities last (so an escaped "&lt;b&gt;" stays as literal text).
+    Whitespace runs collapse and blank lines go."""
+    text = re.sub(r"<\s*br\s*/?>", "\n", text or "", flags=re.IGNORECASE)
+    text = re.sub(r"<\s*/\s*(?:p|div|li|h[1-6])\s*>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</?[a-z][^>]*>", "", text, flags=re.IGNORECASE)
+    text = html.unescape(text).replace("\xa0", " ")
+    lines = (re.sub(r"[^\S\n]+", " ", line).strip() for line in text.split("\n"))
+    return "\n".join(line for line in lines if line)
+
+
 def _safe_url(url: str | None) -> str | None:
     """Reject anything but http(s). This value ends up as an <a href> on the
     public preview page (docs/assets/calendar.js), so a javascript: (or
@@ -376,7 +391,7 @@ def build_event(
         title = f"{code.upper()}: {title}"
     event.add("summary", title)
 
-    desc = description_override if description_override is not None else _clean(raw.get("desc"))
+    desc = description_override if description_override is not None else _clean_description(raw.get("desc"))
     if desc:
         event.add("description", desc)
 

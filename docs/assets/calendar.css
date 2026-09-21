@@ -734,6 +734,7 @@
   line-height: 1.5;
   color: var(--cal-fg);
   text-wrap: pretty;
+  white-space: pre-line; /* keep the line breaks typed into descriptions */
 }
 
 .day-event-link {
