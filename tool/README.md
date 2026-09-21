@@ -258,6 +258,30 @@ as before. A save where every event was a duplicate doesn't trigger one.
    whole-school events (e.g. the school office) - see "Whole School events"
    below.
 
+## Response headers
+
+The tool is for reps, not the public, so it's locked down and kept out of
+search results. Cloudflare Pages applies `_headers` to static files only and
+never to Functions responses, so there are two places:
+
+- `tool/_headers` - the page, `app.js` and `style.css`: `X-Robots-Tag:
+  noindex, nofollow` (a header rather than `robots.txt`, because a crawler that
+  `robots.txt` blocks never sees a noindex), `nosniff`, no framing, no
+  referrer, and a Content-Security-Policy that allows only the tool's own
+  script, stylesheet and API (`default-src 'none'`, nothing inline, no `eval`,
+  no other origin).
+- `functions/api/_middleware.js` - every `/api/*` response: `Cache-Control:
+  no-store`, `nosniff`, `noindex`. It also turns anything an endpoint throws
+  (say, an unparseable `CLASS_PASSWORDS`) into a plain JSON 500, logging the
+  detail rather than showing it.
+
+The CSP is strict enough that some ordinary changes break the page: a web
+font, an inline `<style>` or `style="..."`, a third-party script, an
+`onclick=`. `tests/headers.test.mjs` fails if `index.html`, `app.js` or
+`style.css` stop fitting it - loosen the policy in `_headers` deliberately, not
+to make an error go away. If the tool moves to a custom domain, also turn on
+HSTS there (Cloudflare dashboard, SSL/TLS, Edge Certificates).
+
 ## Rate limiting (recommended, not built in)
 
 The tool has no rate limiting of its own - the passcode gate has no
@@ -290,10 +314,13 @@ guessable (the placeholder in `.dev.vars.example` is literally
 
 ```bash
 cp tool/.dev.vars.example tool/.dev.vars   # then fill in real test values
-npx wrangler pages dev tool/
+cd tool && npx wrangler pages dev .
 ```
 
 This serves the frontend and functions locally (default `http://localhost:8788`).
+Run it from inside `tool/`: Pages looks for `functions/` in the directory you
+run it from, so `npx wrangler pages dev tool/` from the repo root serves the page
+but none of the `/api/*` endpoints (every POST comes back `405`).
 `tool/.dev.vars` is gitignored - never commit it.
 
 To exercise an endpoint directly:
