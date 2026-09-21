@@ -9,6 +9,7 @@
 export function resultStatus(result) {
   if (result.error === "not_found") return 404;
   if (result.error === "file_full") return 413;
+  if (result.error === "confirm_public") return 409;
   return 400;
 }
 

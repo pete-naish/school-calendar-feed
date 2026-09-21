@@ -222,6 +222,41 @@ again. Deleting or shrinking is always allowed, so a full file can be cleaned
 up. The limits apply on the way in only - `build_ics.py` builds whatever is
 already in the JSON.
 
+## Personal details warning
+
+Everything a rep saves goes on a public calendar and into a public repository,
+where it stays in the git history even after the event is deleted. So a mobile
+number pasted in from a WhatsApp message deserves a second look. Before saving,
+`_shared/personalDetails.js` checks an event's title, description and location
+(and a school event's description and location edit) for:
+
+- **UK mobile numbers** (`07...`, `+44 7...`, `(07700) 900123`...). Landlines
+  aren't flagged - a venue's or the office's number is meant to be public.
+- **Email addresses at personal providers** (gmail, hotmail, outlook, yahoo,
+  icloud, btinternet...). An address on an organisation's own domain isn't.
+- **WhatsApp group invite links** (anyone holding one can join the group) and
+  `wa.me` links (which contain a phone number).
+
+If it finds something, the server answers `409 confirm_public` with a message
+naming what it found, and nothing is written. The tool shows that message and
+turns the button into **Save anyway**; pressing it sends the same save again
+with `confirm_public: true`. Any edit to the text withdraws the confirmation,
+since it may now hold something else.
+
+It's a warning, not a rule, so it's deliberately quiet:
+
+- Only a detail the save **adds** counts. Changing the time of an event whose
+  description holds a number the rep already confirmed doesn't ask again (it's
+  compared with the saved event; for a school event, with what the school
+  publishes), and neither does moving or reformatting that number.
+- `PUBLIC_CONTACTS` at the top of `personalDetails.js` lists contacts that are
+  meant to be public and are never flagged - add the FOSPS mailbox there if it
+  is on gmail, say.
+
+It is a safety net, not a guarantee: it doesn't look for names, children or
+addresses (that would flag every pub and school hall), and, since the check is
+advisory, anyone calling the API can set `confirm_public`.
+
 ## Publishing changes
 
 Every add, edit or delete (in any calendar, including a Whole School

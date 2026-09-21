@@ -188,6 +188,45 @@ async function apiCall(path, payload) {
   return { ok: resp.ok, status: resp.status, data };
 }
 
+// The server answers 409 "confirm_public" when the text looks like it holds
+// personal contact details (a mobile number, a personal email...): events are
+// public and permanent. Its message says what it found, and the save button
+// becomes "Save anyway" - pressing it sends the same save again with
+// confirm_public. Any edit inside `watch` takes the confirmation back, since the
+// text may now hold something else. `label` is what the button normally says -
+// passed in, because by the time the server answers the button says "Saving…".
+// See functions/api/_shared/personalDetails.js.
+function isConfirmPublic(resp) {
+  return resp.status === 409 && Boolean(resp.data) && resp.data.error === "confirm_public";
+}
+
+function armPublicConfirm(button, label, errorEl, message, watch) {
+  button.dataset.label = label;
+  button.dataset.confirmPublic = "1";
+  button.textContent = "Save anyway";
+  errorEl.textContent = message;
+  errorEl.hidden = false;
+  watch.addEventListener(
+    "input",
+    () => {
+      disarmPublicConfirm(button);
+      errorEl.hidden = true;
+    },
+    { once: true }
+  );
+}
+
+function disarmPublicConfirm(button) {
+  if (button.dataset.label) button.textContent = button.dataset.label;
+  delete button.dataset.label;
+  delete button.dataset.confirmPublic;
+}
+
+// Spread into a save request's body: confirms it if the button is armed.
+function confirmPublicField(button) {
+  return button.dataset.confirmPublic === "1" ? { confirm_public: true } : {};
+}
+
 async function handleLogin() {
   const calendar = el.calendarSelect.value;
   const passcode = el.passcodeInput.value;
@@ -544,11 +583,22 @@ async function handleSaveAll() {
   el.saveAllButton.disabled = true;
   el.saveAllButton.textContent = "Saving…";
 
-  const { ok, data } = await apiCall("/api/save", { calendar: state.calendar, passcode: state.passcode, events });
+  const resp = await apiCall("/api/save", {
+    calendar: state.calendar,
+    passcode: state.passcode,
+    events,
+    ...confirmPublicField(el.saveAllButton),
+  });
+  const { ok, data } = resp;
 
   el.saveAllButton.disabled = false;
+  disarmPublicConfirm(el.saveAllButton);
   el.saveAllButton.textContent = "Save all";
 
+  if (isConfirmPublic(resp)) {
+    armPublicConfirm(el.saveAllButton, "Save all", el.saveError, data.message, el.draftCards);
+    return;
+  }
   if (!ok) {
     el.saveError.textContent = (data && data.message) || "Couldn't save - try again.";
     el.saveError.hidden = false;
@@ -681,7 +731,7 @@ async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
   if (description !== saved.description) changes.description = description;
   if (location !== saved.location) changes.location = location;
 
-  const originalText = button.textContent;
+  const originalText = button.dataset.label || button.textContent;
   if (Object.keys(changes).length === 0) {
     button.textContent = "No changes";
     setTimeout(() => {
@@ -693,15 +743,22 @@ async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
   button.disabled = true;
   button.textContent = "Saving…";
 
-  const { ok, data } = await apiCall("/api/events-update", {
+  const resp = await apiCall("/api/events-update", {
     calendar: state.calendar,
     passcode: state.passcode,
     id,
     ...(state.calendar !== WHOLE_SCHOOL.code && { school_event: true }),
     ...changes,
+    ...confirmPublicField(button),
   });
+  const { ok, data } = resp;
 
   button.disabled = false;
+  if (isConfirmPublic(resp)) {
+    armPublicConfirm(button, originalText, errorEl, data.message, card);
+    return;
+  }
+  disarmPublicConfirm(button);
   if (!ok) {
     errorEl.textContent = (data && data.message) || "Couldn't save changes - try again.";
     errorEl.hidden = false;
@@ -757,17 +814,24 @@ async function handleUpdateExisting(card, id, button) {
   }
   errorEl.hidden = true;
   button.disabled = true;
-  const originalText = button.textContent;
+  const originalText = button.dataset.label || button.textContent;
   button.textContent = "Saving…";
 
-  const { ok, data } = await apiCall("/api/events-update", {
+  const resp = await apiCall("/api/events-update", {
     calendar: state.calendar,
     passcode: state.passcode,
     id,
     event: value,
+    ...confirmPublicField(button),
   });
+  const { ok, data } = resp;
 
   button.disabled = false;
+  if (isConfirmPublic(resp)) {
+    armPublicConfirm(button, originalText, errorEl, data.message, card);
+    return;
+  }
+  disarmPublicConfirm(button);
   if (!ok) {
     errorEl.textContent = (data && data.message) || "Couldn't save changes - try again.";
     errorEl.hidden = false;

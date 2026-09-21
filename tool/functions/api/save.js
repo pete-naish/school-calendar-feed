@@ -1,6 +1,7 @@
 import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput, LIMITS } from "./_shared/validate.js";
+import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.js";
 import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.js";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.js";
 
@@ -51,8 +52,10 @@ export async function onRequestPost({ request, env }) {
   const own = [];
   const shared = [];
   const errors = [];
+  const checked = [];
   events.forEach((event, index) => {
     const result = validateEventInput(event);
+    if (result.valid) checked.push({ index, event: result.event });
     if (!result.valid) {
       errors.push({ index, error: result.error });
     } else if (event && event.year_group === true) {
@@ -71,6 +74,17 @@ export async function onRequestPost({ request, env }) {
       .map(({ index, error }) => (events.length > 1 ? `Event ${index + 1}: ${error}` : error))
       .join(". ");
     return jsonResponse({ error: "validation_failed", message, errors }, 400);
+  }
+
+  // Looks like personal contact details (a mobile number, a personal email...)?
+  // Ask the rep to confirm before anything is written: this is public and
+  // permanent. Only a warning - the tool re-sends with confirm_public: true.
+  if (body.confirm_public !== true) {
+    const findings = checked.flatMap(({ index, event }) => newPersonalDetails(event).map((f) => ({ ...f, index })));
+    if (findings.length > 0) {
+      const prefix = (f) => (events.length > 1 ? `Event ${f.index + 1}: ` : "");
+      return jsonResponse(confirmPublicResponse(findings, prefix), 409);
+    }
   }
 
   // Each batch is its own commit. If the second fails after the first
