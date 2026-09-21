@@ -1,5 +1,6 @@
-// Persists description/location overrides for whole-school events (see
-// calendars.js's WHOLE_SCHOOL entry) to data/whole_school_overrides.json -
+// Persists description/location overrides for school-sourced events - whole-
+// school ones (see calendars.js's WHOLE_SCHOOL entry) and the ones listed in a
+// class's own calendar - to data/whole_school_overrides.json -
 // {"<school event id>": {"description": "...", "location": "..."}}, either
 // key optional - which scripts/build_ics.py applies in place of the
 // school's own description (and as the LOCATION the school's feed never
@@ -23,6 +24,21 @@ export function normalizeOverride(value) {
   return override;
 }
 
+// The events with any saved override laid over them. A pending override
+// (saved but not yet picked up by the next 6-hourly build) takes precedence
+// over what's currently published, so a rep who just saved doesn't see their
+// own edit vanish.
+export function applyOverrides(events, overrides) {
+  return events.map((e) => {
+    const override = normalizeOverride(overrides[e.id]);
+    return {
+      ...e,
+      description: override.description ?? e.description,
+      location: override.location ?? e.location,
+    };
+  });
+}
+
 // `changes` holds only the fields being edited - {description?, location?} -
 // and any field it leaves out keeps whatever is already stored, so saving a
 // location doesn't also pin the description to the school's current text.
@@ -31,7 +47,7 @@ export function normalizeOverride(value) {
 // would instead force it permanently blank even if the school's text later
 // changes, which isn't what clearing the box means), and leaves the event
 // with no location. An entry with no fields left is dropped entirely.
-export async function commitWholeSchoolOverride(env, id, changes) {
+export async function commitWholeSchoolOverride(env, id, changes, label = "Whole School event") {
   return commitJsonFile(
     env,
     OVERRIDES_PATH,
@@ -54,6 +70,6 @@ export async function commitWholeSchoolOverride(env, id, changes) {
       }
       return { data: updated };
     },
-    `Update Whole School event (${id})`
+    `Update ${label} (${id})`
   );
 }

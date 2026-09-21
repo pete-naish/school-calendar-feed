@@ -1,16 +1,21 @@
-// Lists whole-school events for the restricted "Whole School" calendar
-// entry (description-editing only - see calendars.js) by reading the
-// site's own already-published whole-school.ics, the same public-URL
-// approach termEnd.js already uses - avoids re-implementing
-// scripts/build_ics.py's classify_event() a second time in JS just to ask
-// "which events are whole-school".
+// Lists school-sourced events - those from the school's own Upcoming Events
+// feed, as opposed to manual ones - by reading the site's own
+// already-published .ics files, the same public-URL approach termEnd.js
+// already uses. That avoids re-implementing scripts/build_ics.py's
+// classify_event() a second time in JS just to ask "which events are
+// whole-school / which are this class's".
+//
+// Two callers: the restricted "Whole School" calendar entry (whole-school.ics,
+// description/location editing only - see calendars.js) and each class's own
+// entry, which lists the school events classify_event() routed to that class
+// alongside its manual ones (class .ics files mix the two, told apart by UID).
 //
 // Each event's `id` is the school API's own event id, recovered from the
 // UID scripts/build_ics.py assigns it (`stpauls-<id>@school-calendar-feed`)
 // - stable across rebuilds, and what description/location overrides are
 // keyed by (see wholeSchoolOverrides.js).
 
-const WHOLE_SCHOOL_ICS_URL = "https://pete-naish.github.io/school-calendar-feed/calendars/whole-school.ics";
+const CALENDARS_URL = "https://pete-naish.github.io/school-calendar-feed/calendars";
 const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 
 function unescapeIcsText(text) {
@@ -36,7 +41,7 @@ function extractEvents(icsText) {
     if (!uidMatch || !summaryMatch || !dtstartMatch) continue;
 
     const idMatch = uidMatch[1].trim().match(UID_PATTERN);
-    if (!idMatch) continue; // not a school-API-sourced event - shouldn't happen in whole-school.ics
+    if (!idMatch) continue; // not a school-API-sourced event (e.g. a manual one in a class feed)
 
     const d = dtstartMatch[1];
     events.push({
@@ -50,12 +55,25 @@ function extractEvents(icsText) {
   return events;
 }
 
-export async function fetchWholeSchoolEvents() {
+async function fetchSchoolEvents(icsFile, { titlePrefix = "" } = {}) {
   // No cf.cacheTtl here (unlike termEnd.js's 1hr cache) - a rep loading
   // this page wants to see genuinely current events/descriptions, not a
   // stale edge-cached copy from earlier in the day.
-  const resp = await fetch(WHOLE_SCHOOL_ICS_URL);
-  if (!resp.ok) throw new Error(`Fetch whole-school.ics failed: ${resp.status}`);
+  const resp = await fetch(`${CALENDARS_URL}/${icsFile}`);
+  if (!resp.ok) throw new Error(`Fetch ${icsFile} failed: ${resp.status}`);
   const text = await resp.text();
-  return extractEvents(text).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  return extractEvents(text)
+    .map((e) => (titlePrefix && e.title.startsWith(titlePrefix) ? { ...e, title: e.title.slice(titlePrefix.length) } : e))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
+export function fetchWholeSchoolEvents() {
+  return fetchSchoolEvents("whole-school.ics");
+}
+
+// A class's own school-sourced events, with the "<CODE>: " prefix
+// build_event() adds to every class-calendar title taken back off (the tool
+// already says which calendar you're in).
+export function fetchClassSchoolEvents(classCode) {
+  return fetchSchoolEvents(`${classCode}.ics`, { titlePrefix: `${classCode.toUpperCase()}: ` });
 }

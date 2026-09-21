@@ -66,6 +66,7 @@ const el = {
   existingLoading: document.getElementById("existing-loading"),
   existingEmpty: document.getElementById("existing-empty"),
   existingCards: document.getElementById("existing-cards"),
+  schoolEventsNotice: document.getElementById("school-events-notice"),
   cardTemplate: document.getElementById("event-card-template"),
 };
 
@@ -507,27 +508,42 @@ function formatEventDate(iso) {
 // used everywhere else, with only description + location fields and one
 // save button.
 function renderWholeSchoolEvents(events) {
+  el.schoolEventsNotice.hidden = true;
   el.existingLoading.hidden = true;
   el.existingCards.innerHTML = "";
   el.existingEmpty.hidden = events.length > 0;
 
   for (const event of events) {
-    const node = el.wholeSchoolCardTemplate.content.firstElementChild.cloneNode(true);
-    node.querySelector(".ws-title").textContent = event.title;
-    node.querySelector(".ws-date").textContent = formatEventDate(event.date);
-    node.querySelector(".field-description").value = event.description || "";
-    node.querySelector(".field-location").value = event.location || "";
-
-    // What the server last had, to send back only the fields a rep actually
-    // changed - saving a location alone must not also store the school's
-    // current description as an override (which would then stop following
-    // the school's own edits to it).
-    const saved = { description: (event.description || "").trim(), location: event.location || "" };
-    const saveButton = node.querySelector(".card-save-button");
-    saveButton.addEventListener("click", () => handleUpdateWholeSchoolEvent(node, event.id, saveButton, saved));
-
-    el.existingCards.appendChild(node);
+    el.existingCards.appendChild(createSchoolEventCard(event));
   }
+}
+
+// The same card also stands in for a school-sourced event in a class's own
+// list (event.school_event), where it's flagged as coming from the school's
+// calendar - and, if the sibling class has it too, as shared with the year.
+function createSchoolEventCard(event) {
+  const node = el.wholeSchoolCardTemplate.content.firstElementChild.cloneNode(true);
+  node.querySelector(".ws-title").textContent = event.title;
+  node.querySelector(".ws-date").textContent = formatEventDate(event.date);
+  node.querySelector(".field-description").value = event.description || "";
+  node.querySelector(".field-location").value = event.location || "";
+
+  if (event.school_event) {
+    node.querySelector(".ws-flag").hidden = false;
+    const group = currentYearGroup();
+    if (event.year_group && group) {
+      node.querySelector(".ws-shared-note").textContent = `Shared with ${yearGroupDescription(group)} - changes apply to every class.`;
+    }
+  }
+
+  // What the server last had, to send back only the fields a rep actually
+  // changed - saving a location alone must not also store the school's
+  // current description as an override (which would then stop following
+  // the school's own edits to it).
+  const saved = { description: (event.description || "").trim(), location: event.location || "" };
+  const saveButton = node.querySelector(".card-save-button");
+  saveButton.addEventListener("click", () => handleUpdateWholeSchoolEvent(node, event.id, saveButton, saved));
+  return node;
 }
 
 async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
@@ -556,6 +572,7 @@ async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
     calendar: state.calendar,
     passcode: state.passcode,
     id,
+    ...(state.calendar !== WHOLE_SCHOOL.code && { school_event: true }),
     ...changes,
   });
 
@@ -578,7 +595,13 @@ function renderExistingEvents(events) {
   el.existingCards.innerHTML = "";
   el.existingEmpty.hidden = events.length > 0;
 
+  el.schoolEventsNotice.hidden = !events.some((e) => e.school_event);
+
   for (const event of events) {
+    if (event.school_event) {
+      el.existingCards.appendChild(createSchoolEventCard(event));
+      continue;
+    }
     const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
     fillCardFields(node, event);
     wireRecurrenceToggle(node);

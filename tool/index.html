@@ -51,6 +51,7 @@
 
       <section id="existing-section">
         <h3>Your calendar's events</h3>
+        <p id="school-events-notice" class="hint" hidden>Events marked <span class="badge">From school calendar</span> come from the school's own feed - only their location and description can be edited here.</p>
         <p id="existing-loading" class="hint">Loading…</p>
         <p id="existing-empty" class="hint" hidden>No events saved yet.</p>
         <div id="existing-cards"></div>
@@ -155,6 +156,7 @@
     <div class="event-card whole-school-card">
       <h4 class="ws-title"></h4>
       <p class="ws-date hint"></p>
+      <p class="ws-flag hint" hidden><span class="badge">From school calendar</span> <span class="ws-shared-note"></span></p>
       <label>Location <span class="optional">(optional)</span>
         <input type="text" class="field-location" placeholder="e.g. School hall">
       </label>

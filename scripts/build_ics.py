@@ -54,11 +54,12 @@ SCHOOL_NAME = "St Paul's Enfield"
 UID_DOMAIN = "school-calendar-feed"
 CALENDARS_DIR = Path(__file__).resolve().parent.parent / "docs" / "calendars"
 MANUAL_EVENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "manual_events"
-# Description/location overrides for whole-school events, set via the class
-# rep tool's restricted "Whole School" calendar entry (see tool/README.md) -
+# Description/location overrides for school-sourced events, set via the class
+# rep tool's restricted "Whole School" calendar entry, or from a class's own
+# calendar entry for the school events listed there (see tool/README.md) -
 # {"<school event id>": {"description": "...", "location": "..."}}, either
 # key optional. (An older bare-string entry, "<id>": "description", is still
-# read as {"description": ...}.) Whole-school events otherwise come entirely
+# read as {"description": ...}.) School-sourced events otherwise come entirely
 # from the school's own API on every build, so these are the only pieces of
 # them that are ever hand-edited/persisted. The school's feed has no
 # location at all, so a location override adds one rather than replacing one.
@@ -350,12 +351,13 @@ def build_event(
     "RR: PE Kit") - only class/FOSPS calendars pass this; whole-school
     events (code=None) are never prefixed, since a parent only ever sees a
     whole-school event once, in one calendar, with no other class's events
-    to disambiguate against. `description_override` (whole-school only -
-    see WHOLE_SCHOOL_OVERRIDES_PATH) replaces the school's own description
+    to disambiguate against. `description_override` (see
+    WHOLE_SCHOOL_OVERRIDES_PATH; applies to school-sourced class events as
+    well as whole-school ones) replaces the school's own description
     outright when set, including clearing it entirely if set to "" - both
     are display-only changes to the published .ics; the source data (title,
-    raw description) is never touched. `location_override` (also whole-school
-    only) sets LOCATION, which the school's own feed never provides."""
+    raw description) is never touched. `location_override` sets LOCATION,
+    which the school's own feed never provides."""
     event = Event()
     event.add("uid", f"stpauls-{raw['id']}@{UID_DOMAIN}")
     title = _clean(raw.get("title"))
@@ -683,22 +685,20 @@ def main() -> None:
         seen_ids.add(raw["id"])
 
         bucket, class_codes = classify_event(_clean(raw.get("title")))
+        override = whole_school_overrides.get(str(raw["id"]), {})
+        override_kwargs = {
+            "description_override": override.get("description"),
+            "location_override": override.get("location"),
+        }
         if bucket == "whole-school":
-            override = whole_school_overrides.get(str(raw["id"]), {})
-            whole_school_events.append(
-                build_event(
-                    raw,
-                    description_override=override.get("description"),
-                    location_override=override.get("location"),
-                )
-            )
+            whole_school_events.append(build_event(raw, **override_kwargs))
         else:
             # A separate Event per class code (not one object appended to
             # several codes' lists) - each calendar's title is prefixed with
             # its own code, so a year-group-wide event needs its own
             # instance per class rather than one shared, mutated object.
             for code in class_codes:
-                class_events[code].append(build_event(raw, code=code))
+                class_events[code].append(build_event(raw, code=code, **override_kwargs))
 
     CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
 

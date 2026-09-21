@@ -1,8 +1,9 @@
 import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateEventInput, cleanOptionalLocation } from "./_shared/validate.js";
-import { commitEventById, triggerRebuild } from "./_shared/github.js";
+import { commitEventById, triggerRebuild, retryable } from "./_shared/github.js";
 import { commitWholeSchoolOverride } from "./_shared/wholeSchoolOverrides.js";
+import { fetchClassSchoolEvents } from "./_shared/wholeSchool.js";
 import { commitErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
@@ -30,6 +31,16 @@ function scopeExceptions(event, calendar, file) {
   return { ...event, exceptions };
 }
 
+// The description/location fields present in the request, cleaned - only the
+// ones a rep edited, so leaving the description alone while adding a location
+// doesn't pin it to the school's current text.
+function overrideChanges(body) {
+  const changes = {};
+  if (typeof body.description === "string") changes.description = body.description.trim();
+  if (typeof body.location === "string") changes.location = cleanOptionalLocation(body.location) ?? "";
+  return changes;
+}
+
 export async function onRequestPost({ request, env }) {
   let body;
   try {
@@ -54,18 +65,35 @@ export async function onRequestPost({ request, env }) {
   // location - no title/date/recurrence/etc, and events themselves aren't
   // stored here at all (they come from the school's own feed), so this is a
   // completely different, much smaller write than the regular manual-event
-  // path below. Only the fields present in the request are changed: the
-  // tool sends just the ones a rep edited, so leaving the description alone
-  // while adding a location doesn't pin it to the school's current text.
+  // path below.
   if (isWholeSchoolCalendar(calendar)) {
-    const changes = {};
-    if (typeof body.description === "string") changes.description = body.description.trim();
-    if (typeof body.location === "string") changes.location = cleanOptionalLocation(body.location) ?? "";
+    const changes = overrideChanges(body);
     if (Object.keys(changes).length === 0) {
       return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description or location given." }, 400);
     }
     try {
       await commitWholeSchoolOverride(env, id, changes);
+      return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
+    } catch (err) {
+      return jsonResponse(commitErrorResponse(err), 502);
+    }
+  }
+
+  // A school-sourced event listed in a class's own calendar (see
+  // events-list.js) gets the same description/location-only edit. Only ids in
+  // this class's published feed are accepted, so a class passcode can't be
+  // used to rewrite some other class's - or a whole-school - event.
+  if (body.school_event === true) {
+    const changes = overrideChanges(body);
+    if (Object.keys(changes).length === 0) {
+      return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description or location given." }, 400);
+    }
+    try {
+      const schoolEvents = await retryable(() => fetchClassSchoolEvents(calendar));
+      if (!schoolEvents.some((e) => e.id === id)) {
+        return jsonResponse({ error: "not_found", message: "That event isn't in this calendar's school events." }, 404);
+      }
+      await commitWholeSchoolOverride(env, id, changes, `school event in ${calendar}`);
       return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
     } catch (err) {
       return jsonResponse(commitErrorResponse(err), 502);

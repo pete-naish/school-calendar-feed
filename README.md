@@ -186,7 +186,10 @@ deleting events is disabled entirely for this entry. Saved edits live in
 key optional, keyed by the id embedded in that event's own UID) and are
 applied by `scripts/build_ics.py` on the next build - triggered straight after a save, see the tool's "Publishing
 changes" section. An override whose event has vanished from the school's feed
-is pruned on that same build.
+is pruned on that same build. The same overrides apply to school-sourced
+events that were routed to a class calendar instead: a class's tool entry
+lists them (flagged as coming from the school's calendar) with the same
+description/location-only editing.
 
 ## Calendar preview (`docs/index.html`)
 

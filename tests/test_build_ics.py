@@ -11,6 +11,7 @@ installed in addition to requirements.txt).
 
 from __future__ import annotations
 
+import json
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -222,6 +223,55 @@ def test_save_whole_school_overrides_matches_tool_format(tmp_path, monkeypatch):
     assert path.read_text() == (
         '{\n  "857": {\n    "description": "Parking – use the side gate",\n    "location": "Car park"\n  }\n}\n'
     )
+
+
+def test_build_event_class_override_keeps_code_prefix():
+    raw = {"id": 9, "title": "Group 1 Start", "allDay": True, "start": "2026-09-08", "desc": "Original text"}
+    event = build_ics.build_event(raw, code="rr", description_override="Bring a water bottle", location_override="Hall")
+    assert str(event["summary"]) == "RR: Group 1 Start"
+    assert str(event["description"]) == "Bring a water bottle"
+    assert str(event["location"]) == "Hall"
+
+
+def _build_with_overrides(tmp_path, monkeypatch, raw_events, overrides):
+    """Runs main() against a fake school feed and the given overrides,
+    returning {calendar file name: parsed Calendar} for what it wrote."""
+    path = tmp_path / "overrides.json"
+    path.write_text(json.dumps(overrides))
+    monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", path)
+    monkeypatch.setattr(build_ics, "CALENDARS_DIR", tmp_path / "calendars")
+    monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", tmp_path / "manual")
+    monkeypatch.setattr(build_ics, "fetch_events", lambda: raw_events)
+    build_ics.main()
+    return {f.name: Calendar.from_ical(f.read_bytes()) for f in (tmp_path / "calendars").glob("*.ics")}
+
+
+def _events_by_uid(cal):
+    return {str(e["uid"]): e for e in cal.walk("VEVENT")}
+
+
+def test_main_applies_overrides_to_class_events(tmp_path, monkeypatch):
+    # "Reception ..." names one year group and no class, so it's built into
+    # both Reception classes; an override for its school id must reach both.
+    raw = {"id": 42, "title": "Reception Group 1 Start", "allDay": True, "start": "2026-09-08", "desc": "School text"}
+    overrides = {"42": {"description": "Updated by the class rep", "location": "Reception hall"}}
+    cals = _build_with_overrides(tmp_path, monkeypatch, [raw], overrides)
+
+    uid = "stpauls-42@school-calendar-feed"
+    for name in ("rr.ics", "rgp.ics"):
+        event = _events_by_uid(cals[name])[uid]
+        assert str(event["description"]) == "Updated by the class rep"
+        assert str(event["location"]) == "Reception hall"
+    assert uid not in _events_by_uid(cals["whole-school.ics"])
+
+
+def test_main_class_event_without_override_keeps_school_text(tmp_path, monkeypatch):
+    raw = {"id": 43, "title": "Reception Group 2 Start", "allDay": True, "start": "2026-09-09", "desc": "School text"}
+    cals = _build_with_overrides(tmp_path, monkeypatch, [raw], {"999": {"description": "for another event"}})
+
+    event = _events_by_uid(cals["rr.ics"])["stpauls-43@school-calendar-feed"]
+    assert str(event["description"]) == "School text"
+    assert "location" not in event
 
 
 # --------------------------------------------------------------------------

@@ -145,6 +145,24 @@ override whose school event has since disappeared from the school's feed
 (deleted, or deleted and recreated under a new id) is pruned from the file by
 `build_ics.py` on the next build.
 
+### School events in a class's own calendar
+
+`scripts/build_ics.py` routes some events from the school's Upcoming Events
+feed to a class (or both classes of a year group) instead of Whole School,
+based on the class/year named in the title. A class's entry lists those too,
+alongside its manual events: `events-list.js` reads the class's own
+published `.ics` (`fetchClassSchoolEvents` in `_shared/wholeSchool.js`,
+keeping only `stpauls-<id>` UIDs and dropping the `"<CODE>: "` title prefix)
+and flags each as `school_event`, plus `year_group` when the sibling class's
+feed has it too. They render with the same description/location-only card as
+Whole School events, with a "From school calendar" badge (and a "shared with
+the year" note where relevant), and save through `events-update.js` with
+`school_event: true` into the same `data/whole_school_overrides.json` (keyed by
+school event id, so a year-wide event's edit reaches both classes). The id
+must be in that class's published feed, so a class passcode can't edit some
+other class's or a whole-school event. There is no delete: like Whole School
+events, their existence is the school's call.
+
 ## Publishing changes
 
 Every add, edit or delete (in any calendar, including a Whole School
