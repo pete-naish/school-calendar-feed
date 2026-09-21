@@ -9,7 +9,7 @@ const calendar = (...events) =>
 
 const EMPTY = calendar();
 
-function week(weekStart, { own = null, wholeSchool = EMPTY, cal = "rr" } = {}) {
+function week(weekStart, { own = null, wholeSchool = EMPTY, cal = "rec-a" } = {}) {
   return buildWeekText({ calendarIcs: own, wholeSchoolIcs: wholeSchool, calendar: cal, weekStart });
 }
 

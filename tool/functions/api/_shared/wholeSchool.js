@@ -16,6 +16,7 @@
 // keyed by (see wholeSchoolOverrides.js).
 
 import { fetchIcsText, unescapeIcsText, parseDateTime, dayToIso } from "./ics.js";
+import { titlePrefixFor } from "./calendars.js";
 
 const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 
@@ -78,5 +79,5 @@ export function fetchWholeSchoolEvents() {
 // build_event() adds to every class-calendar title taken back off (the tool
 // already says which calendar you're in).
 export function fetchClassSchoolEvents(classCode) {
-  return fetchSchoolEvents(`${classCode}.ics`, { titlePrefix: `${classCode.toUpperCase()}: ` });
+  return fetchSchoolEvents(`${classCode}.ics`, { titlePrefix: titlePrefixFor(classCode) });
 }

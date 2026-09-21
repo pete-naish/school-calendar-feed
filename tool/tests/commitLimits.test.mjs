@@ -40,7 +40,7 @@ function fakeGithub(fileData) {
   return puts;
 }
 
-const env = { GITHUB_TOKEN: "t", CLASS_PASSWORDS: JSON.stringify({ "5hp": "pw", "whole-school": "ws" }) };
+const env = { GITHUB_TOKEN: "t", CLASS_PASSWORDS: JSON.stringify({ "y5-b": "pw", "whole-school": "ws" }) };
 const post = (handler, body) =>
   handler({ request: new Request("https://x/api", { method: "POST", body: JSON.stringify(body) }), env });
 
@@ -80,7 +80,7 @@ test("growing an already over-full file is refused even if the addition is small
 test("save.js answers 413 with a readable message when the calendar has no room left", async () => {
   fakeGithub([bulky(MAX_FILE_BYTES - 500)]);
   const resp = await post(save, {
-    calendar: "5hp",
+    calendar: "y5-b",
     passcode: "pw",
     events: [{ title: "New", date: "2026-10-02", description: "y".repeat(1500) }],
   });
@@ -91,7 +91,7 @@ test("save.js answers 413 with a readable message when the calendar has no room 
 test("save.js refuses more events than the per-save limit before touching GitHub", async () => {
   const puts = fakeGithub([]);
   const events = Array.from({ length: 51 }, (_, i) => ({ title: `E${i}`, date: "2026-10-01" }));
-  const resp = await post(save, { calendar: "5hp", passcode: "pw", events });
+  const resp = await post(save, { calendar: "y5-b", passcode: "pw", events });
   assert.equal(resp.status, 400);
   assert.equal((await resp.json()).error, "too_many_events");
   assert.equal(puts.length, 0);
@@ -100,19 +100,19 @@ test("save.js refuses more events than the per-save limit before touching GitHub
 test("save.js accepts exactly the per-save limit", async () => {
   fakeGithub([]);
   const events = Array.from({ length: 50 }, (_, i) => ({ title: `E${i}`, date: "2026-10-01" }));
-  const resp = await post(save, { calendar: "5hp", passcode: "pw", events });
+  const resp = await post(save, { calendar: "y5-b", passcode: "pw", events });
   assert.equal(resp.status, 200);
   assert.equal((await resp.json()).saved, 50);
 });
 
 test("save.js puts a validation problem in `message`, which is what the tool shows", async () => {
   fakeGithub([]);
-  const one = await post(save, { calendar: "5hp", passcode: "pw", events: [{ title: "x".repeat(300), date: "2026-10-01" }] });
+  const one = await post(save, { calendar: "y5-b", passcode: "pw", events: [{ title: "x".repeat(300), date: "2026-10-01" }] });
   assert.equal(one.status, 400);
   assert.equal((await one.json()).message, "Title is too long (at most 200 characters)");
 
   const two = await post(save, {
-    calendar: "5hp",
+    calendar: "y5-b",
     passcode: "pw",
     events: [
       { title: "Fine", date: "2026-10-01" },
@@ -142,7 +142,7 @@ test("a whole-school description at the limit is saved", async () => {
 test("editing an event into something too big gets 413 rather than a false 'updated'", async () => {
   fakeGithub([{ id: "e1", title: "Old", date: "2026-10-01" }, bulky(MAX_FILE_BYTES - 1500)]);
   const resp = await post(update, {
-    calendar: "5hp",
+    calendar: "y5-b",
     passcode: "pw",
     id: "e1",
     event: { title: "Old", date: "2026-10-01", description: "y".repeat(2000) },

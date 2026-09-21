@@ -36,25 +36,33 @@ CLASSIFY_CASES = [
     ("Information meeting for Parents - KS2", "whole-school", None),
     # Several *named* years go to those years' classes only (not whole-school,
     # which is for KS1/KS2/"whole school" or no year at all).
-    ("Information meeting for Parents - Year 1 and 2", "classes", {"1MS", "1T", "2LY", "2S"}),
-    ("Eucharist Year 5 and Year 6 - St Paul's Church", "classes", {"5L", "5HP", "6BT", "6R"}),
-    ("Eucharist Service Year 5 and Year 6 - in school", "classes", {"5L", "5HP", "6BT", "6R"}),
-    ("5HP and 6R Museum Trip", "classes", {"5HP", "6R"}),
-    ("5HP and Year 6 Museum Trip", "classes", {"5HP", "6BT", "6R"}),
+    ("Information meeting for Parents - Year 1 and 2", "classes", {"y1-a", "y1-b", "y2-a", "y2-b"}),
+    ("Eucharist Year 5 and Year 6 - St Paul's Church", "classes", {"y5-a", "y5-b", "y6-a", "y6-b"}),
+    ("Eucharist Service Year 5 and Year 6 - in school", "classes", {"y5-a", "y5-b", "y6-a", "y6-b"}),
+    ("5HP and 6R Museum Trip", "classes", {"y5-b", "y6-b"}),
+    ("5HP and Year 6 Museum Trip", "classes", {"y5-b", "y6-a", "y6-b"}),
     # A range names only its ends, so it can't be fanned out - whole-school.
     ("Reception to Year 6 Sports Day", "whole-school", None),
     ("Year 1 - Year 6 Sports Day", "whole-school", None),
     ("Year 3-6 Swimming Gala", "whole-school", None),
     ("R/KS1 Dress rehearsal to KS2", "whole-school", None),
-    ("5HP Collective Worship to parents", "classes", {"5HP"}),
-    ("4W Collective Worship to parents", "classes", {"4W"}),
-    ("Year 5 to Celtic Harmony", "classes", {"5L", "5HP"}),
-    ("Year 3 to Celtic Harmony", "classes", {"3B", "3D"}),
-    ("Reception Group 1 Start", "classes", {"RR", "RGP"}),
+    ("5HP Collective Worship to parents", "classes", {"y5-b"}),
+    ("4W Collective Worship to parents", "classes", {"y4-b"}),
+    ("Year 5 to Celtic Harmony", "classes", {"y5-a", "y5-b"}),
+    ("Year 3 to Celtic Harmony", "classes", {"y3-a", "y3-b"}),
+    ("Reception Group 1 Start", "classes", {"rec-a", "rec-b"}),
     # Unrecognised class-code-shaped tokens fall back to both classes in
     # that year group (the label-churn case: a new teacher's initials).
-    ("6L Collective Worship to parents", "classes", {"6BT", "6R"}),
-    ("5M Collective Worship", "classes", {"5L", "5HP"}),
+    # 6L and 5M are the school's real labels (they replaced our mistaken 6BT and
+    # 5L), so each names exactly one class...
+    ("6L Collective Worship to parents", "classes", {"y6-a"}),
+    ("5M Collective Worship", "classes", {"y5-a"}),
+    # ...and the old labels still work as aliases.
+    ("6BT Trip", "classes", {"y6-a"}),
+    ("5L Trip", "classes", {"y5-a"}),
+    # A label that isn't configured at all falls back to both of its year's classes.
+    ("6Z Collective Worship to parents", "classes", {"y6-a", "y6-b"}),
+    ("5Q Collective Worship", "classes", {"y5-a", "y5-b"}),
 ]
 
 
@@ -141,7 +149,7 @@ def test_build_event_whole_school_has_no_prefix():
 
 def test_build_event_class_prefixes_title_with_code():
     raw = {"id": 2, "title": "PE Kit", "allDay": True, "start": "2026-09-16"}
-    event = build_ics.build_event(raw, code="rr")
+    event = build_ics.build_event(raw, code="rec-a")
     assert str(event["summary"]) == "RR: PE Kit"
 
 
@@ -269,7 +277,7 @@ def test_save_whole_school_overrides_matches_tool_format(tmp_path, monkeypatch):
 
 def test_build_event_class_override_keeps_code_prefix():
     raw = {"id": 9, "title": "Group 1 Start", "allDay": True, "start": "2026-09-08", "desc": "Original text"}
-    event = build_ics.build_event(raw, code="rr", description_override="Bring a water bottle", location_override="Hall")
+    event = build_ics.build_event(raw, code="rec-a", description_override="Bring a water bottle", location_override="Hall")
     assert str(event["summary"]) == "RR: Group 1 Start"
     assert str(event["description"]) == "Bring a water bottle"
     assert str(event["location"]) == "Hall"
@@ -300,7 +308,7 @@ def test_main_applies_overrides_to_class_events(tmp_path, monkeypatch):
     cals = _build_with_overrides(tmp_path, monkeypatch, [raw], overrides)
 
     uid = "stpauls-42@school-calendar-feed"
-    for name in ("rr.ics", "rgp.ics"):
+    for name in ("rec-a.ics", "rec-b.ics"):
         event = _events_by_uid(cals[name])[uid]
         assert str(event["description"]) == "Updated by the class rep"
         assert str(event["location"]) == "Reception hall"
@@ -311,7 +319,7 @@ def test_main_class_event_without_override_keeps_school_text(tmp_path, monkeypat
     raw = {"id": 43, "title": "Reception Group 2 Start", "allDay": True, "start": "2026-09-09", "desc": "School text"}
     cals = _build_with_overrides(tmp_path, monkeypatch, [raw], {"999": {"description": "for another event"}})
 
-    event = _events_by_uid(cals["rr.ics"])["stpauls-43@school-calendar-feed"]
+    event = _events_by_uid(cals["rec-a.ics"])["stpauls-43@school-calendar-feed"]
     assert str(event["description"]) == "School text"
     assert "location" not in event
 
@@ -323,7 +331,7 @@ def test_main_class_event_without_override_keeps_school_text(tmp_path, monkeypat
 
 def test_multi_day_all_day_event_dtend_is_exclusive():
     raw = {"id": "t1", "title": "Residential", "date": "2026-11-09", "end_date": "2026-11-11"}
-    events = build_ics.build_manual_event(raw, "5hp", set())
+    events = build_ics.build_manual_event(raw, "y5-b", set())
     assert len(events) == 1  # no exceptions -> just the base event, no moved one-offs
     assert events[0]["dtstart"].dt == date(2026, 11, 9)
     # DTEND is exclusive, so a 3-day (9th-11th inclusive) event ends the 12th.
@@ -332,7 +340,7 @@ def test_multi_day_all_day_event_dtend_is_exclusive():
 
 def test_manual_event_prefixes_title_with_calendar_code():
     raw = {"id": "m1", "title": "PE Kit", "date": "2026-09-16"}
-    events = build_ics.build_manual_event(raw, "rr", set())
+    events = build_ics.build_manual_event(raw, "rec-a", set())
     assert str(events[0]["summary"]) == "RR: PE Kit"
 
 
@@ -352,29 +360,29 @@ def test_manual_event_location_is_published():
 
 def test_manual_event_without_location_has_no_location():
     raw = {"id": "m4", "title": "PE Kit", "date": "2026-09-16", "location": None}
-    assert "location" not in build_ics.build_manual_event(raw, "rr", set())[0]
+    assert "location" not in build_ics.build_manual_event(raw, "rec-a", set())[0]
 
 
 def test_load_class_manual_events_merges_the_year_groups_shared_file(tmp_path, monkeypatch):
     monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", tmp_path)
-    (tmp_path / "1ms.json").write_text('[{"id": "own1", "title": "1MS only", "date": "2026-10-01"}]')
-    (tmp_path / "1t.json").write_text('[{"id": "own2", "title": "1T only", "date": "2026-10-02"}]')
+    (tmp_path / "y1-a.json").write_text('[{"id": "own1", "title": "1MS only", "date": "2026-10-01"}]')
+    (tmp_path / "y1-b.json").write_text('[{"id": "own2", "title": "1T only", "date": "2026-10-02"}]')
     (tmp_path / "year1.json").write_text('[{"id": "shared1", "title": "Trip", "date": "2026-10-03"}]')
-    ms = [raw["id"] for raw in build_ics.load_class_manual_events("1ms", "year1")]
-    t = [raw["id"] for raw in build_ics.load_class_manual_events("1t", "year1")]
+    ms = [raw["id"] for raw in build_ics.load_class_manual_events("y1-a", "year1")]
+    t = [raw["id"] for raw in build_ics.load_class_manual_events("y1-b", "year1")]
     assert ms == ["own1", "shared1"]
     assert t == ["own2", "shared1"]
 
 
 def test_load_class_manual_events_tolerates_missing_files(tmp_path, monkeypatch):
     monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", tmp_path)
-    assert build_ics.load_class_manual_events("rr", "reception") == []
+    assert build_ics.load_class_manual_events("rec-a", "reception") == []
 
 
 def test_shared_year_event_is_built_per_class_with_its_own_prefix():
     raw = {"id": "shared1", "title": "Trip to the farm", "date": "2026-10-03"}
-    ms = build_ics.build_manual_event(raw, "1ms", set())[0]
-    t = build_ics.build_manual_event(raw, "1t", set())[0]
+    ms = build_ics.build_manual_event(raw, "y1-a", set())[0]
+    t = build_ics.build_manual_event(raw, "y1-b", set())[0]
     assert str(ms["summary"]) == "1MS: Trip to the farm"
     assert str(t["summary"]) == "1T: Trip to the farm"
     # Same id -> same UID in each class's own feed, like a school year-group event.
@@ -403,7 +411,7 @@ def test_recurring_event_uses_tzid_not_utc():
         "end_time": "10:00",
         "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
     }
-    events = build_ics.build_manual_event(raw, "5hp", set())
+    events = build_ics.build_manual_event(raw, "y5-b", set())
     ical_bytes = build_ics.make_calendar("test", events).to_ical()
 
     assert b"DTSTART;TZID=Europe/London" in ical_bytes
@@ -422,7 +430,7 @@ def test_recurring_event_excludes_closure_dates_via_exdate():
         "end_time": "10:00",
         "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
     }
-    events = build_ics.build_manual_event(raw, "5hp", closure_dates)
+    events = build_ics.build_manual_event(raw, "y5-b", closure_dates)
     ical_bytes = build_ics.make_calendar("test", events).to_ical()
     assert b"EXDATE;TZID=Europe/London:20261027T090000" in ical_bytes
 
@@ -434,7 +442,7 @@ def test_daily_recurring_event_excludes_weekends():
         "date": "2026-10-19",  # Monday
         "recurrence": {"freq": "DAILY", "interval": 1, "until": "2026-10-20"},  # Mon + Tue only
     }
-    events = build_ics.build_manual_event(raw, "5hp", set())
+    events = build_ics.build_manual_event(raw, "y5-b", set())
     ical_bytes = build_ics.make_calendar("test", events).to_ical()
     # A 2-day span with no weekend in it shouldn't produce any EXDATE at all.
     assert b"EXDATE" not in ical_bytes
@@ -449,7 +457,7 @@ def test_output_parses_as_valid_icalendar():
         "time": "09:00",
         "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-10"},
     }
-    events = build_ics.build_manual_event(raw, "5hp", {date(2026, 10, 27)})
+    events = build_ics.build_manual_event(raw, "y5-b", {date(2026, 10, 27)})
     ical_bytes = build_ics.make_calendar("test", events).to_ical()
     parsed = Calendar.from_ical(ical_bytes)
     events = [c for c in parsed.walk() if c.name == "VEVENT"]
@@ -473,7 +481,7 @@ WEEKLY_PE_BASE = {
 
 def test_cancelled_exception_adds_exdate_only():
     raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled"}]}
-    events = build_ics.build_manual_event(raw, "5hp", set())
+    events = build_ics.build_manual_event(raw, "y5-b", set())
     assert len(events) == 1  # cancelled -> no second event, just an EXDATE
     ical_bytes = build_ics.make_calendar("test", events).to_ical()
     assert b"EXDATE;TZID=Europe/London:20261020T090000" in ical_bytes
@@ -492,7 +500,7 @@ def test_moved_exception_excludes_original_and_adds_new_event():
             }
         ],
     }
-    events = build_ics.build_manual_event(raw, "5hp", set())
+    events = build_ics.build_manual_event(raw, "y5-b", set())
     assert len(events) == 2
 
     base_event, moved_event = events
@@ -514,7 +522,7 @@ def test_moved_exception_inherits_parent_location():
         "location": "Sports hall",
         "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"}],
     }
-    base_event, moved_event = build_ics.build_manual_event(raw, "5hp", set())
+    base_event, moved_event = build_ics.build_manual_event(raw, "y5-b", set())
     assert str(base_event["location"]) == "Sports hall"
     assert str(moved_event["location"]) == "Sports hall"
 
@@ -524,7 +532,7 @@ def test_moved_exception_inherits_parent_time_if_unspecified():
         **WEEKLY_PE_BASE,
         "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"}],
     }
-    events = build_ics.build_manual_event(raw, "5hp", set())
+    events = build_ics.build_manual_event(raw, "y5-b", set())
     moved_event = events[1]
     # No new_time given - falls back to the parent's own time/end_time.
     assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 9, 0, tzinfo=build_ics.LONDON)
@@ -539,8 +547,8 @@ def test_rebuild_is_idempotent_for_moved_exceptions():
         **WEEKLY_PE_BASE,
         "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"}],
     }
-    first = build_ics.build_manual_event(raw, "5hp", set())
-    second = build_ics.build_manual_event(raw, "5hp", set())
+    first = build_ics.build_manual_event(raw, "y5-b", set())
+    second = build_ics.build_manual_event(raw, "y5-b", set())
     assert str(first[1]["uid"]) == str(second[1]["uid"])
 
 
@@ -554,36 +562,36 @@ def _ical_for(raw, code):
 
 
 def test_class_scoped_cancel_only_applies_to_that_class():
-    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled", "classes": ["rr"]}]}
-    assert b"EXDATE;TZID=Europe/London:20261020T090000" in _ical_for(raw, "rr")
-    assert b"EXDATE" not in _ical_for(raw, "rgp")
+    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled", "classes": ["rec-a"]}]}
+    assert b"EXDATE;TZID=Europe/London:20261020T090000" in _ical_for(raw, "rec-a")
+    assert b"EXDATE" not in _ical_for(raw, "rec-b")
 
 
 def test_class_scoped_move_only_creates_a_moved_event_for_that_class():
     raw = {
         **WEEKLY_PE_BASE,
-        "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21", "classes": ["rgp"]}],
+        "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21", "classes": ["rec-b"]}],
     }
-    assert len(build_ics.build_manual_event(raw, "rgp", set())) == 2
-    rr_events = build_ics.build_manual_event(raw, "rr", set())
+    assert len(build_ics.build_manual_event(raw, "rec-b", set())) == 2
+    rr_events = build_ics.build_manual_event(raw, "rec-a", set())
     assert len(rr_events) == 1
     assert b"EXDATE" not in build_ics.make_calendar("test", rr_events).to_ical()
 
 
 def test_unscoped_exception_applies_to_every_class():
     raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled"}]}
-    for code in ("rr", "rgp"):
+    for code in ("rec-a", "rec-b"):
         assert b"EXDATE;TZID=Europe/London:20261020T090000" in _ical_for(raw, code)
 
 
 def test_empty_classes_list_means_every_class():
     raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled", "classes": []}]}
-    assert b"EXDATE" in _ical_for(raw, "rgp")
+    assert b"EXDATE" in _ical_for(raw, "rec-b")
 
 
 def test_class_scope_match_is_case_insensitive():
-    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled", "classes": ["RR"]}]}
-    assert b"EXDATE" in _ical_for(raw, "rr")
+    raw = {**WEEKLY_PE_BASE, "exceptions": [{"date": "2026-10-20", "action": "cancelled", "classes": ["REC-A"]}]}
+    assert b"EXDATE" in _ical_for(raw, "rec-a")
 
 
 def test_class_specific_exception_overrides_unscoped_one_on_same_date():
@@ -591,12 +599,12 @@ def test_class_specific_exception_overrides_unscoped_one_on_same_date():
     raw = {
         **WEEKLY_PE_BASE,
         "exceptions": [
-            {"date": "2026-10-20", "action": "cancelled", "classes": ["rr"]},
+            {"date": "2026-10-20", "action": "cancelled", "classes": ["rec-a"]},
             {"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"},
         ],
     }
-    assert len(build_ics.build_manual_event(raw, "rr", set())) == 1  # cancelled, no moved event
-    assert len(build_ics.build_manual_event(raw, "rgp", set())) == 2  # the year-wide move
+    assert len(build_ics.build_manual_event(raw, "rec-a", set())) == 1  # cancelled, no moved event
+    assert len(build_ics.build_manual_event(raw, "rec-b", set())) == 2  # the year-wide move
 
 
 def test_moved_exception_with_new_time_but_no_end_keeps_the_original_length():
@@ -607,7 +615,7 @@ def test_moved_exception_with_new_time_but_no_end_keeps_the_original_length():
         "end_time": "10:30",
         "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21", "new_time": "14:00"}],
     }
-    moved_event = build_ics.build_manual_event(raw, "5hp", set())[1]
+    moved_event = build_ics.build_manual_event(raw, "y5-b", set())[1]
     assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 14, 0, tzinfo=build_ics.LONDON)
     assert moved_event["dtend"].dt == datetime(2026, 10, 21, 15, 30, tzinfo=build_ics.LONDON)
 
@@ -617,7 +625,7 @@ def test_moved_exception_with_new_time_and_a_parent_with_no_end_gets_an_hour():
         **{k: v for k, v in WEEKLY_PE_BASE.items() if k != "end_time"},
         "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21", "new_time": "14:00"}],
     }
-    moved_event = build_ics.build_manual_event(raw, "5hp", set())[1]
+    moved_event = build_ics.build_manual_event(raw, "y5-b", set())[1]
     assert moved_event["dtend"].dt == datetime(2026, 10, 21, 15, 0, tzinfo=build_ics.LONDON)
 
 
@@ -627,7 +635,7 @@ def test_moved_exception_can_run_past_midnight_when_the_original_length_does():
         "end_time": "11:00",
         "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21", "new_time": "23:00"}],
     }
-    moved_event = build_ics.build_manual_event(raw, "5hp", set())[1]
+    moved_event = build_ics.build_manual_event(raw, "y5-b", set())[1]
     assert moved_event["dtend"].dt == datetime(2026, 10, 22, 1, 0, tzinfo=build_ics.LONDON)
 
 
@@ -637,7 +645,7 @@ def test_moved_exception_keeps_parent_end_when_only_the_date_moves():
         "end_time": "10:30",
         "exceptions": [{"date": "2026-10-20", "action": "moved", "new_date": "2026-10-21"}],
     }
-    moved_event = build_ics.build_manual_event(raw, "5hp", set())[1]
+    moved_event = build_ics.build_manual_event(raw, "y5-b", set())[1]
     assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 9, 0, tzinfo=build_ics.LONDON)
     assert moved_event["dtend"].dt == datetime(2026, 10, 21, 10, 30, tzinfo=build_ics.LONDON)
 
@@ -671,26 +679,122 @@ GOOD_MANUAL_EVENT = {"id": "good", "title": "Good", "date": "2026-10-02"}
 
 @pytest.mark.parametrize("bad", BAD_MANUAL_EVENTS.values(), ids=BAD_MANUAL_EVENTS.keys())
 def test_build_manual_events_skips_an_event_that_cannot_be_built(bad, capsys):
-    events = build_ics.build_manual_events([bad, GOOD_MANUAL_EVENT], "5hp", set())
+    events = build_ics.build_manual_events([bad, GOOD_MANUAL_EVENT], "y5-b", set())
     assert [str(e["uid"]) for e in events] == [f"manual-good@{build_ics.UID_DOMAIN}"]
-    assert "WARNING: skipped a manual event in 5hp.ics" in capsys.readouterr().err
+    assert "WARNING: skipped a manual event in y5-b.ics" in capsys.readouterr().err
 
 
 def test_build_manual_events_builds_every_good_event():
     other = {"id": "other", "title": "Other", "date": "2026-10-03"}
-    assert len(build_ics.build_manual_events([GOOD_MANUAL_EVENT, other], "5hp", set())) == 2
+    assert len(build_ics.build_manual_events([GOOD_MANUAL_EVENT, other], "y5-b", set())) == 2
 
 
 def test_main_still_publishes_every_calendar_when_a_manual_event_is_bad(tmp_path, monkeypatch, capsys):
     manual = tmp_path / "manual"
     manual.mkdir()
-    (manual / "5hp.json").write_text(json.dumps([BAD_MANUAL_EVENTS["impossible date"], GOOD_MANUAL_EVENT]))
+    (manual / "y5-b.json").write_text(json.dumps([BAD_MANUAL_EVENTS["impossible date"], GOOD_MANUAL_EVENT]))
     (manual / "year5.json").write_text(json.dumps([BAD_MANUAL_EVENTS["bad time"]]))
     (manual / "fosps.json").write_text(json.dumps([BAD_MANUAL_EVENTS["impossible repeat-until"], GOOD_MANUAL_EVENT]))
     cals = _build_with_overrides(tmp_path, monkeypatch, [], {})
 
     assert len(cals) == 16  # whole school, 14 classes, FOSPS
-    for name in ("5hp.ics", "fosps.ics"):
+    for name in ("y5-b.ics", "fosps.ics"):
         assert [str(e["uid"]) for e in cals[name].walk("VEVENT")] == [f"manual-good@{build_ics.UID_DOMAIN}"]
-    assert list(cals["5l.ics"].walk("VEVENT")) == []  # year5.json's bad event is skipped there too
-    assert capsys.readouterr().err.count("WARNING: skipped a manual event") == 4  # 5hp, 5hp+5l (year5), fosps
+    assert list(cals["y5-a.ics"].walk("VEVENT")) == []  # year5.json's bad event is skipped there too
+    assert capsys.readouterr().err.count("WARNING: skipped a manual event") == 4  # y5-b, y5-b+y5-a (year5), fosps
+
+
+
+# --------------------------------------------------------------------------
+# Permanent class codes vs the labels people see. A class's code is a generic
+# slot ("y5-b" = Year 5's second class) that never changes; its label is what
+# the school calls it today ("5HP") and is the only thing a relabel touches.
+# --------------------------------------------------------------------------
+
+EXPECTED_SLOTS = {
+    "reception": [("rec-a", "RR"), ("rec-b", "RGP")],
+    "year1": [("y1-a", "1MS"), ("y1-b", "1T")],
+    "year2": [("y2-a", "2LY"), ("y2-b", "2S")],
+    "year3": [("y3-a", "3B"), ("y3-b", "3D")],
+    "year4": [("y4-a", "4M"), ("y4-b", "4W")],
+    "year5": [("y5-a", "5M"), ("y5-b", "5HP")],
+    "year6": [("y6-a", "6L"), ("y6-b", "6R")],
+}
+
+
+def test_every_class_has_a_permanent_generic_code_and_the_schools_current_label():
+    got = {g["key"]: [(c["code"], c["current_label"]) for c in g["classes"]] for g in build_ics.YEAR_GROUPS}
+    assert got == EXPECTED_SLOTS
+
+
+def test_a_code_names_a_slot_never_a_teacher_and_can_never_be_mistaken_for_a_label():
+    every_label = {a.upper() for g in build_ics.YEAR_GROUPS for c in g["classes"] for a in c["aliases"]}
+    for group in build_ics.YEAR_GROUPS:
+        prefix = "rec" if group["key"] == "reception" else f"y{group['number']}"
+        for cls, slot in zip(group["classes"], "ab"):
+            assert cls["code"] == f"{prefix}-{slot}"
+            assert cls["code"].upper() not in every_label  # "y3-b" is not class 3B
+            assert cls["code"] == cls["code"].lower()
+
+
+def test_every_current_and_retired_label_routes_to_its_class():
+    for group in build_ics.YEAR_GROUPS:
+        for cls in group["classes"]:
+            assert cls["current_label"] in cls["aliases"], "a class's own label must route back to it"
+            for alias in cls["aliases"]:
+                assert build_ics.ALIAS_TO_CLASS[alias.upper()] == (group["key"], cls["code"])
+    assert build_ics.ALIAS_TO_CLASS["5L"] == ("year5", "y5-a")  # our mistake for 5M
+    assert build_ics.ALIAS_TO_CLASS["6BT"] == ("year6", "y6-a")  # our mistake for 6L
+    assert build_ics.ALIAS_TO_CLASS["RKJ"] == ("reception", "rec-a")  # Reception's earlier labels
+    assert build_ics.ALIAS_TO_CLASS["RKP"] == ("reception", "rec-b")
+
+
+def test_the_renamed_classes_are_recognised_without_a_warning(capsys):
+    for title in ("5M Collective Worship", "6L Collective Worship to parents", "5L Trip", "6BT Trip", "RKJ Trip"):
+        build_ics.classify_event(title)
+    assert "unrecognised class code" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "code,prefix", [("rec-a", "RR: "), ("rec-b", "RGP: "), ("y3-a", "3B: "), ("y5-b", "5HP: "), ("y6-a", "6L: "), ("fosps", "FOSPS: ")]
+)
+def test_the_title_prefix_is_the_label_not_the_code(code, prefix):
+    assert build_ics.class_prefix(code) == prefix
+
+
+def test_titles_are_prefixed_with_the_label_everywhere_a_title_is_built():
+    assert str(build_ics.build_event({"id": 1, "title": "Trip", "start": "2026-10-05", "end": "2026-10-05", "allDay": True}, code="y5-b")["summary"]) == "5HP: Trip"
+    assert str(build_ics.build_manual_event({"id": "m", "title": "Trip", "date": "2026-10-05"}, "y6-a", set())[0]["summary"]) == "6L: Trip"
+    moved = {"id": "m", "title": "PE", "date": "2026-10-01", "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-01"},
+             "exceptions": [{"date": "2026-10-08", "action": "moved", "new_date": "2026-10-09"}]}
+    assert [str(e["summary"]) for e in build_ics.build_manual_event(moved, "y1-b", set())] == ["1T: PE", "1T: PE"]
+
+
+def test_relabelling_a_class_changes_only_its_label_and_prefix(tmp_path, monkeypatch):
+    """The whole point: a class gets a new teacher. Edit its label (and add the
+    old one as an alias) - its code, feed filename and data file don't move."""
+    year5 = next(g for g in build_ics.YEAR_GROUPS if g["key"] == "year5")
+    second = year5["classes"][1]
+    monkeypatch.setitem(second, "current_label", "5XY")
+    monkeypatch.setitem(build_ics.CLASS_LABEL, "y5-b", "5XY")
+    raw = {"id": 951, "title": "Trip for Year 5", "start": "2026-10-06", "end": "2026-10-06", "allDay": True, "desc": ""}
+    cals = _build_with_overrides(tmp_path, monkeypatch, [raw], {})
+    assert set(cals) >= {"y5-b.ics"} and "5xy.ics" not in cals and "5hp.ics" not in cals
+    assert [str(e["summary"]) for e in cals["y5-b.ics"].walk("VEVENT")] == ["5XY: Trip for Year 5"]
+    assert "(5XY)" in str(cals["y5-b.ics"]["x-wr-calname"])
+    assert [str(e["summary"]) for e in cals["y5-a.ics"].walk("VEVENT")] == ["5M: Trip for Year 5"]  # its sibling is untouched
+
+
+def test_published_feeds_are_exactly_the_configured_classes():
+    """No stale feed left behind by a rename (a retired name keeps being served
+    from docs/calendars until someone deletes it), none missing for a new class."""
+    calendars = Path(__file__).resolve().parent.parent / "docs" / "calendars"
+    configured = {"whole-school", "fosps"} | {cls["code"] for g in build_ics.YEAR_GROUPS for cls in g["classes"]}
+    assert {f.stem for f in calendars.glob("*.ics")} == configured
+
+
+def test_manual_events_for_a_class_live_under_its_generic_code(tmp_path, monkeypatch):
+    monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", tmp_path)
+    (tmp_path / "y6-a.json").write_text('[{"id": "own", "title": "6L only", "date": "2026-10-01"}]')
+    (tmp_path / "year6.json").write_text('[{"id": "shared", "title": "Year 6", "date": "2026-10-02"}]')
+    assert [raw["id"] for raw in build_ics.load_class_manual_events("y6-a", "year6")] == ["own", "shared"]

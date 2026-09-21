@@ -83,23 +83,28 @@ REQUEST_HEADERS = {
 # --------------------------------------------------------------------------
 # Class / year-group configuration.
 #
-# `code` is a PERMANENT identifier - it's the .ics filename and subscribe URL
-# slug (e.g. "5HP" -> calendars/5hp.ics), and once chosen it must never
-# change, even if the school later relabels the class. `current_label` is
-# what's actually shown to humans (the calendar's display name, and the
-# tool/docs UI) - it can be updated freely as the school's labels change,
-# with zero impact on anyone's subscription URL.
+# `code` is a PERMANENT, GENERIC identifier for a class *slot*: "y5-a" is the
+# first class of Year 5, "y5-b" the second, "rec-a"/"rec-b" Reception's. It is
+# the .ics filename and subscribe URL slug (calendars/y5-a.ics), the key of the
+# class rep's passcode, and the name of its data file - so it must never change,
+# and deliberately says nothing about the class's teacher. It also can't be
+# mistaken for a school label ("y3-b" is not class 3B).
 #
-# `aliases` are every label a class has ever used (e.g. Reception's classes
-# were "RKJ"/"RKP" and are now "RR"/"RGP") - kept around rather than deleted,
-# since the school's own event titles are the only signal we get and old
-# labels can resurface in stale copy/pasted event titles.
+# `current_label` is what humans see: the calendar's display name, the "5HP: "
+# prefix on its event titles, and the tool/docs UI. It follows the school's own
+# label for that class, and is the ONLY thing to edit when a class is relabelled
+# (a new teacher, a new year). Doing so changes no URL, passcode or data file.
 #
-# When the school starts using a class label that isn't listed here (e.g. a
-# new teacher), classify_event() below still figures out the *year group*
-# from the leading digit/R and fans the event out to both of that year's
-# classes, logging a warning so this config can be updated (add the new
-# label to `aliases` and update `current_label` - never change `code`).
+# `aliases` are every label a class has used (Reception's were "RKJ"/"RKP" and
+# are now "RR"/"RGP"; Year 6's "6BT" was our mistake for "6L") - kept rather
+# than deleted, since the school's own event titles are the only signal we get
+# and old labels can resurface in stale copy/pasted event titles. When a class
+# is relabelled, add the new label here as well as updating `current_label`.
+#
+# When the school starts using a class label that isn't listed here, classify_event()
+# below still figures out the *year group* from the leading digit/R and fans the
+# event out to both of that year's classes, logging a warning so this config can
+# be updated.
 # --------------------------------------------------------------------------
 YEAR_GROUPS = [
     {
@@ -107,8 +112,8 @@ YEAR_GROUPS = [
         "label": "Reception",
         "number": "R",
         "classes": [
-            {"code": "RR", "current_label": "RR", "aliases": ["RR", "RKJ"]},
-            {"code": "RGP", "current_label": "RGP", "aliases": ["RGP", "RKP"]},
+            {"code": "rec-a", "current_label": "RR", "aliases": ["RR", "RKJ"]},
+            {"code": "rec-b", "current_label": "RGP", "aliases": ["RGP", "RKP"]},
         ],
     },
     {
@@ -116,8 +121,8 @@ YEAR_GROUPS = [
         "label": "Year 1",
         "number": "1",
         "classes": [
-            {"code": "1MS", "current_label": "1MS", "aliases": ["1MS"]},
-            {"code": "1T", "current_label": "1T", "aliases": ["1T"]},
+            {"code": "y1-a", "current_label": "1MS", "aliases": ["1MS"]},
+            {"code": "y1-b", "current_label": "1T", "aliases": ["1T"]},
         ],
     },
     {
@@ -125,8 +130,8 @@ YEAR_GROUPS = [
         "label": "Year 2",
         "number": "2",
         "classes": [
-            {"code": "2LY", "current_label": "2LY", "aliases": ["2LY"]},
-            {"code": "2S", "current_label": "2S", "aliases": ["2S"]},
+            {"code": "y2-a", "current_label": "2LY", "aliases": ["2LY"]},
+            {"code": "y2-b", "current_label": "2S", "aliases": ["2S"]},
         ],
     },
     {
@@ -134,8 +139,8 @@ YEAR_GROUPS = [
         "label": "Year 3",
         "number": "3",
         "classes": [
-            {"code": "3B", "current_label": "3B", "aliases": ["3B"]},
-            {"code": "3D", "current_label": "3D", "aliases": ["3D"]},
+            {"code": "y3-a", "current_label": "3B", "aliases": ["3B"]},
+            {"code": "y3-b", "current_label": "3D", "aliases": ["3D"]},
         ],
     },
     {
@@ -143,8 +148,8 @@ YEAR_GROUPS = [
         "label": "Year 4",
         "number": "4",
         "classes": [
-            {"code": "4M", "current_label": "4M", "aliases": ["4M"]},
-            {"code": "4W", "current_label": "4W", "aliases": ["4W"]},
+            {"code": "y4-a", "current_label": "4M", "aliases": ["4M"]},
+            {"code": "y4-b", "current_label": "4W", "aliases": ["4W"]},
         ],
     },
     {
@@ -152,8 +157,9 @@ YEAR_GROUPS = [
         "label": "Year 5",
         "number": "5",
         "classes": [
-            {"code": "5L", "current_label": "5L", "aliases": ["5L"]},
-            {"code": "5HP", "current_label": "5HP", "aliases": ["5HP"]},
+            # 5L was our mistake, not a real label: the school's Year 5 is 5M + 5HP.
+            {"code": "y5-a", "current_label": "5M", "aliases": ["5M", "5L"]},
+            {"code": "y5-b", "current_label": "5HP", "aliases": ["5HP"]},
         ],
     },
     {
@@ -161,8 +167,9 @@ YEAR_GROUPS = [
         "label": "Year 6",
         "number": "6",
         "classes": [
-            {"code": "6BT", "current_label": "6BT", "aliases": ["6BT"]},
-            {"code": "6R", "current_label": "6R", "aliases": ["6R"]},
+            # Likewise 6BT was never a real label: Year 6 is 6L + 6R.
+            {"code": "y6-a", "current_label": "6L", "aliases": ["6L", "6BT"]},
+            {"code": "y6-b", "current_label": "6R", "aliases": ["6R"]},
         ],
     },
 ]
@@ -173,6 +180,8 @@ ALIAS_TO_CLASS: dict[str, tuple[str, str]] = {}
 YEAR_CLASS_CODES: dict[str, list[str]] = {}
 # year_key -> display label, e.g. "Year 5"
 YEAR_LABEL: dict[str, str] = {}
+# class code -> the label shown to people, e.g. "y5-b" -> "5HP"
+CLASS_LABEL: dict[str, str] = {}
 # "1".."6" / "R" -> year_key
 YEAR_NUMBER_TO_KEY: dict[str, str] = {}
 
@@ -181,6 +190,7 @@ for group in YEAR_GROUPS:
     YEAR_LABEL[group["key"]] = group["label"]
     YEAR_NUMBER_TO_KEY[group["number"]] = group["key"]
     for cls in group["classes"]:
+        CLASS_LABEL[cls["code"]] = cls["current_label"]
         for alias in cls["aliases"]:
             ALIAS_TO_CLASS[alias.upper()] = (group["key"], cls["code"])
 
@@ -201,7 +211,7 @@ _YEAR_RANGE_PATTERN = re.compile(
     r"\bReception\s*(?:-|–|—|\bto\b|\bthrough\b)\s*Year\b",
     re.IGNORECASE,
 )
-# Fallback: any unrecognised class-code-shaped token, e.g. "6L", "5M". Kept
+# Fallback: any unrecognised class-code-shaped token, e.g. "6Z", "5Q". Kept
 # case-sensitive since real class codes are always written upper-case in the
 # school's event titles - a looser match risks false positives on ordinary
 # capitalised words.
@@ -328,6 +338,15 @@ def _clean(text: str | None) -> str:
     return html.unescape((text or "").strip())
 
 
+def class_prefix(code: str) -> str:
+    """The "5HP: " a class calendar's event titles start with, so a parent
+    subscribed to several can tell them apart. It's the class's *label* - what
+    the school calls it - not its permanent code ("y5-b"), so a relabelled class
+    just gets a new prefix. FOSPS isn't a class: its code, upper-cased, is its
+    label."""
+    return f"{CLASS_LABEL.get(code.lower(), code.upper())}: "
+
+
 def _clean_description(text: str | None) -> str:
     """The school's `desc` is an HTML fragment ("<p>Reception 1:15pm<br />
     Year 1 1:20pm</p>"), but calendar apps and the preview page show
@@ -408,7 +427,7 @@ def build_event(
     event.add("uid", f"stpauls-{raw['id']}@{UID_DOMAIN}")
     title = _clean(raw.get("title"))
     if code:
-        title = f"{code.upper()}: {title}"
+        title = f"{class_prefix(code)}{title}"
     event.add("summary", title)
 
     desc = description_override if description_override is not None else _clean_description(raw.get("desc"))
@@ -478,7 +497,7 @@ def _build_moved_exception_event(raw: dict, exception: dict, code: str) -> Event
     event = Event()
     base_id = raw.get("id") or sha1(f"{raw['title']}|{raw['date']}".encode("utf-8")).hexdigest()[:16]
     event.add("uid", f"manual-{base_id}-{exception['date']}@{UID_DOMAIN}")
-    event.add("summary", f"{code.upper()}: {raw['title']}")
+    event.add("summary", f"{class_prefix(code)}{raw['title']}")
 
     desc = raw.get("description")
     if desc:
@@ -526,7 +545,7 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
     # subscribed to several class calendars at once can tell which class an
     # event belongs to without opening it - the stored `title` itself is
     # never touched, only what's published.
-    event.add("summary", f"{code.upper()}: {raw['title']}")
+    event.add("summary", f"{class_prefix(code)}{raw['title']}")
 
     desc = raw.get("description")
     if desc:

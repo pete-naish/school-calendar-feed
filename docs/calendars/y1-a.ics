@@ -1,0 +1,18 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//school-calendar-feed//stpauls-enfield//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:St Paul's Enfield — Year 1 (1MS)
+X-WR-TIMEZONE:Europe/London
+BEGIN:VEVENT
+SUMMARY:1MS: Information meeting for Parents - Year 1 and 2
+DTSTART:20260908T081500Z
+DTEND:20260908T084500Z
+DTSTAMP:20260921T203852Z
+UID:stpauls-850@school-calendar-feed
+LAST-MODIFIED:20260921T203852Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=850
+END:VEVENT
+END:VCALENDAR

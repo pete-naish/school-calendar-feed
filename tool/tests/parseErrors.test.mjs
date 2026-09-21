@@ -16,12 +16,12 @@ afterEach(() => {
   console.error = realConsoleError;
 });
 
-const env = { ANTHROPIC_API_KEY: "sk-ant-secret", CLASS_PASSWORDS: JSON.stringify({ "5hp": "pw" }) };
+const env = { ANTHROPIC_API_KEY: "sk-ant-secret", CLASS_PASSWORDS: JSON.stringify({ "y5-b": "pw" }) };
 const extract = () =>
   parse({
     request: new Request("https://x/api/parse", {
       method: "POST",
-      body: JSON.stringify({ calendar: "5hp", passcode: "pw", text: "Bake sale on 2026-10-01" }),
+      body: JSON.stringify({ calendar: "y5-b", passcode: "pw", text: "Bake sale on 2026-10-01" }),
     }),
     env,
   });

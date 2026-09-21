@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 import { checkPasscode, timingSafeEqual } from "../functions/api/_shared/auth.js";
 
-const env = { CLASS_PASSWORDS: JSON.stringify({ "5hp": "correct horse", rr: "pässwörd-🐴", empty: "", num: 12345 }) };
+const env = { CLASS_PASSWORDS: JSON.stringify({ "y5-b": "correct horse", "rec-a": "pässwörd-🐴", empty: "", num: 12345 }) };
 
 test("timingSafeEqual: equal strings match, anything else doesn't", () => {
   assert.equal(timingSafeEqual("abc", "abc"), true);
@@ -27,20 +27,20 @@ test("timingSafeEqual: equal strings match, anything else doesn't", () => {
 });
 
 test("the right passcode for the right calendar is accepted", () => {
-  assert.equal(checkPasscode(env, "5hp", "correct horse"), true);
-  assert.equal(checkPasscode(env, "rr", "pässwörd-🐴"), true);
+  assert.equal(checkPasscode(env, "y5-b", "correct horse"), true);
+  assert.equal(checkPasscode(env, "rec-a", "pässwörd-🐴"), true);
 });
 
 test("a wrong, partial, longer, differently-cased or another calendar's passcode is refused", () => {
   for (const guess of ["wrong", "correct hors", "correct horse!", "Correct Horse", " correct horse", "correct horse "]) {
-    assert.equal(checkPasscode(env, "5hp", guess), false, guess);
+    assert.equal(checkPasscode(env, "y5-b", guess), false, guess);
   }
-  assert.equal(checkPasscode(env, "rr", "correct horse"), false);
+  assert.equal(checkPasscode(env, "rec-a", "correct horse"), false);
 });
 
 test("a missing, empty or non-string passcode is refused", () => {
   for (const guess of [undefined, null, "", 12345, ["correct horse"], { toString: () => "correct horse" }]) {
-    assert.equal(checkPasscode(env, "5hp", guess), false, JSON.stringify(guess));
+    assert.equal(checkPasscode(env, "y5-b", guess), false, JSON.stringify(guess));
   }
 });
 
@@ -54,6 +54,6 @@ test("a calendar with no passcode configured can't be opened, whatever is sent",
 });
 
 test("a CLASS_PASSWORDS secret that isn't JSON is an error, not a silent refusal", () => {
-  assert.throws(() => checkPasscode({ CLASS_PASSWORDS: "not json" }, "5hp", "x"), /not valid JSON/);
-  assert.throws(() => checkPasscode({}, "5hp", "x"), /not valid JSON/);
+  assert.throws(() => checkPasscode({ CLASS_PASSWORDS: "not json" }, "y5-b", "x"), /not valid JSON/);
+  assert.throws(() => checkPasscode({}, "y5-b", "x"), /not valid JSON/);
 });

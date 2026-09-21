@@ -10,13 +10,13 @@ import ICAL from "./vendor/ical.min.js";
 // school) is a neutral grey rather than another hue since it's structurally
 // the "everyone" bucket, not a peer category.
 const GROUPS = [
-  { label: "Reception", dot: "dot-reception", colorVar: "--cal-1", classes: [{ code: "rr", label: "RR" }, { code: "rgp", label: "RGP" }] },
-  { label: "Year 1", dot: "dot-year1", colorVar: "--cal-2", classes: [{ code: "1ms", label: "1MS" }, { code: "1t", label: "1T" }] },
-  { label: "Year 2", dot: "dot-year2", colorVar: "--cal-3", classes: [{ code: "2ly", label: "2LY" }, { code: "2s", label: "2S" }] },
-  { label: "Year 3", dot: "dot-year3", colorVar: "--cal-4", classes: [{ code: "3b", label: "3B" }, { code: "3d", label: "3D" }] },
-  { label: "Year 4", dot: "dot-year4", colorVar: "--cal-5", classes: [{ code: "4m", label: "4M" }, { code: "4w", label: "4W" }] },
-  { label: "Year 5", dot: "dot-year5", colorVar: "--cal-6", classes: [{ code: "5l", label: "5L" }, { code: "5hp", label: "5HP" }] },
-  { label: "Year 6", dot: "dot-year6", colorVar: "--cal-7", classes: [{ code: "6bt", label: "6BT" }, { code: "6r", label: "6R" }] },
+  { label: "Reception", dot: "dot-reception", colorVar: "--cal-1", classes: [{ code: "rec-a", label: "RR" }, { code: "rec-b", label: "RGP" }] },
+  { label: "Year 1", dot: "dot-year1", colorVar: "--cal-2", classes: [{ code: "y1-a", label: "1MS" }, { code: "y1-b", label: "1T" }] },
+  { label: "Year 2", dot: "dot-year2", colorVar: "--cal-3", classes: [{ code: "y2-a", label: "2LY" }, { code: "y2-b", label: "2S" }] },
+  { label: "Year 3", dot: "dot-year3", colorVar: "--cal-4", classes: [{ code: "y3-a", label: "3B" }, { code: "y3-b", label: "3D" }] },
+  { label: "Year 4", dot: "dot-year4", colorVar: "--cal-5", classes: [{ code: "y4-a", label: "4M" }, { code: "y4-b", label: "4W" }] },
+  { label: "Year 5", dot: "dot-year5", colorVar: "--cal-6", classes: [{ code: "y5-a", label: "5M" }, { code: "y5-b", label: "5HP" }] },
+  { label: "Year 6", dot: "dot-year6", colorVar: "--cal-7", classes: [{ code: "y6-a", label: "6L" }, { code: "y6-b", label: "6R" }] },
 ];
 const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School", dot: "dot-whole", colorVar: "--cal-neutral" };
 const FOSPS = { code: "fosps", label: "FOSPS", dot: "dot-fosps", colorVar: "--cal-8" };
@@ -39,10 +39,14 @@ const ALL_CALENDARS = [
 // day-indexed data is ready the moment a calendar is launched; launching
 // one is just adding its code to this set - the page has no per-calendar
 // markup of its own.
-const LAUNCHED_CALENDARS = new Set([WHOLE_SCHOOL.code, FOSPS.code, "rr", "rgp"]);
+const LAUNCHED_CALENDARS = new Set([WHOLE_SCHOOL.code, FOSPS.code, "rec-a", "rec-b"]);
 
 const DEFAULT_ON = new Set([WHOLE_SCHOOL.code, FOSPS.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
+// Toggles saved before class codes became generic (see YEAR_GROUPS in
+// scripts/build_ics.py) were keyed by Reception's labels; carry them over so a
+// returning visitor's ticked calendars aren't lost.
+const LEGACY_TOGGLE_KEYS = { "rec-a": "rr", "rec-b": "rgp" };
 const VIEW_STORAGE_KEY = "stpauls-calendar-view";
 const VIEWS = ["month", "week", "day"];
 
@@ -133,7 +137,10 @@ function loadToggleState() {
     if (!raw) throw new Error("no saved state");
     const saved = JSON.parse(raw);
     const state = {};
-    for (const cal of ALL_CALENDARS) state[cal.code] = LAUNCHED_CALENDARS.has(cal.code) && Boolean(saved[cal.code]);
+    for (const cal of ALL_CALENDARS) {
+      const wasOn = saved[cal.code] ?? saved[LEGACY_TOGGLE_KEYS[cal.code]];
+      state[cal.code] = LAUNCHED_CALENDARS.has(cal.code) && Boolean(wasOn);
+    }
     return state;
   } catch {
     const state = {};

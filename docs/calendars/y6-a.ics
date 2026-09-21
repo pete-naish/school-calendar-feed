@@ -3,35 +3,35 @@ VERSION:2.0
 PRODID:-//school-calendar-feed//stpauls-enfield//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-X-WR-CALNAME:St Paul's Enfield — Year 6 (6BT)
+X-WR-CALNAME:St Paul's Enfield — Year 6 (6L)
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:6BT: Eucharist Year 5 and Year 6 - St Paul's Church
+SUMMARY:6L: Eucharist Year 5 and Year 6 - St Paul's Church
 DTSTART:20260929T080500Z
 DTEND:20260929T090500Z
-DTSTAMP:20260921T201611Z
+DTSTAMP:20260921T203852Z
 UID:stpauls-860@school-calendar-feed
-LAST-MODIFIED:20260921T201611Z
+LAST-MODIFIED:20260921T203852Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=860
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:6BT: 6L Collective Worship to parents
+SUMMARY:6L: 6L Collective Worship to parents
 DTSTART:20261014T080500Z
 DTEND:20261014T090500Z
-DTSTAMP:20260921T201611Z
+DTSTAMP:20260921T203852Z
 UID:stpauls-867@school-calendar-feed
-LAST-MODIFIED:20260921T201611Z
+LAST-MODIFIED:20260921T203852Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=867
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:6BT: Eucharist Service Year 5 and Year 6 - in school
+SUMMARY:6L: Eucharist Service Year 5 and Year 6 - in school
 DTSTART:20261119T090000Z
 DTEND:20261119T100000Z
-DTSTAMP:20260921T201611Z
+DTSTAMP:20260921T203852Z
 UID:stpauls-879@school-calendar-feed
-LAST-MODIFIED:20260921T201611Z
+LAST-MODIFIED:20260921T203852Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=879
 END:VEVENT

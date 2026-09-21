@@ -6,6 +6,7 @@
 // applied, exactly as parents' calendar apps see them.
 
 import { parseIcsEvents, isoToDay, dayToIso, weekdayIndex, dayParts, londonDayAndTime } from "./ics.js";
+import { titlePrefixFor } from "./calendars.js";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -114,7 +115,7 @@ function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = f
 export function buildWeekText({ calendarIcs, wholeSchoolIcs, calendar, weekStart }) {
   const weekStartDay = isoToDay(weekStart);
   const items = [
-    ...(calendarIcs ? collectItems(calendarIcs, weekStartDay, { titlePrefix: `${calendar.toUpperCase()}: ` }) : []),
+    ...(calendarIcs ? collectItems(calendarIcs, weekStartDay, { titlePrefix: titlePrefixFor(calendar) }) : []),
     ...collectItems(wholeSchoolIcs, weekStartDay, { wholeSchool: true }),
   ];
 

@@ -47,7 +47,7 @@ integration.
   series yet to override. On an event shared by the whole year (see
   `save.js` below) an exception can be limited to one class with an
   **Applies to** choice (e.g. only RR's class trip clashes with the shared
-  PE): saved as `classes: ["rr"]` on the exception, absent meaning every
+  PE): saved as `classes: ["rec-a"]` on the exception, absent meaning every
   class. Where the same date has both a year-wide and a class-specific
   exception, the class-specific one wins for that class; two that would clash
   (both year-wide, or sharing a class) are refused.
@@ -277,7 +277,11 @@ as before. A save where every event was a duplicate doesn't trigger one.
 2. Under the project's **Settings → Environment variables** (as secrets, for
    both Production and Preview), set:
    - `CLASS_PASSWORDS` - a JSON object mapping each of the 16 calendar codes
-     to a passcode you choose (see `.dev.vars.example` for the shape).
+     (`rec-a`, `rec-b`, `y1-a` ... `y6-b`, `fosps`, `whole-school`) to a
+     passcode you choose (see `.dev.vars.example` for the shape). A class's code
+     is a permanent slot, not its current label, so a class that changes
+     teacher keeps its key and its passcode: reps still pick their class by
+     label in the tool.
    - `ANTHROPIC_API_KEY` - an Anthropic API key.
    - `GITHUB_TOKEN` - a fine-grained GitHub PAT, scoped to only this repo,
      with **Contents: Read and write** and **Actions: Read and write**
@@ -363,5 +367,5 @@ To exercise an endpoint directly:
 ```bash
 curl -X POST http://localhost:8788/api/parse \
   -H "content-type: application/json" \
-  -d '{"calendar":"5hp","passcode":"changeme","text":"Collective worship for 5HP next Tuesday at 9am"}'
+  -d '{"calendar":"y5-b","passcode":"changeme","text":"Collective worship for 5HP next Tuesday at 9am"}'
 ```

@@ -63,11 +63,11 @@ def _run_main(tmp_path, monkeypatch, raw_events, manual=None, report=True):
 
 
 def test_an_unrecognised_class_code_is_recorded_and_still_warned(capsys):
-    build_ics.classify_event("Trip for 6L")
+    build_ics.classify_event("Trip for 6Z")
     (problem,) = build_ics.BUILD_PROBLEMS
     assert problem["kind"] == "unrecognised_class_code"
-    assert (problem["token"], problem["title"], problem["treated_as"]) == ("6L", "Trip for 6L", "Year 6")
-    assert "WARNING: unrecognised class code '6L' in event" in capsys.readouterr().err
+    assert (problem["token"], problem["title"], problem["treated_as"]) == ("6Z", "Trip for 6Z", "Year 6")
+    assert "WARNING: unrecognised class code '6Z' in event" in capsys.readouterr().err
 
 
 def test_known_class_codes_are_not_problems():
@@ -77,10 +77,10 @@ def test_known_class_codes_are_not_problems():
 
 
 def test_a_skipped_manual_event_is_recorded_with_where_and_why():
-    build_ics.build_manual_events([BAD_EVENT, GOOD_EVENT], "5hp", set())
+    build_ics.build_manual_events([BAD_EVENT, GOOD_EVENT], "y5-b", set())
     (problem,) = build_ics.BUILD_PROBLEMS
     assert problem["kind"] == "skipped_manual_event"
-    assert problem["calendar"] == "5hp.ics"
+    assert problem["calendar"] == "y5-b.ics"
     assert problem["event"] == "bad1"
     assert problem["error"].startswith("ValueError:")
 
@@ -89,20 +89,20 @@ def test_main_writes_the_report_with_problems_and_a_count_per_calendar(tmp_path,
     path = _run_main(
         tmp_path,
         monkeypatch,
-        [SCHOOL_EVENT, {**SCHOOL_EVENT, "id": 901, "title": "Trip for 6L"}],
-        manual={"5hp": [BAD_EVENT, GOOD_EVENT]},
+        [SCHOOL_EVENT, {**SCHOOL_EVENT, "id": 901, "title": "Trip for 6Z"}],
+        manual={"y5-b": [BAD_EVENT, GOOD_EVENT]},
     )
     report = json.loads(path.read_text())
     kinds = sorted(p["kind"] for p in report["problems"])
     assert kinds == ["skipped_manual_event", "unrecognised_class_code"]
     assert len(report["calendars"]) == 16  # whole school, 14 classes, FOSPS
     assert report["calendars"]["whole-school.ics"] == 1
-    assert report["calendars"]["5hp.ics"] == 1  # the good manual event; the bad one was skipped
-    assert report["calendars"]["6bt.ics"] == 1 and report["calendars"]["6r.ics"] == 1  # 6L -> both Year 6 classes
+    assert report["calendars"]["y5-b.ics"] == 1  # the good manual event; the bad one was skipped
+    assert report["calendars"]["y6-a.ics"] == 1 and report["calendars"]["y6-b.ics"] == 1  # 6Z -> both Year 6 classes
 
 
 def test_a_clean_build_reports_no_problems(tmp_path, monkeypatch):
-    path = _run_main(tmp_path, monkeypatch, [SCHOOL_EVENT], manual={"5hp": [GOOD_EVENT]})
+    path = _run_main(tmp_path, monkeypatch, [SCHOOL_EVENT], manual={"y5-b": [GOOD_EVENT]})
     assert json.loads(path.read_text())["problems"] == []
 
 
@@ -113,8 +113,8 @@ def test_no_report_is_written_unless_asked_for(tmp_path, monkeypatch):
 
 
 def test_problems_from_one_build_dont_leak_into_the_next(tmp_path, monkeypatch):
-    _run_main(tmp_path, monkeypatch, [SCHOOL_EVENT], manual={"5hp": [BAD_EVENT]})
-    path = _run_main(tmp_path, monkeypatch, [SCHOOL_EVENT], manual={"5hp": [GOOD_EVENT]})
+    _run_main(tmp_path, monkeypatch, [SCHOOL_EVENT], manual={"y5-b": [BAD_EVENT]})
+    path = _run_main(tmp_path, monkeypatch, [SCHOOL_EVENT], manual={"y5-b": [GOOD_EVENT]})
     assert json.loads(path.read_text())["problems"] == []
 
 
@@ -135,7 +135,7 @@ def test_an_unwritable_report_path_never_stops_the_feeds_being_published(tmp_pat
     monkeypatch.setenv("BUILD_REPORT_PATH", str(tmp_path / "no-such-dir" / "report.json"))
     build_ics.main()  # must not raise
     assert "couldn't write the build report" in capsys.readouterr().err
-    assert len(list((tmp_path / "calendars").glob("*.ics"))) == 16
+    assert len(list((tmp_path / "calendars").glob("*.ics"))) == 16  # whole school, 14 classes, FOSPS
 
 
 def test_reporting_leaves_the_published_feeds_exactly_as_they_were(tmp_path, monkeypatch):
@@ -151,8 +151,8 @@ def test_reporting_leaves_the_published_feeds_exactly_as_they_were(tmp_path, mon
     without = tmp_path / "b"
     with_report.mkdir()
     without.mkdir()
-    _run_main(with_report, monkeypatch, [SCHOOL_EVENT], manual={"5hp": [BAD_EVENT, GOOD_EVENT]}, report=True)
-    _run_main(without, monkeypatch, [SCHOOL_EVENT], manual={"5hp": [BAD_EVENT, GOOD_EVENT]}, report=False)
+    _run_main(with_report, monkeypatch, [SCHOOL_EVENT], manual={"y5-b": [BAD_EVENT, GOOD_EVENT]}, report=True)
+    _run_main(without, monkeypatch, [SCHOOL_EVENT], manual={"y5-b": [BAD_EVENT, GOOD_EVENT]}, report=False)
     assert feed_bodies(with_report / "calendars") == feed_bodies(without / "calendars")
 
 
@@ -162,12 +162,12 @@ def test_reporting_leaves_the_published_feeds_exactly_as_they_were(tmp_path, mon
 
 PROBLEM_REPORT = {
     "problems": [
-        {"kind": "skipped_manual_event", "message": "m", "calendar": "5hp.ics", "event": "bad1", "error": "ValueError: day is out of range"},
-        {"kind": "unrecognised_class_code", "message": "m", "token": "6L", "title": "Trip for 6L", "treated_as": "Year 6"},
+        {"kind": "skipped_manual_event", "message": "m", "calendar": "y5-b.ics", "event": "bad1", "error": "ValueError: day is out of range"},
+        {"kind": "unrecognised_class_code", "message": "m", "token": "6Z", "title": "Trip for 6Z", "treated_as": "Year 6"},
         {"kind": "school_feed_empty", "message": "m"},
         {"kind": "something_new", "message": "a future kind of problem"},
     ],
-    "calendars": {"5hp.ics": 3, "whole-school.ics": 49},
+    "calendars": {"y5-b.ics": 3, "whole-school.ics": 49},
 }
 
 
@@ -175,9 +175,9 @@ def test_render_lists_each_kind_of_problem_with_what_to_do():
     md = build_report.render(PROBLEM_REPORT, run_url="https://github.com/o/r/actions/runs/1")
     assert md.startswith("## Calendar build problems")
     assert "https://github.com/o/r/actions/runs/1" in md
-    assert "### Events skipped (1)" in md and "`5hp.ics`: `bad1` - `ValueError: day is out of range`" in md
+    assert "### Events skipped (1)" in md and "`y5-b.ics`: `bad1` - `ValueError: day is out of range`" in md
     assert "data/manual_events/" in md
-    assert "### Unrecognised class codes (1)" in md and "`6L` in `Trip for 6L` - treated as `Year 6`" in md
+    assert "### Unrecognised class codes (1)" in md and "`6Z` in `Trip for 6Z` - treated as `Year 6`" in md
     assert "`YEAR_GROUPS`" in md
     assert "### The school's calendar returned no events" in md
     assert "### Other (1)" in md and "a future kind of problem" in md
@@ -185,10 +185,10 @@ def test_render_lists_each_kind_of_problem_with_what_to_do():
 
 
 def test_render_says_so_when_there_are_no_problems():
-    md = build_report.render({"problems": [], "calendars": {"5hp.ics": 3}})
+    md = build_report.render({"problems": [], "calendars": {"y5-b.ics": 3}})
     assert md.startswith("## Calendar build: no problems")
     assert "### Events skipped" not in md and "Unrecognised" not in md
-    assert "- `5hp.ics`: 3" in md
+    assert "- `y5-b.ics`: 3" in md
 
 
 def test_render_copes_with_an_empty_or_minimal_report():
@@ -222,9 +222,9 @@ def test_event_text_cannot_break_out_of_its_code_span(hostile):
 
 def test_a_hostile_title_stays_inside_code_in_the_rendered_report():
     md = build_report.render(
-        {"problems": [{"kind": "unrecognised_class_code", "token": "6L", "title": "@everyone see #1\n## x", "treated_as": "Year 6"}]}
+        {"problems": [{"kind": "unrecognised_class_code", "token": "6Z", "title": "@everyone see #1\n## x", "treated_as": "Year 6"}]}
     )
-    line = next(l for l in md.splitlines() if l.startswith("- `6L`"))
+    line = next(l for l in md.splitlines() if l.startswith("- `6Z`"))
     assert "`@everyone see #1 ## x`" in line
     assert "## x" not in md.replace("`@everyone see #1 ## x`", "")
 
@@ -330,7 +330,7 @@ def _run_report_step(tmp_path, report: dict | None, open_issue: str = ""):
     return result, calls, read("summary.md"), read("bodies.md")
 
 
-CLEAN_REPORT = {"problems": [], "calendars": {"5hp.ics": 2}}
+CLEAN_REPORT = {"problems": [], "calendars": {"y5-b.ics": 2}}
 
 
 def test_first_problem_opens_one_issue_and_fills_the_summary(tmp_path):

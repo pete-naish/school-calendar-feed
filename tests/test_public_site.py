@@ -8,10 +8,14 @@ from __future__ import annotations
 
 import hashlib
 import re
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import build_ics  # noqa: E402
 
 DOCS = Path(__file__).resolve().parent.parent / "docs"
 INDEX = (DOCS / "index.html").read_text()
@@ -150,3 +154,39 @@ def test_the_vendored_licence_and_provenance_ship_with_it():
     assert "Mozilla Public License Version 2.0" in (VENDOR / "ical.js-LICENSE.txt").read_text()
     readme = (VENDOR / "README.md").read_text()
     assert "ical.js 2.2.1" in readme and "sha512-" in readme
+
+
+# --- the page's own idea of which calendars exist ---
+
+CONFIGURED_CODES = {cls["code"] for g in build_ics.YEAR_GROUPS for cls in g["classes"]}
+
+
+def test_every_calendar_the_page_launches_is_a_configured_code():
+    """A stale code here would quietly drop that calendar from the live page."""
+    launched = re.search(r"const LAUNCHED_CALENDARS = new Set\(\[([^\]]*)\]\)", JS)
+    assert launched, "LAUNCHED_CALENDARS not found"
+    literals = set(re.findall(r'"([^"]+)"', launched.group(1)))
+    assert literals, "the page should launch some class calendars"
+    assert literals <= CONFIGURED_CODES, f"not class codes: {sorted(literals - CONFIGURED_CODES)}"
+
+
+def test_saved_toggles_from_the_old_reception_codes_are_carried_over():
+    """Returning visitors' ticked boxes on the preview were keyed by Reception's
+    old codes (rr, rgp). That's saved browser state, not a feed subscription, so
+    it's carried over to the classes those codes became."""
+    shim = re.search(r"const LEGACY_TOGGLE_KEYS = \{([^}]*)\}", JS)
+    assert shim, "LEGACY_TOGGLE_KEYS not found"
+    mapping = dict(re.findall(r'"([^"]+)":\s*"([^"]+)"', shim.group(1)))
+    assert mapping == {"rec-a": "rr", "rec-b": "rgp"}
+    assert set(mapping) <= CONFIGURED_CODES
+
+
+def test_the_page_lists_the_same_class_codes_and_labels_as_the_build():
+    groups = re.findall(r'\{ label: "Year \d", dot: "[^"]+", colorVar: "[^"]+", classes: \[([^\]]*)\] \}', JS)
+    reception = re.findall(r'label: "Reception"[^\n]*?classes: \[([^\]]*)\]', JS)
+    pairs = [
+        pair
+        for chunk in reception + groups
+        for pair in re.findall(r'code: "([^"]+)", label: "([^"]+)"', chunk)
+    ]
+    assert dict(pairs) == {cls["code"]: cls["current_label"] for g in build_ics.YEAR_GROUPS for cls in g["classes"]}

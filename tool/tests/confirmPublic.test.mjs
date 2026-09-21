@@ -36,17 +36,17 @@ function fakeSite({ file = [], wholeSchool = ics("Inset Day", "Parking on the fi
     }
     if (u.includes("/actions/workflows/")) return new Response(null, { status: 204 });
     if (u.endsWith("/calendars/whole-school.ics")) return new Response(wholeSchool, { status: 200 });
-    if (u.endsWith("/calendars/5hp.ics")) return new Response(fiveHp, { status: 200 });
+    if (u.endsWith("/calendars/y5-b.ics")) return new Response(fiveHp, { status: 200 });
     return new Response(JSON.stringify({ content: b64(u.includes("whole_school_overrides") ? {} : file), sha: "sha1" }), { status: 200 });
   };
   return puts;
 }
 
-const env = { GITHUB_TOKEN: "t", CLASS_PASSWORDS: JSON.stringify({ "5hp": "pw", "whole-school": "ws" }) };
+const env = { GITHUB_TOKEN: "t", CLASS_PASSWORDS: JSON.stringify({ "y5-b": "pw", "whole-school": "ws" }) };
 const post = (handler, body) =>
   handler({ request: new Request("https://x/api", { method: "POST", body: JSON.stringify(body) }), env });
-const saveEvents = (events, extra = {}) => post(save, { calendar: "5hp", passcode: "pw", events, ...extra });
-const updateEvent = (id, event, extra = {}) => post(update, { calendar: "5hp", passcode: "pw", id, event, ...extra });
+const saveEvents = (events, extra = {}) => post(save, { calendar: "y5-b", passcode: "pw", events, ...extra });
+const updateEvent = (id, event, extra = {}) => post(update, { calendar: "y5-b", passcode: "pw", id, event, ...extra });
 
 const MOBILE = "07700 900123";
 
@@ -217,10 +217,10 @@ test("a location with an email is caught on a whole-school edit", async () => {
 
 test("a class's school-event description edit is checked the same way", async () => {
   const puts = fakeSite();
-  const asked = await post(update, overrideBody("5hp", { description: `Bring lunch. Ring ${MOBILE}` }));
+  const asked = await post(update, overrideBody("y5-b", { description: `Bring lunch. Ring ${MOBILE}` }));
   assert.equal(asked.status, 409);
   assert.equal(puts.length, 0);
-  const confirmed = await post(update, overrideBody("5hp", { description: `Bring lunch. Ring ${MOBILE}` }, { confirm_public: true }));
+  const confirmed = await post(update, overrideBody("y5-b", { description: `Bring lunch. Ring ${MOBILE}` }, { confirm_public: true }));
   assert.equal(confirmed.status, 200);
   assert.equal(puts.length, 1);
 });

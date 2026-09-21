@@ -12,56 +12,56 @@ export const YEAR_GROUPS = [
     key: "reception",
     label: "Reception",
     classes: [
-      { code: "rr", label: "RR" },
-      { code: "rgp", label: "RGP" },
+      { code: "rec-a", label: "RR" },
+      { code: "rec-b", label: "RGP" },
     ],
   },
   {
     key: "year1",
     label: "Year 1",
     classes: [
-      { code: "1ms", label: "1MS" },
-      { code: "1t", label: "1T" },
+      { code: "y1-a", label: "1MS" },
+      { code: "y1-b", label: "1T" },
     ],
   },
   {
     key: "year2",
     label: "Year 2",
     classes: [
-      { code: "2ly", label: "2LY" },
-      { code: "2s", label: "2S" },
+      { code: "y2-a", label: "2LY" },
+      { code: "y2-b", label: "2S" },
     ],
   },
   {
     key: "year3",
     label: "Year 3",
     classes: [
-      { code: "3b", label: "3B" },
-      { code: "3d", label: "3D" },
+      { code: "y3-a", label: "3B" },
+      { code: "y3-b", label: "3D" },
     ],
   },
   {
     key: "year4",
     label: "Year 4",
     classes: [
-      { code: "4m", label: "4M" },
-      { code: "4w", label: "4W" },
+      { code: "y4-a", label: "4M" },
+      { code: "y4-b", label: "4W" },
     ],
   },
   {
     key: "year5",
     label: "Year 5",
     classes: [
-      { code: "5l", label: "5L" },
-      { code: "5hp", label: "5HP" },
+      { code: "y5-a", label: "5M" },
+      { code: "y5-b", label: "5HP" },
     ],
   },
   {
     key: "year6",
     label: "Year 6",
     classes: [
-      { code: "6bt", label: "6BT" },
-      { code: "6r", label: "6R" },
+      { code: "y6-a", label: "6L" },
+      { code: "y6-b", label: "6R" },
     ],
   },
 ];
@@ -83,6 +83,14 @@ export const ALL_CALENDARS = [
   ...YEAR_GROUPS.flatMap((group) => group.classes.map((cls) => ({ ...cls, yearLabel: group.label }))),
   { ...FOSPS, yearLabel: "Friends of St Paul's" },
 ];
+
+// The "5HP: " a calendar's event titles start with in its published feed (see
+// class_prefix() in scripts/build_ics.py): its label - what the school calls
+// the class - not its permanent code ("y5-b"). For stripping it back off.
+export function titlePrefixFor(code) {
+  const entry = ALL_CALENDARS.find((c) => c.code === code);
+  return `${entry ? entry.label : String(code).toUpperCase()}: `;
+}
 
 // The year group a class calendar belongs to, or null for FOSPS / Whole
 // School. An event added for "all of Year 1" is stored once, in

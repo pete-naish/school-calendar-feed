@@ -16,12 +16,22 @@ calendar into `docs/calendars/`.
   groups: inset days, holidays, KS1/KS2-wide events, whole-school services,
   etc. This is also the fallback bucket for anything that doesn't look
   class/year-specific.
-- **One per class, 14 total** (`rr.ics`, `rgp.ics`, `1ms.ics`, `1t.ics`,
-  `2ly.ics`, `2s.ics`, `3b.ics`, `3d.ics`, `4m.ics`, `4w.ics`, `5l.ics`,
-  `5hp.ics`, `6bt.ics`, `6r.ics`) - an event for a specific class (e.g. "5HP
+- **One per class, 14 total** - an event for a specific class (e.g. "5HP
   Collective Worship") appears only in that class's calendar; an event for a
   whole year group (e.g. "Year 5 to Celtic Harmony") appears in both of that
-  year's class calendars.
+  year's class calendars. Each file is named for a permanent class *slot*, not
+  for the class's current label (which changes with teachers):
+
+  | Year | First class | Second class |
+  |---|---|---|
+  | Reception | `rec-a.ics` (RR) | `rec-b.ics` (RGP) |
+  | Year 1 | `y1-a.ics` (1MS) | `y1-b.ics` (1T) |
+  | Year 2 | `y2-a.ics` (2LY) | `y2-b.ics` (2S) |
+  | Year 3 | `y3-a.ics` (3B) | `y3-b.ics` (3D) |
+  | Year 4 | `y4-a.ics` (4M) | `y4-b.ics` (4W) |
+  | Year 5 | `y5-a.ics` (5M) | `y5-b.ics` (5HP) |
+  | Year 6 | `y6-a.ics` (6L) | `y6-b.ics` (6R) |
+
 - **`fosps.ics`** - Friends of St Paul's (the parents' fundraising charity).
   Not published by the school's API at all - see below.
 
@@ -30,7 +40,7 @@ either whole-school, or in one/both of a single year's two class calendars,
 never both whole-school *and* class-specific).
 
 Every class/FOSPS event's *published* title is prefixed with its calendar's
-code (e.g. "PE Kit" becomes "RR: PE Kit") - useful for a parent subscribed
+label (e.g. "PE Kit" becomes "RR: PE Kit") - useful for a parent subscribed
 to more than one class calendar (siblings in different year groups), who'd
 otherwise see identically-titled events from each with no way to tell them
 apart at a glance. This only affects the `.ics` `SUMMARY` at build time -
@@ -47,7 +57,7 @@ ticked - one feed per click, so several ticked fan out to a list - plus
 plain feed links in the facts strip, all with URLs derived from wherever
 the page is served, and names the rest in a one-line "coming soon" note.
 Currently launched:
-Whole School, FOSPS and Reception (RR/RGP). To launch a calendar, add its `code`
+Whole School, FOSPS and Reception (`rec-a`/`rec-b`). To launch a calendar, add its `code`
 to `LAUNCHED_CALENDARS` - no other change needed, the `.ics` file has been
 there the whole time.
 
@@ -73,18 +83,27 @@ The API gives no structured "which year/class is this for" field, so
 
 Class labels change over time (they're teacher-initials-based, and teachers
 change). When the script sees a class-code-shaped token it doesn't recognise
-(e.g. "6L"), it logs a warning to stderr, figures out the year group from the
+(e.g. "6Z"), it logs a warning to stderr, figures out the year group from the
 leading digit/R, and fans the event out to both of that year's classes so no
-one misses it. Check the Action's logs occasionally for these warnings and
-add newly-seen class codes as aliases in `YEAR_GROUPS` in
+one misses it. The build reports these in its "Calendar build problems" issue
+(see "How it works"); add the newly-seen label as an alias in `YEAR_GROUPS` in
 `scripts/build_ics.py`.
 
-Each class in `YEAR_GROUPS` has a permanent `code` (the `.ics` filename /
-subscribe URL slug - e.g. always `5hp.ics`) separate from a `current_label`
-(what's shown in the calendar's display name and in the tool's UI). When a
-class relabels, add the new label to `aliases` and update `current_label` -
-**never change `code`**, or every parent subscribed to that class breaks
-their subscription.
+Each class in `YEAR_GROUPS` has a permanent, generic `code` - a *slot*: `rec-a`
+and `rec-b` for Reception, `y1-a`/`y1-b` ... `y6-a`/`y6-b` for the years (a =
+the first class listed for that year, b = the second) - separate from its
+`current_label` (`5HP`, `6L`...: what the school calls it now). The code is the
+feed's filename and subscribe URL, the class rep's passcode key and the name of
+its data file, and it says nothing about a teacher, so it never has to change.
+It also can't be mistaken for a school label (`y3-b` is not class 3B). The
+label is what people see: the calendar's name, the tool's picker, and the
+prefix on every event title.
+
+When a class relabels (a new teacher, a new year, or a correction like 5L ->
+5M): update its `current_label` and add the new label to `aliases`. That's all
+- no URL, passcode or data file moves. **Never change a `code`**, or everyone
+subscribed to that feed breaks. A class's old labels stay in `aliases` because
+they resurface in stale event titles.
 
 ### Manual / hand-entered events (class events + FOSPS)
 
@@ -92,7 +111,7 @@ Class-specific events not published anywhere scrapable (class trips, extra
 collective-worship dates, etc) and all FOSPS events (FOSPS doesn't publish a
 scrapable calendar at all) are entered by hand into
 `data/manual_events/<code>.json` - one plain JSON list per calendar (e.g.
-`data/manual_events/5hp.json`, `data/manual_events/fosps.json`), merged into
+`data/manual_events/y5-b.json`, `data/manual_events/fosps.json`), merged into
 that calendar's `.ics` alongside anything from the school API.
 
 An event for a whole year group (e.g. a Reception trip for both RR and RGP)
