@@ -239,7 +239,10 @@ device timezone.
   hours via GitHub Actions - and immediately after any change made through
   the class rep tool - and commits `docs/calendars/*.ics` if anything
   changed (plus `data/whole_school_overrides.json` when stale overrides were
-  pruned, see below).
+  pruned, see below). If the push is rejected because something else landed
+  on `main` mid-build (another save from the tool, say), the run discards its
+  build and rebuilds on top of the new tip rather than merging - the `.ics`
+  files carry build timestamps, so two builds always conflict.
 - GitHub Pages serves `docs/` as a static site, so the feeds are published at
   `https://pete-naish.github.io/school-calendar-feed/calendars/<name>.ics`.
 - `docs/index.html` is a landing page listing every calendar with subscribe

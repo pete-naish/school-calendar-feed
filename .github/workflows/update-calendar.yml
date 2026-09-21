@@ -10,8 +10,9 @@ permissions:
 
 # The class rep tool dispatches this workflow after every save, so several
 # can arrive close together. Queue them (never cancel one mid-push); GitHub
-# keeps only the newest pending run, which is all that's needed since every
-# run rebuilds from the latest committed data.
+# keeps only the newest pending run, which is all that's needed since a run
+# whose push is rejected rebuilds from the latest committed data (see the
+# commit step).
 concurrency:
   group: update-calendar
   cancel-in-progress: false
@@ -37,15 +38,24 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # data/ is included for build_ics.py pruning stale whole-school
-          # description overrides (data/whole_school_overrides.json).
-          if ! git diff --quiet -- docs/calendars/ data/; then
+          for attempt in 1 2 3; do
+            # data/ is included for build_ics.py pruning stale whole-school
+            # description overrides (data/whole_school_overrides.json).
+            if git diff --quiet -- docs/calendars/ data/; then
+              echo "No changes to calendar feeds"
+              exit 0
+            fi
             git add docs/calendars/ data/
             git commit -m "Update calendar feeds"
-            # The class rep tool commits straight to main too, possibly
-            # while this run was building.
-            git pull --rebase
-            git push
-          else
-            echo "No changes to calendar feeds"
-          fi
+            git push && exit 0
+            # Rejected: the class rep tool (or an earlier run) pushed while
+            # this one was building, so the data we built from may be stale.
+            # The .ics files can't be merged (every build stamps them with
+            # the current time, so any two builds conflict), so drop this
+            # build and redo it on top of the new tip.
+            git fetch origin main
+            git reset --hard origin/main
+            python scripts/build_ics.py
+          done
+          echo "Couldn't push the calendar feeds after 3 attempts" >&2
+          exit 1
