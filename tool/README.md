@@ -188,6 +188,37 @@ marked "— Whole School" in a class's list.
 
 Tests: `node --test "tool/tests/*.test.mjs"` (no dependencies; also run in CI).
 
+## Limits
+
+`_shared/validate.js` (`LIMITS`) caps what one event can hold, so a single save
+can't bloat a data file or produce a feed the public page and calendar apps
+struggle with. A rep who goes over gets a message saying which limit, and the
+form's text boxes stop at the same lengths (`maxlength` in `index.html` - keep
+the two in step).
+
+| | Limit |
+|---|---|
+| Title / location | 200 characters each |
+| Description | 2,000 characters (also for a school event's description edit) |
+| Link | 2,000 characters |
+| Dates | real calendar days, years 2000-2100 |
+| A repeat's "repeat until" | at most 400 days after the event's first day (the public page only looks 400 days ahead), and not before it; interval up to 52 |
+| A multi-day event | at most 90 days |
+| Exceptions on one event | 100 |
+| Events in one save | 50 |
+
+Text pasted through Claude that runs over is shortened (with a warning shown
+for the rep to check) rather than refused; an over-long repeat or span from
+Claude is dropped, also with a warning. Anything a rep types is refused.
+
+Separately, `commitJsonFile()` won't grow a data file past 900 KB
+(`MAX_FILE_BYTES` in `_shared/github.js`), and answers 413 "This calendar has
+run out of room for events" instead: GitHub's Contents API stops returning a
+file's content inline at 1 MB, after which the tool couldn't read that calendar
+again. Deleting or shrinking is always allowed, so a full file can be cleaned
+up. The limits apply on the way in only - `build_ics.py` builds whatever is
+already in the JSON.
+
 ## Publishing changes
 
 Every add, edit or delete (in any calendar, including a Whole School

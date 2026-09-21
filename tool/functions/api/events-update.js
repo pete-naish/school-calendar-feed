@@ -1,10 +1,10 @@
 import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
-import { validateEventInput, cleanOptionalLocation } from "./_shared/validate.js";
+import { validateEventInput, cleanOptionalLocation, overrideLengthError } from "./_shared/validate.js";
 import { commitEventById, triggerRebuild, retryable } from "./_shared/github.js";
 import { commitWholeSchoolOverride } from "./_shared/wholeSchoolOverrides.js";
 import { fetchClassSchoolEvents } from "./_shared/wholeSchool.js";
-import { commitErrorResponse } from "./_shared/errors.js";
+import { commitErrorResponse, resultStatus } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -71,8 +71,11 @@ export async function onRequestPost({ request, env }) {
     if (Object.keys(changes).length === 0) {
       return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description or location given." }, 400);
     }
+    const tooLong = overrideLengthError(changes);
+    if (tooLong) return jsonResponse({ error: "validation_failed", message: tooLong }, 400);
     try {
-      await commitWholeSchoolOverride(env, id, changes);
+      const result = await commitWholeSchoolOverride(env, id, changes);
+      if (result.error) return jsonResponse(result, resultStatus(result));
       return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
     } catch (err) {
       return jsonResponse(commitErrorResponse(err), 502);
@@ -88,12 +91,15 @@ export async function onRequestPost({ request, env }) {
     if (Object.keys(changes).length === 0) {
       return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description or location given." }, 400);
     }
+    const tooLong = overrideLengthError(changes);
+    if (tooLong) return jsonResponse({ error: "validation_failed", message: tooLong }, 400);
     try {
       const schoolEvents = await retryable(() => fetchClassSchoolEvents(calendar));
       if (!schoolEvents.some((e) => e.id === id)) {
         return jsonResponse({ error: "not_found", message: "That event isn't in this calendar's school events." }, 404);
       }
-      await commitWholeSchoolOverride(env, id, changes, `school event in ${calendar}`);
+      const result = await commitWholeSchoolOverride(env, id, changes, `school event in ${calendar}`);
+      if (result.error) return jsonResponse(result, resultStatus(result));
       return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
     } catch (err) {
       return jsonResponse(commitErrorResponse(err), 502);
@@ -120,7 +126,7 @@ export async function onRequestPost({ request, env }) {
       `Update event in ${calendar}`
     );
     if (result.error) {
-      return jsonResponse(result, 404);
+      return jsonResponse(result, resultStatus(result));
     }
     return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
   } catch (err) {

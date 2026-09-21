@@ -78,6 +78,20 @@ export async function dedupeKey(calendar, title, date) {
 
 const MAX_ATTEMPTS = 3;
 
+// The Contents API only returns a file's content inline up to 1 MB (past that
+// `content` comes back empty and getJsonFile couldn't read it again, locking
+// that calendar out of the tool). Refuse a write that would grow a file past
+// this, well short of that limit. Shrinking a file is always allowed, so an
+// over-full one can still be cleaned up.
+export const MAX_FILE_BYTES = 900_000;
+
+const serializedBytes = (data) => new TextEncoder().encode(`${JSON.stringify(data, null, 2)}\n`).length;
+
+const FILE_FULL_ERROR = {
+  error: "file_full",
+  message: "This calendar has run out of room for events - delete some old ones and try again.",
+};
+
 function isRetryableStatus(status) {
   // 409: another save landed between our GET and PUT - re-fetch and retry.
   // 5xx: GitHub's problem, not the data's - a plain retry is likely to work.
@@ -125,6 +139,8 @@ export async function commitJsonFile(env, path, defaultValue, mutatorFn, commitM
       if (result.error) return result;
 
       const { data: newData, ...extra } = result;
+      const newBytes = serializedBytes(newData);
+      if (newBytes > MAX_FILE_BYTES && newBytes > serializedBytes(data)) return { ...FILE_FULL_ERROR };
       const resp = await putJsonFile(env, path, newData, sha, commitMessage);
       if (resp.ok) {
         const body = await resp.json();
@@ -190,6 +206,8 @@ export async function commitEventById(env, calendar, mutatorFn, commitMessage) {
     // The mutator is also told which file it's editing, so a caller can tell
     // a class's own event from its year group's shared one.
     const result = await commitManualEvents(env, file, (events) => mutatorFn(events, file), commitMessage);
+    // Anything but "not in this file" (success, or a real failure such as
+    // file_full) is the answer - only a miss moves on to the year's file.
     if (result.error !== "not_found") return result;
   }
   return { error: "not_found" };

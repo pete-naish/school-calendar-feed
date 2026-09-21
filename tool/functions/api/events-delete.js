@@ -1,7 +1,7 @@
 import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { commitEventById, triggerRebuild } from "./_shared/github.js";
-import { commitErrorResponse } from "./_shared/errors.js";
+import { commitErrorResponse, resultStatus } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -50,7 +50,7 @@ export async function onRequestPost({ request, env }) {
       `Remove event from ${calendar}`
     );
     if (result.error) {
-      return jsonResponse(result, 404);
+      return jsonResponse(result, resultStatus(result));
     }
     return jsonResponse({ deleted: true, rebuild_triggered: await triggerRebuild(env) });
   } catch (err) {

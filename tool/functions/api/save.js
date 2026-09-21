@@ -1,8 +1,8 @@
 import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
-import { validateEventInput } from "./_shared/validate.js";
+import { validateEventInput, LIMITS } from "./_shared/validate.js";
 import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.js";
-import { commitErrorResponse } from "./_shared/errors.js";
+import { commitErrorResponse, resultStatus } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -36,6 +36,12 @@ export async function onRequestPost({ request, env }) {
   if (!Array.isArray(events) || events.length === 0) {
     return jsonResponse({ error: "no_events" }, 400);
   }
+  if (events.length > LIMITS.eventsPerSave) {
+    return jsonResponse(
+      { error: "too_many_events", message: `Save at most ${LIMITS.eventsPerSave} events at a time.` },
+      400
+    );
+  }
 
   // An event flagged `year_group` is for every class in this calendar's year
   // (e.g. RR and RGP): it's stored once, in the year's shared file, rather
@@ -60,7 +66,11 @@ export async function onRequestPost({ request, env }) {
     }
   });
   if (errors.length > 0) {
-    return jsonResponse({ error: "validation_failed", errors }, 400);
+    // `message` is what the tool shows the rep; `errors` keeps the detail per event.
+    const message = errors
+      .map(({ index, error }) => (events.length > 1 ? `Event ${index + 1}: ${error}` : error))
+      .join(". ");
+    return jsonResponse({ error: "validation_failed", message, errors }, 400);
   }
 
   // Each batch is its own commit. If the second fails after the first
@@ -77,6 +87,9 @@ export async function onRequestPost({ request, env }) {
   try {
     for (const batch of batches) {
       const result = await appendEvents(env, batch.file, batch.events);
+      // e.g. a file with no room left. Whatever an earlier batch already saved
+      // stays saved (a retry skips it as a duplicate).
+      if (result.error) return jsonResponse(result, resultStatus(result));
       saved += result.saved;
       skippedDuplicates += result.skippedDuplicates;
       commitSha = result.commitSha || commitSha;

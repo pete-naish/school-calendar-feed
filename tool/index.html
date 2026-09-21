@@ -77,7 +77,7 @@
   <template id="event-card-template">
     <div class="event-card">
       <label>Title
-        <input type="text" class="field-title" required>
+        <input type="text" class="field-title" maxlength="200" required>
       </label>
       <label class="checkbox-label field-year-group-label" hidden>
         <input type="checkbox" class="field-year-group">
@@ -149,10 +149,10 @@
         </div>
       </div>
       <label>Location <span class="optional">(optional)</span>
-        <input type="text" class="field-location" placeholder="e.g. School hall">
+        <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
       </label>
       <label>Description
-        <textarea class="field-description" rows="2"></textarea>
+        <textarea class="field-description" rows="2" maxlength="2000"></textarea>
       </label>
       <!-- Hidden for now, not removed: readCardFields() still reads it, so saving
            an event that already has a link keeps that link. -->
@@ -173,10 +173,10 @@
       <p class="ws-date hint"></p>
       <p class="ws-flag hint" hidden><span class="badge">From school calendar</span> <span class="ws-shared-note"></span></p>
       <label>Location <span class="optional">(optional)</span>
-        <input type="text" class="field-location" placeholder="e.g. School hall">
+        <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
       </label>
       <label>Description
-        <textarea class="field-description" rows="3"></textarea>
+        <textarea class="field-description" rows="3" maxlength="2000"></textarea>
       </label>
       <p class="field-error error" hidden></p>
       <div class="card-actions">

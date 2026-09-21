@@ -3,6 +3,15 @@
 // detailed error still goes to the Cloudflare Functions log via
 // console.error for anyone actually debugging it.
 
+// The HTTP status for a `{ error }` a commit helper returned without writing
+// anything: an event that isn't there is a 404, a file with no room left a
+// 413, anything else a plain 400.
+export function resultStatus(result) {
+  if (result.error === "not_found") return 404;
+  if (result.error === "file_full") return 413;
+  return 400;
+}
+
 export function commitErrorResponse(err) {
   console.error("Manual event write failed:", err);
   return {
