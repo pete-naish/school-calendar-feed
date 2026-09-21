@@ -72,7 +72,7 @@ export function londonDayAndTime(date) {
 
 // One DTSTART/DTEND/EXDATE value -> { day, time }, `time` being "HH:MM", or
 // null for an all-day (date-only) value.
-function parseDateTime(value) {
+export function parseDateTime(value) {
   const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})\d{2}(Z?))?$/);
   if (!m) return null;
   const [, y, mo, d, hh, mm, utc] = m;

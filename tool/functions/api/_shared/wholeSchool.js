@@ -15,7 +15,7 @@
 // - stable across rebuilds, and what description/location overrides are
 // keyed by (see wholeSchoolOverrides.js).
 
-import { fetchIcsText, unescapeIcsText } from "./ics.js";
+import { fetchIcsText, unescapeIcsText, parseDateTime, dayToIso } from "./ics.js";
 
 const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 
@@ -25,14 +25,20 @@ const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 // RFC 5545 line-unfolding (a folded continuation line starts with exactly
 // one space, which must be stripped when rejoining) - as is LOCATION, once
 // an override has given the event one.
-function extractEvents(icsText) {
+//
+// `time`/`end_time` are the Europe/London "HH:MM" start and end (the feed
+// holds them as UTC instants), or null for an all-day event / one with no end.
+// An end on a later day than the start is left null rather than shown as if
+// it were the same day.
+export function extractEvents(icsText) {
   const blocks = icsText.split("BEGIN:VEVENT").slice(1);
   const events = [];
   for (const block of blocks) {
     const body = block.split("END:VEVENT")[0];
     const uidMatch = body.match(/\nUID:([^\r\n]*)/);
     const summaryMatch = body.match(/\nSUMMARY:([^\r\n]*)/);
-    const dtstartMatch = body.match(/\nDTSTART[^:]*:(\d{8})/);
+    const dtstartMatch = body.match(/\nDTSTART[^:]*:([^\r\n]*)/);
+    const dtendMatch = body.match(/\nDTEND[^:]*:([^\r\n]*)/);
     const descMatch = body.match(/\nDESCRIPTION:([^\r\n]*(?:\r?\n [^\r\n]*)*)/);
     const locationMatch = body.match(/\nLOCATION:([^\r\n]*(?:\r?\n [^\r\n]*)*)/);
     if (!uidMatch || !summaryMatch || !dtstartMatch) continue;
@@ -40,11 +46,16 @@ function extractEvents(icsText) {
     const idMatch = uidMatch[1].trim().match(UID_PATTERN);
     if (!idMatch) continue; // not a school-API-sourced event (e.g. a manual one in a class feed)
 
-    const d = dtstartMatch[1];
+    const start = parseDateTime(dtstartMatch[1].trim());
+    if (!start) continue;
+    const end = dtendMatch && parseDateTime(dtendMatch[1].trim());
+
     events.push({
       id: idMatch[1],
       title: unescapeIcsText(summaryMatch[1].trim()),
-      date: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`,
+      date: dayToIso(start.day),
+      time: start.time,
+      end_time: start.time && end && end.time && end.day === start.day ? end.time : null,
       description: descMatch ? unescapeIcsText(descMatch[1].replace(/\r?\n /g, "")) : "",
       location: locationMatch ? unescapeIcsText(locationMatch[1].replace(/\r?\n /g, "")) : "",
     });

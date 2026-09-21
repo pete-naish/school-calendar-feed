@@ -567,6 +567,13 @@ function formatEventDate(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// The date, plus the start (and end) time when the event has one.
+function formatEventWhen(event) {
+  const date = formatEventDate(event.date);
+  if (!event.time) return date;
+  return `${date}, ${event.time}${event.end_time ? `–${event.end_time}` : ""}`;
+}
+
 // Whole School events aren't stored/edited like a normal manual event -
 // title/date/recurrence/etc all come from the school's own feed and can't
 // be changed here, so this renders a much simpler read-mostly card (see
@@ -590,7 +597,7 @@ function renderWholeSchoolEvents(events) {
 function createSchoolEventCard(event) {
   const node = el.wholeSchoolCardTemplate.content.firstElementChild.cloneNode(true);
   node.querySelector(".ws-title").textContent = event.title;
-  node.querySelector(".ws-date").textContent = formatEventDate(event.date);
+  node.querySelector(".ws-date").textContent = formatEventWhen(event);
   node.querySelector(".field-description").value = event.description || "";
   node.querySelector(".field-location").value = event.location || "";
 
