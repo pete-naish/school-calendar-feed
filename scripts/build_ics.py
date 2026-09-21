@@ -192,6 +192,14 @@ _WHOLE_SCHOOL_KEYWORDS = re.compile(r"\bwhole\s+school\b|\bKS[12]\b", re.IGNOREC
 _YEAR_WORD_PATTERN = re.compile(r"\bYear\s+(\d)\b", re.IGNORECASE)
 _YEAR_COMPOUND_PATTERN = re.compile(r"\bYear\s+\d\s*(?:and|&)\s*(\d)\b", re.IGNORECASE)
 _RECEPTION_WORD_PATTERN = re.compile(r"\bReception\b", re.IGNORECASE)
+# "Reception to Year 6", "Year 1 - Year 6", "Year 3-6": a range names only its
+# two ends, so fanning out to just those would silently miss the years in
+# between - those go to the whole-school calendar instead.
+_YEAR_RANGE_PATTERN = re.compile(
+    r"\b(?:Reception|Year\s+\d)\s*(?:-|–|—|\bto\b|\bthrough\b)\s*(?:Year\s+)?\d\b|"
+    r"\bReception\s*(?:-|–|—|\bto\b|\bthrough\b)\s*Year\b",
+    re.IGNORECASE,
+)
 # Fallback: any unrecognised class-code-shaped token, e.g. "6L", "5M". Kept
 # case-sensitive since real class codes are always written upper-case in the
 # school's event titles - a looser match risks false positives on ordinary
@@ -242,13 +250,16 @@ def classify_event(title: str) -> tuple[str, set[str]]:
                 file=sys.stderr,
             )
 
-    if len(matched_years) >= 2:
-        return "whole-school", set()
-    if len(matched_years) == 1:
-        (year_key,) = matched_years
-        if matched_classes:
-            return "classes", matched_classes
-        return "classes", set(YEAR_CLASS_CODES[year_key])
+    if matched_years and not _YEAR_RANGE_PATTERN.search(title):
+        # Each named year contributes the classes named in it, or - if none
+        # of its classes were named - all of its classes. So "Year 5 and
+        # Year 6" is all four Year 5/6 classes, "5HP and Year 6" is 5HP plus
+        # both Year 6 classes.
+        codes: set[str] = set()
+        for year_key in matched_years:
+            named = matched_classes & set(YEAR_CLASS_CODES[year_key])
+            codes |= named or set(YEAR_CLASS_CODES[year_key])
+        return "classes", codes
 
     return "whole-school", set()
 

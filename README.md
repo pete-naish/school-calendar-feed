@@ -62,9 +62,12 @@ The API gives no structured "which year/class is this for" field, so
 3. If it names exactly one year group (by "Year N", "Reception", or an
    unrecognised-but-year-shaped class code like a new teacher's initials) →
    both classes in that year group.
-4. If it names more than one year group (e.g. "Eucharist Year 5 and Year 6")
-   → whole-school, on the same logic the school itself uses when it calls a
-   KS2-wide meeting "for parents" rather than naming individual classes.
+4. If it names more than one year group (e.g. "Eucharist Year 5 and Year 6",
+   "Information meeting - Year 1 and 2") → every class in each named year
+   (or just the class named, where a year's class is named specifically).
+   A range ("Reception to Year 6", "Year 3-6") names only its ends, so it
+   falls back to whole-school rather than missing the years in between; so do
+   "KS1"/"KS2"/"whole school" (rule 1).
 5. Otherwise (no year/class reference at all, e.g. "Back to School", "Half
    Term Break") → whole-school.
 
