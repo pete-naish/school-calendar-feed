@@ -47,7 +47,7 @@ ticked - one feed per click, so several ticked fan out to a list - plus
 plain feed links in the facts strip, all with URLs derived from wherever
 the page is served, and names the rest in a one-line "coming soon" note.
 Currently launched:
-Whole School and Reception (RR/RGP). To launch a calendar, add its `code`
+Whole School, FOSPS and Reception (RR/RGP). To launch a calendar, add its `code`
 to `LAUNCHED_CALENDARS` - no other change needed, the `.ics` file has been
 there the whole time.
 

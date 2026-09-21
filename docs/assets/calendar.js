@@ -39,7 +39,7 @@ const ALL_CALENDARS = [
 // day-indexed data is ready the moment a calendar is launched; launching
 // one is just adding its code to this set - the page has no per-calendar
 // markup of its own.
-const LAUNCHED_CALENDARS = new Set([WHOLE_SCHOOL.code, "rr", "rgp"]);
+const LAUNCHED_CALENDARS = new Set([WHOLE_SCHOOL.code, FOSPS.code, "rr", "rgp"]);
 
 const DEFAULT_ON = new Set([WHOLE_SCHOOL.code, FOSPS.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
@@ -482,7 +482,7 @@ function renderIcsLinks() {
 }
 
 // One short line naming what isn't launched yet, for the rail under the
-// calendar list: "Years 1 to 6 and FOSPS follow once they're ready."
+// calendar list: "Years 1 to 6 follow once they're ready."
 function renderComingSoon() {
   if (!el.comingSoon) return;
   const pendingGroups = GROUPS.filter((g) => g.classes.some((c) => !LAUNCHED_CALENDARS.has(c.code)));
