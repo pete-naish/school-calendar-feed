@@ -243,6 +243,11 @@ device timezone.
   on `main` mid-build (another save from the tool, say), the run discards its
   build and rebuilds on top of the new tip rather than merging - the `.ics`
   files carry build timestamps, so two builds always conflict.
+- The workflows pin each GitHub Action to a commit SHA (with its version in a
+  comment) rather than a tag, and `.github/workflows/test.yml` runs with
+  read-only permissions. `.github/dependabot.yml` opens a weekly pull request
+  for newer Actions and Python requirements, so the pins get bumped - and the
+  tests run against them - instead of going stale.
 - GitHub Pages serves `docs/` as a static site, so the feeds are published at
   `https://pete-naish.github.io/school-calendar-feed/calendars/<name>.ics`.
 - `docs/index.html` is a landing page listing every calendar with subscribe
