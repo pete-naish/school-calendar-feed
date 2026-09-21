@@ -253,6 +253,11 @@ device timezone.
 - `docs/index.html` is a landing page listing every calendar with subscribe
   links for Google Calendar, Apple Calendar, and Outlook, plus the
   interactive preview calendar described above.
+  Its fonts (Geist, under the SIL Open Font License) are served from
+  `docs/assets/fonts/` rather than Google Fonts, so a visitor's browser makes
+  no request to Google; `tests/test_public_site.py` fails if the page starts
+  loading anything from another host (bar the one known exception, ical.js
+  from a CDN, which it lists).
 - `tool/` is a separately-deployed (Cloudflare Pages) web app - see
   [tool/README.md](tool/README.md) - that commits to `data/manual_events/`
   directly; it doesn't itself rebuild the `.ics` files, it just feeds the
