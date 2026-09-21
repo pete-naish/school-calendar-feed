@@ -2,6 +2,7 @@ import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
 import { checkPasscode } from "./_shared/auth.js";
 import { validateExtractedEvents } from "./_shared/validate.js";
 import { getNextTermEndDate } from "./_shared/termEnd.js";
+import { extractionErrorResponse } from "./_shared/errors.js";
 
 const MODEL = "claude-haiku-4-5";
 const MAX_TEXT_LENGTH = 8000;
@@ -129,11 +130,11 @@ export async function onRequestPost({ request, env }) {
       }),
     });
   } catch (err) {
-    return jsonResponse({ error: "extraction_failed", message: String(err) }, 502);
+    return jsonResponse(extractionErrorResponse(err), 502);
   }
 
   if (!anthropicResp.ok) {
-    return jsonResponse({ error: "extraction_failed", message: await anthropicResp.text() }, 502);
+    return jsonResponse(extractionErrorResponse(`${anthropicResp.status} ${await anthropicResp.text()}`), 502);
   }
 
   const data = await anthropicResp.json();
@@ -149,7 +150,7 @@ export async function onRequestPost({ request, env }) {
 
   const toolUse = (data.content || []).find((block) => block.type === "tool_use" && block.name === "record_events");
   if (!toolUse) {
-    return jsonResponse({ error: "extraction_failed", message: "Model did not return structured events." }, 502);
+    return jsonResponse(extractionErrorResponse("no record_events tool_use block in the response"), 502);
   }
 
   const rawEvents = Array.isArray(toolUse.input && toolUse.input.events) ? toolUse.input.events : [];

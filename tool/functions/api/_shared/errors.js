@@ -20,6 +20,18 @@ export function commitErrorResponse(err) {
   };
 }
 
+// A failed call to Claude. Anthropic's own error body (billing state, request
+// ids, the model in use) and a fetch failure's text are for the log, never for
+// the rep - or for anyone who has guessed a passcode. `detail` is whatever
+// went wrong: an Error, or the upstream status and body.
+export function extractionErrorResponse(detail) {
+  console.error("Event extraction failed:", detail);
+  return {
+    error: "extraction_failed",
+    message: "Couldn't read that text just now - please try again in a moment, or add the event manually.",
+  };
+}
+
 export function readErrorResponse(err) {
   console.error("Manual event read failed:", err);
   return {
