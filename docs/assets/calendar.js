@@ -38,8 +38,18 @@ const ALL_CALENDARS = [
 // Everything else still gets *fetched* below (ALL_CALENDARS, unchanged) so
 // day-indexed data is ready the moment a calendar is launched; launching
 // one is just adding its code to this set - the page has no per-calendar
-// markup of its own.
-const LAUNCHED_CALENDARS = new Set([WHOLE_SCHOOL.code, FOSPS.code, "rec-a", "rec-b"]);
+// markup of its own. All classes are launched now.
+const LAUNCHED_CALENDARS = new Set([
+  WHOLE_SCHOOL.code,
+  "rec-a", "rec-b",
+  "y1-a", "y1-b",
+  "y2-a", "y2-b",
+  "y3-a", "y3-b",
+  "y4-a", "y4-b",
+  "y5-a", "y5-b",
+  "y6-a", "y6-b",
+  FOSPS.code,
+]);
 
 const DEFAULT_ON = new Set([WHOLE_SCHOOL.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
