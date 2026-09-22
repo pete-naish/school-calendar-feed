@@ -39,15 +39,15 @@ CLASSIFY_CASES = [
     ("Information meeting for Parents - Year 1 and 2", "classes", {"y1-a", "y1-b", "y2-a", "y2-b"}),
     ("Eucharist Year 5 and Year 6 - St Paul's Church", "classes", {"y5-a", "y5-b", "y6-a", "y6-b"}),
     ("Eucharist Service Year 5 and Year 6 - in school", "classes", {"y5-a", "y5-b", "y6-a", "y6-b"}),
-    ("5HP and 6R Museum Trip", "classes", {"y5-b", "y6-b"}),
-    ("5HP and Year 6 Museum Trip", "classes", {"y5-b", "y6-a", "y6-b"}),
+    ("5HP and 6R Museum Trip", "classes", {"y5-a", "y6-b"}),
+    ("5HP and Year 6 Museum Trip", "classes", {"y5-a", "y6-a", "y6-b"}),
     # A range names only its ends, so it can't be fanned out - whole-school.
     ("Reception to Year 6 Sports Day", "whole-school", None),
     ("Year 1 - Year 6 Sports Day", "whole-school", None),
     ("Year 3-6 Swimming Gala", "whole-school", None),
     ("R/KS1 Dress rehearsal to KS2", "whole-school", None),
-    ("5HP Collective Worship to parents", "classes", {"y5-b"}),
-    ("4W Collective Worship to parents", "classes", {"y4-b"}),
+    ("5HP Collective Worship to parents", "classes", {"y5-a"}),
+    ("4W Collective Worship to parents", "classes", {"y4-a"}),
     ("Year 5 to Celtic Harmony", "classes", {"y5-a", "y5-b"}),
     ("Year 3 to Celtic Harmony", "classes", {"y3-a", "y3-b"}),
     ("Reception Group 1 Start", "classes", {"rec-a", "rec-b"}),
@@ -55,7 +55,7 @@ CLASSIFY_CASES = [
     # that year group (the label-churn case: a new teacher's initials).
     # A current label names exactly one class...
     ("6L Collective Worship to parents", "classes", {"y6-a"}),
-    ("5M Collective Worship", "classes", {"y5-a"}),
+    ("5M Collective Worship", "classes", {"y5-b"}),
     # ...but a retired one (6BT/5L were our mistakes for 6L/5M) is no longer
     # an alias, so it falls back like any unconfigured label.
     ("6BT Trip", "classes", {"y6-a", "y6-b"}),
@@ -507,7 +507,7 @@ def test_moved_exception_excludes_original_and_adds_new_event():
     base_ical = build_ics.make_calendar("test", [base_event]).to_ical()
     assert b"EXDATE;TZID=Europe/London:20261020T090000" in base_ical
 
-    assert str(moved_event["summary"]) == "5HP: PE"
+    assert str(moved_event["summary"]) == "5M: PE"
     assert moved_event["dtstart"].dt == datetime(2026, 10, 21, 13, 0, tzinfo=build_ics.LONDON)
     assert moved_event["dtend"].dt == datetime(2026, 10, 21, 14, 0, tzinfo=build_ics.LONDON)
     # Derived from the parent's id + the ORIGINAL date - distinct from, but
@@ -716,8 +716,8 @@ EXPECTED_SLOTS = {
     "year1": [("y1-a", "1S"), ("y1-b", "1T")],
     "year2": [("y2-a", "2L"), ("y2-b", "2MS")],
     "year3": [("y3-a", "3B"), ("y3-b", "3D")],
-    "year4": [("y4-a", "4Y"), ("y4-b", "4W")],
-    "year5": [("y5-a", "5M"), ("y5-b", "5HP")],
+    "year4": [("y4-a", "4W"), ("y4-b", "4Y")],
+    "year5": [("y5-a", "5HP"), ("y5-b", "5M")],
     "year6": [("y6-a", "6L"), ("y6-b", "6R")],
 }
 
@@ -754,14 +754,14 @@ def test_the_renamed_classes_are_recognised_without_a_warning(capsys):
 
 
 @pytest.mark.parametrize(
-    "code,prefix", [("rec-a", "RR: "), ("rec-b", "RGP: "), ("y3-a", "3B: "), ("y5-b", "5HP: "), ("y6-a", "6L: "), ("fosps", "FOSPS: ")]
+    "code,prefix", [("rec-a", "RR: "), ("rec-b", "RGP: "), ("y3-a", "3B: "), ("y5-b", "5M: "), ("y6-a", "6L: "), ("fosps", "FOSPS: ")]
 )
 def test_the_title_prefix_is_the_label_not_the_code(code, prefix):
     assert build_ics.class_prefix(code) == prefix
 
 
 def test_titles_are_prefixed_with_the_label_everywhere_a_title_is_built():
-    assert str(build_ics.build_event({"id": 1, "title": "Trip", "start": "2026-10-05", "end": "2026-10-05", "allDay": True}, code="y5-b")["summary"]) == "5HP: Trip"
+    assert str(build_ics.build_event({"id": 1, "title": "Trip", "start": "2026-10-05", "end": "2026-10-05", "allDay": True}, code="y5-b")["summary"]) == "5M: Trip"
     assert str(build_ics.build_manual_event({"id": "m", "title": "Trip", "date": "2026-10-05"}, "y6-a", set())[0]["summary"]) == "6L: Trip"
     moved = {"id": "m", "title": "PE", "date": "2026-10-01", "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-01"},
              "exceptions": [{"date": "2026-10-08", "action": "moved", "new_date": "2026-10-09"}]}
@@ -769,18 +769,18 @@ def test_titles_are_prefixed_with_the_label_everywhere_a_title_is_built():
 
 
 def test_relabelling_a_class_changes_only_its_label_and_prefix(tmp_path, monkeypatch):
-    """The whole point: a class gets a new teacher. Edit its label (and add the
-    old one as an alias) - its code, feed filename and data file don't move."""
+    """The whole point: a class gets a new teacher. Edit its label (and its
+    alias) - its code, feed filename and data file don't move."""
     year5 = next(g for g in build_ics.YEAR_GROUPS if g["key"] == "year5")
     second = year5["classes"][1]
     monkeypatch.setitem(second, "current_label", "5XY")
     monkeypatch.setitem(build_ics.CLASS_LABEL, "y5-b", "5XY")
     raw = {"id": 951, "title": "Trip for Year 5", "start": "2026-10-06", "end": "2026-10-06", "allDay": True, "desc": ""}
     cals = _build_with_overrides(tmp_path, monkeypatch, [raw], {})
-    assert set(cals) >= {"y5-b.ics"} and "5xy.ics" not in cals and "5hp.ics" not in cals
+    assert set(cals) >= {"y5-b.ics"} and "5xy.ics" not in cals and "5m.ics" not in cals
     assert [str(e["summary"]) for e in cals["y5-b.ics"].walk("VEVENT")] == ["5XY: Trip for Year 5"]
     assert "(5XY)" in str(cals["y5-b.ics"]["x-wr-calname"])
-    assert [str(e["summary"]) for e in cals["y5-a.ics"].walk("VEVENT")] == ["5M: Trip for Year 5"]  # its sibling is untouched
+    assert [str(e["summary"]) for e in cals["y5-a.ics"].walk("VEVENT")] == ["5HP: Trip for Year 5"]  # its sibling is untouched
 
 
 def test_published_feeds_are_exactly_the_configured_classes():

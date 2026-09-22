@@ -6,8 +6,8 @@ const YEAR_GROUPS = [
   { label: "Year 1", classes: [{ code: "y1-a", label: "1S" }, { code: "y1-b", label: "1T" }] },
   { label: "Year 2", classes: [{ code: "y2-a", label: "2L" }, { code: "y2-b", label: "2MS" }] },
   { label: "Year 3", classes: [{ code: "y3-a", label: "3B" }, { code: "y3-b", label: "3D" }] },
-  { label: "Year 4", classes: [{ code: "y4-a", label: "4Y" }, { code: "y4-b", label: "4W" }] },
-  { label: "Year 5", classes: [{ code: "y5-a", label: "5M" }, { code: "y5-b", label: "5HP" }] },
+  { label: "Year 4", classes: [{ code: "y4-a", label: "4W" }, { code: "y4-b", label: "4Y" }] },
+  { label: "Year 5", classes: [{ code: "y5-a", label: "5HP" }, { code: "y5-b", label: "5M" }] },
   { label: "Year 6", classes: [{ code: "y6-a", label: "6L" }, { code: "y6-b", label: "6R" }] },
 ];
 const FOSPS = { code: "fosps", label: "FOSPS" };

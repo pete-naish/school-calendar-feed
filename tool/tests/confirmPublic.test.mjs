@@ -26,7 +26,7 @@ const ics = (title, description) =>
   ].join("\r\n");
 
 // A fake GitHub holding one JSON file, and the published feeds. Returns the PUTs.
-function fakeSite({ file = [], wholeSchool = ics("Inset Day", "Parking on the field"), fiveHp = ics("5HP: Trip", "Bring a packed lunch") } = {}) {
+function fakeSite({ file = [], wholeSchool = ics("Inset Day", "Parking on the field"), fiveM = ics("5M: Trip", "Bring a packed lunch") } = {}) {
   const puts = [];
   globalThis.fetch = async (url, init = {}) => {
     const u = String(url);
@@ -36,7 +36,7 @@ function fakeSite({ file = [], wholeSchool = ics("Inset Day", "Parking on the fi
     }
     if (u.includes("/actions/workflows/")) return new Response(null, { status: 204 });
     if (u.endsWith("/calendars/whole-school.ics")) return new Response(wholeSchool, { status: 200 });
-    if (u.endsWith("/calendars/y5-b.ics")) return new Response(fiveHp, { status: 200 });
+    if (u.endsWith("/calendars/y5-b.ics")) return new Response(fiveM, { status: 200 });
     return new Response(JSON.stringify({ content: b64(u.includes("whole_school_overrides") ? {} : file), sha: "sha1" }), { status: 200 });
   };
   return puts;

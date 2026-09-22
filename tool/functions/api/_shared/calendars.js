@@ -44,16 +44,16 @@ export const YEAR_GROUPS = [
     key: "year4",
     label: "Year 4",
     classes: [
-      { code: "y4-a", label: "4Y" },
-      { code: "y4-b", label: "4W" },
+      { code: "y4-a", label: "4W" },
+      { code: "y4-b", label: "4Y" },
     ],
   },
   {
     key: "year5",
     label: "Year 5",
     classes: [
-      { code: "y5-a", label: "5M" },
-      { code: "y5-b", label: "5HP" },
+      { code: "y5-a", label: "5HP" },
+      { code: "y5-b", label: "5M" },
     ],
   },
   {
@@ -86,7 +86,7 @@ export const ALL_CALENDARS = [
 
 // The "5HP: " a calendar's event titles start with in its published feed (see
 // class_prefix() in scripts/build_ics.py): its label - what the school calls
-// the class - not its permanent code ("y5-b"). For stripping it back off.
+// the class - not its permanent code ("y5-a"). For stripping it back off.
 export function titlePrefixFor(code) {
   const entry = ALL_CALENDARS.find((c) => c.code === code);
   return `${entry ? entry.label : String(code).toUpperCase()}: `;

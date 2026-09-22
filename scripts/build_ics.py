@@ -88,7 +88,10 @@ REQUEST_HEADERS = {
 # the .ics filename and subscribe URL slug (calendars/y5-a.ics), the key of the
 # class rep's passcode, and the name of its data file - so it must never change,
 # and deliberately says nothing about the class's teacher. It also can't be
-# mistaken for a school label ("y3-b" is not class 3B).
+# mistaken for a school label ("y3-b" is not class 3B). Slots started out in
+# alphabetical order of label (y4-a 4W, y4-b 4Y; Reception, live earlier, is
+# RR/RGP), but a relabel never reshuffles them, so over time the order drifts.
+# That's expected - every list parents and reps see is sorted by label anyway.
 #
 # `current_label` is what humans see: the calendar's display name, the "5HP: "
 # prefix on its event titles, and the tool/docs UI. It follows the school's own
@@ -147,8 +150,8 @@ YEAR_GROUPS = [
         "label": "Year 4",
         "number": "4",
         "classes": [
-            {"code": "y4-a", "current_label": "4Y", "aliases": ["4Y"]},
-            {"code": "y4-b", "current_label": "4W", "aliases": ["4W"]},
+            {"code": "y4-a", "current_label": "4W", "aliases": ["4W"]},
+            {"code": "y4-b", "current_label": "4Y", "aliases": ["4Y"]},
         ],
     },
     {
@@ -156,8 +159,8 @@ YEAR_GROUPS = [
         "label": "Year 5",
         "number": "5",
         "classes": [
-            {"code": "y5-a", "current_label": "5M", "aliases": ["5M"]},
-            {"code": "y5-b", "current_label": "5HP", "aliases": ["5HP"]},
+            {"code": "y5-a", "current_label": "5HP", "aliases": ["5HP"]},
+            {"code": "y5-b", "current_label": "5M", "aliases": ["5M"]},
         ],
     },
     {
@@ -177,7 +180,7 @@ ALIAS_TO_CLASS: dict[str, tuple[str, str]] = {}
 YEAR_CLASS_CODES: dict[str, list[str]] = {}
 # year_key -> display label, e.g. "Year 5"
 YEAR_LABEL: dict[str, str] = {}
-# class code -> the label shown to people, e.g. "y5-b" -> "5HP"
+# class code -> the label shown to people, e.g. "y5-a" -> "5HP"
 CLASS_LABEL: dict[str, str] = {}
 # "1".."6" / "R" -> year_key
 YEAR_NUMBER_TO_KEY: dict[str, str] = {}
@@ -338,7 +341,7 @@ def _clean(text: str | None) -> str:
 def class_prefix(code: str) -> str:
     """The "5HP: " a class calendar's event titles start with, so a parent
     subscribed to several can tell them apart. It's the class's *label* - what
-    the school calls it - not its permanent code ("y5-b"), so a relabelled class
+    the school calls it - not its permanent code ("y5-a"), so a relabelled class
     just gets a new prefix. FOSPS isn't a class: its code, upper-cased, is its
     label."""
     return f"{CLASS_LABEL.get(code.lower(), code.upper())}: "

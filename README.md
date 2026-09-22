@@ -28,8 +28,8 @@ calendar into `docs/calendars/`.
   | Year 1 | `y1-a.ics` (1S) | `y1-b.ics` (1T) |
   | Year 2 | `y2-a.ics` (2L) | `y2-b.ics` (2MS) |
   | Year 3 | `y3-a.ics` (3B) | `y3-b.ics` (3D) |
-  | Year 4 | `y4-a.ics` (4Y) | `y4-b.ics` (4W) |
-  | Year 5 | `y5-a.ics` (5M) | `y5-b.ics` (5HP) |
+  | Year 4 | `y4-a.ics` (4W) | `y4-b.ics` (4Y) |
+  | Year 5 | `y5-a.ics` (5HP) | `y5-b.ics` (5M) |
   | Year 6 | `y6-a.ics` (6L) | `y6-b.ics` (6R) |
 
 - **`fosps.ics`** - Friends of St Paul's (the parents' fundraising charity).
@@ -90,8 +90,9 @@ one misses it. The build reports these in its "Calendar build problems" issue
 `scripts/build_ics.py`.
 
 Each class in `YEAR_GROUPS` has a permanent, generic `code` - a *slot*: `rec-a`
-and `rec-b` for Reception, `y1-a`/`y1-b` ... `y6-a`/`y6-b` for the years (a =
-the first class listed for that year, b = the second) - separate from its
+and `rec-b` for Reception, `y1-a`/`y1-b` ... `y6-a`/`y6-b` for the years (a and
+b started out in alphabetical order of label, but a relabel never swaps them,
+so they drift over time; every list people see is sorted by label instead) - separate from its
 `current_label` (`5HP`, `6L`...: what the school calls it now). The code is the
 feed's filename and subscribe URL, the class rep's passcode key and the name of
 its data file, and it says nothing about a teacher, so it never has to change.

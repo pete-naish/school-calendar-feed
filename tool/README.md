@@ -407,5 +407,5 @@ To exercise an endpoint directly:
 ```bash
 curl -X POST http://localhost:8788/api/parse \
   -H "content-type: application/json" \
-  -d '{"calendar":"y5-b","passcode":"changeme","text":"Collective worship for 5HP next Tuesday at 9am"}'
+  -d '{"calendar":"y5-a","passcode":"changeme","text":"Collective worship for 5HP next Tuesday at 9am"}'
 ```
