@@ -31,6 +31,13 @@ function recurrenceToSelectValue(recurrence) {
   return ""; // an interval/freq combination the picker can't represent - treated as non-recurring here
 }
 
+// A year group's classes alphabetised by label, for listing them to reps -
+// the same order as the public site's calendar list (displayOrder() in
+// docs/assets/calendar.js). YEAR_GROUPS itself stays in config order.
+function sortedClasses(group) {
+  return [...group.classes].sort((a, b) => a.label.localeCompare(b.label));
+}
+
 const ALL_CALENDARS = [
   { ...WHOLE_SCHOOL, yearLabel: "Whole School" },
   ...YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, yearLabel: g.label }))),
@@ -88,7 +95,7 @@ function init() {
   for (const group of YEAR_GROUPS) {
     const optgroup = document.createElement("optgroup");
     optgroup.label = group.label;
-    for (const cls of group.classes) {
+    for (const cls of sortedClasses(group)) {
       const opt = document.createElement("option");
       opt.value = cls.code;
       opt.textContent = cls.label;
@@ -128,7 +135,7 @@ function currentYearGroup() {
 }
 
 function yearGroupDescription(group) {
-  return `all of ${group.label} (${group.classes.map((c) => c.label).join(" and ")})`;
+  return `all of ${group.label} (${sortedClasses(group).map((c) => c.label).join(" and ")})`;
 }
 
 // A new event on a class calendar can be ticked as "all of Year 1", saving it
@@ -418,7 +425,9 @@ function setCardExceptions(card, exceptions) {
 function exceptionScopeText(exc) {
   const group = currentYearGroup();
   if (!group || !exc.classes || exc.classes.length === 0) return "";
-  const labels = exc.classes.map((code) => group.classes.find((c) => c.code === code)?.label || code.toUpperCase());
+  const labels = exc.classes
+    .map((code) => group.classes.find((c) => c.code === code)?.label || code.toUpperCase())
+    .sort((a, b) => a.localeCompare(b));
   return ` (${labels.join(" and ")} only)`;
 }
 
@@ -490,8 +499,8 @@ function wireExceptionsSection(card, initialExceptions, { shared = false } = {})
   const group = currentYearGroup();
   if (shared && group) {
     scopeSelect.innerHTML = "";
-    scopeSelect.add(new Option(`All of ${group.label} (${group.classes.map((c) => c.label).join(" and ")})`, ""));
-    for (const cls of group.classes) scopeSelect.add(new Option(`${cls.label} only`, cls.code));
+    scopeSelect.add(new Option(`All of ${group.label} (${sortedClasses(group).map((c) => c.label).join(" and ")})`, ""));
+    for (const cls of sortedClasses(group)) scopeSelect.add(new Option(`${cls.label} only`, cls.code));
     scopeRow.hidden = false;
   }
 
