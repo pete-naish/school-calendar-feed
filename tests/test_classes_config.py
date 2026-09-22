@@ -1,8 +1,8 @@
-"""Checks on the live class list, docs/classes.json - the single source of
+"""Checks on the live class list, docs/classes.js - the single source of
 truth for class codes and labels, read by scripts/build_ics.py, the parent
 page and the class rep tool.
 
-The other tests run against a frozen copy (tests/fixtures/classes.json, see
+The other tests run against a frozen copy (tests/fixtures/classes.js, see
 conftest.py) so that relabelling a class never means editing them. These
 tests are what keep that safe: the live file has to be well-formed, and its
 permanent codes have to match the frozen copy's exactly - labels are free to
@@ -10,13 +10,16 @@ change, codes never are (they're feed URLs, passcode keys and data files).
 """
 from __future__ import annotations
 
-import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LIVE = json.loads((ROOT / "docs" / "classes.json").read_text())
-FROZEN = json.loads((ROOT / "tests" / "fixtures" / "classes.json").read_text())
+sys.path.insert(0, str(ROOT / "scripts"))
+from build_ics import read_classes_file  # noqa: E402
+
+LIVE = read_classes_file(ROOT / "docs" / "classes.js")
+FROZEN = read_classes_file(ROOT / "tests" / "fixtures" / "classes.js")
 PAGE_JS = (ROOT / "docs" / "assets" / "calendar.js").read_text()
 
 

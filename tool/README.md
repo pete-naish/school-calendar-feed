@@ -56,7 +56,7 @@ integration.
   re-validates the calendar code and passcode independently.
   - `calendars.js` - `GET /api/calendars`, the one endpoint without a
     passcode: the year groups and class labels for the page's calendar
-    picker, from `docs/classes.json` (class labels are public anyway).
+    picker, from `docs/classes.js` (class labels are public anyway).
   - `parse.js` - calls Claude to extract events from pasted text. Detects
     an explicitly-stated repeat pattern ("every Thursday", "weekly") and
     sets `recurrence.freq`/`interval` - it's never allowed to guess how
@@ -90,7 +90,7 @@ integration.
     read/write a description/location override (see below); `events-delete.js`
     rejects it outright, same as `save.js`.
 - `functions/api/_shared/` - `calendars.js` (the 16 valid calendar codes -
-  the 14 classes come from `docs/classes.json`, the single source of truth
+  the 14 classes come from `docs/classes.js`, the single source of truth
   shared with `scripts/build_ics.py` and the parent page, bundled in at deploy
   time; FOSPS is fixed; the 16th, `whole-school`, is the restricted entry
   below and isn't mirrored from anywhere, since it has no

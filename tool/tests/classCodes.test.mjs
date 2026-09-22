@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 const classes = YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, group: g })));
-// Labels come from docs/classes.json and change with the school; look them up
+// Labels come from docs/classes.js and change with the school; look them up
 // rather than spelling them out, so a relabel never breaks these tests.
 const labelOf = (code) => classes.find((c) => c.code === code).label;
 

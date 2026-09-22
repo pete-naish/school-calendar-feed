@@ -81,7 +81,7 @@ REQUEST_HEADERS = {
 }
 
 # --------------------------------------------------------------------------
-# Class / year-group configuration: docs/classes.json is the single source of
+# Class / year-group configuration: docs/classes.js is the single source of
 # truth, read here, by the parent page (docs/assets/calendar.js) and by the
 # class rep tool (tool/functions/api/_shared/calendars.js, which also serves
 # it to tool/app.js). Relabelling classes means editing that one file.
@@ -112,13 +112,21 @@ REQUEST_HEADERS = {
 # be updated.
 # --------------------------------------------------------------------------
 # CLASSES_FILE in the environment points the tests at a frozen copy
-# (tests/fixtures/classes.json, see tests/conftest.py), so a relabel is only
-# ever an edit to docs/classes.json - never to test expectations too.
-CLASSES_FILE = Path(os.environ.get("CLASSES_FILE") or Path(__file__).resolve().parent.parent / "docs" / "classes.json")
+# (tests/fixtures/classes.js, see tests/conftest.py), so a relabel is only
+# ever an edit to docs/classes.js - never to test expectations too.
+CLASSES_FILE = Path(os.environ.get("CLASSES_FILE") or Path(__file__).resolve().parent.parent / "docs" / "classes.js")
+
+
+def read_classes_file(path: Path = CLASSES_FILE) -> dict:
+    """docs/classes.js is an ES module whose default export is strict JSON."""
+    match = re.search(r"^export default\b(.*)", path.read_text(), re.M | re.S)
+    if not match:
+        raise ValueError(f"{path}: expected a line starting `export default {{...}};`")
+    return json.loads(match.group(1).strip().removesuffix(";"))
 
 
 def load_year_groups(path: Path = CLASSES_FILE) -> list[dict]:
-    groups = json.loads(path.read_text())["yearGroups"]
+    groups = read_classes_file(path)["yearGroups"]
     return [
         {
             "key": g["key"],

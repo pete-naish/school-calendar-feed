@@ -1,4 +1,6 @@
-{
+// Frozen copy of docs/classes.js for the Python tests - see tests/conftest.py.
+// Only update it if a year group or class code genuinely changes.
+export default {
   "yearGroups": [
     {
       "key": "reception",
@@ -64,4 +66,4 @@
       ]
     }
   ]
-}
+};

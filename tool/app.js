@@ -1,5 +1,5 @@
 // The year groups and their classes: fetched from GET /api/calendars at
-// start-up (see loadCalendars()), which serves docs/classes.json - the single
+// start-up (see loadCalendars()), which serves docs/classes.js - the single
 // source of truth for class codes and labels. Empty until then.
 let YEAR_GROUPS = [];
 let ALL_CALENDARS = [];

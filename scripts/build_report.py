@@ -88,7 +88,7 @@ def render(report: dict, run_url: str | None = None) -> str:
             "",
             "The school's calendar used a class label the build doesn't know, so the event went to "
             "both classes of that year instead. If it's a real class, set it as that class's "
-            "label in `docs/classes.json`.",
+            "label in `docs/classes.js`.",
             "",
         ]
         lines += [

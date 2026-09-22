@@ -131,9 +131,12 @@ def test_the_font_licence_ships_with_the_fonts():
 def test_every_module_import_in_calendar_js_is_a_local_file():
     specifiers = re.findall(r"^import\b[^;]*?from\s*[\"']([^\"']+)[\"']", JS, re.M)
     assert "./vendor/ical.min.js" in specifiers
+    assert "../classes.js" in specifiers
     for specifier in specifiers:
-        assert specifier.startswith("./"), f"{specifier} isn't a local import"
-        assert (ASSETS / specifier).is_file(), f"{specifier} is missing"
+        assert specifier.startswith(("./", "../")), f"{specifier} isn't a local import"
+        target = (ASSETS / specifier).resolve()
+        assert target.is_file(), f"{specifier} is missing"
+        assert target.is_relative_to(DOCS.resolve()), f"{specifier} isn't published with the site"
 
 
 def test_vendored_ical_js_is_the_recorded_unmodified_file():

@@ -1,4 +1,15 @@
-{
+// The year groups and their classes - the single source of truth for class
+// codes and labels. Read by scripts/build_ics.py (feeds), docs/assets/calendar.js
+// (the parent page) and tool/functions/api/_shared/calendars.js (the class rep
+// tool, which serves it to its page from GET /api/calendars).
+//
+// To relabel a class (a new teacher, a new school year), change its "label".
+// Never change a "code": it's the feed URL, the rep's passcode key and the data
+// file name. Everything after `export default` must stay strict JSON (double
+// quotes, no comments, no trailing commas) - the Python build parses it as JSON.
+// It's a JS module rather than a .json file because Cloudflare's bundler and
+// Node disagree on how to import JSON.
+export default {
   "yearGroups": [
     {
       "key": "reception",
@@ -64,4 +75,4 @@
       ]
     }
   ]
-}
+};

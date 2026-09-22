@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { buildWeekText, defaultWeekStart, snapToMonday } from "../functions/api/_shared/weekList.js";
 import { titlePrefixFor } from "../functions/api/_shared/calendars.js";
 
-// rec-a's title prefix ("RR: " today), looked up from docs/classes.json so a
+// rec-a's title prefix ("RR: " today), looked up from docs/classes.js so a
 // relabel doesn't break these.
 const PREFIX = titlePrefixFor("rec-a");
 

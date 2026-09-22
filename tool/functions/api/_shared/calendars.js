@@ -1,4 +1,4 @@
-// The year groups and their classes come from docs/classes.json - the single
+// The year groups and their classes come from docs/classes.js - the single
 // source of truth shared with scripts/build_ics.py and the parent page
 // (docs/assets/calendar.js). Relabel classes there, not here. The rep tool's
 // page gets the same list from GET /api/calendars (see ../calendars.js).
@@ -7,7 +7,7 @@
 // and data/manual_events/<code>.json, and must never change. `label` is
 // what's shown to reps in the picker and can be updated any time the school
 // relabels a class.
-import CLASSES from "../../../../docs/classes.json" with { type: "json" };
+import CLASSES from "../../../../docs/classes.js";
 
 export const YEAR_GROUPS = CLASSES.yearGroups.map((g) => ({
   key: g.key,

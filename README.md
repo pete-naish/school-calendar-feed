@@ -67,7 +67,7 @@ The API gives no structured "which year/class is this for" field, so
 `scripts/build_ics.py` classifies purely from the event title:
 
 1. If the title mentions "whole school", "KS1" or "KS2" → whole-school.
-2. If it names a specific class label (from `docs/classes.json`, see
+2. If it names a specific class label (from `docs/classes.js`, see
    "Changing class labels" below) → that class only.
 3. If it names exactly one year group (by "Year N", "Reception", or an
    unrecognised-but-year-shaped class code like a new teacher's initials) →
@@ -87,24 +87,29 @@ change). When the script sees a class-code-shaped token it doesn't recognise
 leading digit/R, and fans the event out to both of that year's classes so no
 one misses it. The build reports these in its "Calendar build problems" issue
 (see "How it works"); if it's a real class, set it as that class's label in
-`docs/classes.json`.
+`docs/classes.js`.
 
 ### Changing class labels
 
-`docs/classes.json` is the single source of truth for the year groups and
-their classes. `scripts/build_ics.py` reads it, the parent page fetches it,
+`docs/classes.js` is the single source of truth for the year groups and
+their classes. `scripts/build_ics.py` reads it, the parent page imports it,
 and the class rep tool bundles it (and serves it to its page from
 `GET /api/calendars`), so a relabel - one class or the whole school before a
 new year - is one edit to that file:
 
-```json
+```js
 { "code": "y5-a", "label": "5HP" }
 ```
+
+It's an ES module (`export default {...};`) rather than a `.json` file,
+because Cloudflare's bundler and Node can't agree on a JSON import syntax.
+Everything after `export default` must stay strict JSON (double quotes, no
+comments, no trailing commas), since the Python build parses it as JSON.
 
 Change the `label`, push, and trigger the "Update calendar feed" workflow (or
 wait for its 6-hourly run) so every feed's event titles pick up the new
 prefix. Nothing else needs editing - the tests run against a frozen copy in
-`tests/fixtures/classes.json`, and `tests/test_classes_config.py` checks the
+`tests/fixtures/classes.js`, and `tests/test_classes_config.py` checks the
 live file: labels start with their year's number or R, are unique, and every
 `code` still matches the frozen copy.
 

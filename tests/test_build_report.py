@@ -178,7 +178,7 @@ def test_render_lists_each_kind_of_problem_with_what_to_do():
     assert "### Events skipped (1)" in md and "`y5-b.ics`: `bad1` - `ValueError: day is out of range`" in md
     assert "data/manual_events/" in md
     assert "### Unrecognised class codes (1)" in md and "`6Z` in `Trip for 6Z` - treated as `Year 6`" in md
-    assert "`docs/classes.json`" in md
+    assert "`docs/classes.js`" in md
     assert "### The school's calendar returned no events" in md
     assert "### Other (1)" in md and "a future kind of problem" in md
     assert "- `whole-school.ics`: 49" in md
