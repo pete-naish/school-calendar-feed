@@ -474,14 +474,13 @@ function renderAddActions() {
 
   if (openPlatform && selected.length > 1) {
     const platform = PLATFORMS.find((p) => p.key === openPlatform);
-    const intro = document.createElement("p");
-    intro.textContent = `${platform.label} adds one calendar at a time:`;
-    el.addList.appendChild(intro);
     for (const cal of selected) {
+      const item = document.createElement("li");
       const link = document.createElement("a");
       link.href = platform.url(cal);
-      link.textContent = displayName(cal);
-      el.addList.appendChild(link);
+      link.textContent = `Subscribe to ${displayName(cal)}`;
+      item.appendChild(link);
+      el.addList.appendChild(item);
     }
     el.addList.hidden = false;
   }
@@ -490,9 +489,9 @@ function renderAddActions() {
     if (selected.length === 0) {
       el.addHint.textContent = "Pick a calendar above to get started.";
     } else if (selected.length === 1) {
-      el.addHint.textContent = `Tap an app above — it'll ask you to confirm before adding ${displayName(selected[0])}.`;
+      el.addHint.textContent = `Tap your app below — it'll ask you to confirm before adding ${displayName(selected[0])}.`;
     } else {
-      el.addHint.textContent = "Tap an app above, then add each calendar it lists separately — each app can only add one at a time.";
+      el.addHint.textContent = "Tap your app below, then add each calendar separately.";
     }
   }
 }

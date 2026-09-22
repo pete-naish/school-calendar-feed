@@ -323,13 +323,14 @@
 .cal-add-list {
   display: grid;
   gap: 0.25rem;
-  padding: 0.25rem 0 0 0.25rem;
+  margin: 0;
+  padding: 0.25rem 0 0 1.1rem;
   font-size: 0.8125rem;
+  list-style: disc;
 }
 
-.cal-add-list p {
-  margin: 0 0 0.15rem;
-  color: var(--cal-muted);
+.cal-add-list li {
+  padding-left: 0.15rem;
 }
 
 .cal-add-list a {
