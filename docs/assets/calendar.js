@@ -408,9 +408,24 @@ function launchedCalendars() {
   return ALL_CALENDARS.filter((cal) => LAUNCHED_CALENDARS.has(cal.code));
 }
 
+// Same calendars as launchedCalendars(), but with each year group's classes
+// alphabetised by label (so parents can scan for their child's teacher)
+// rather than left in build-config order. Groups stay in their original
+// sequence and keep their classes adjacent, so this doesn't disturb the
+// mobile two-column pairing in the @media rule for .cal-tiles.
+function tileOrder() {
+  const groups = new Map();
+  for (const cal of launchedCalendars()) {
+    const key = cal.groupLabel || cal.code;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(cal);
+  }
+  return [...groups.values()].flatMap((classes) => classes.sort((a, b) => a.label.localeCompare(b.label)));
+}
+
 function renderTiles() {
   el.toggles.innerHTML = "";
-  launchedCalendars().forEach((cal, i) => {
+  tileOrder().forEach((cal, i) => {
     const tile = document.createElement("div");
     // Whole School and FOSPS aren't half of a year-group pair, so they span
     // both mobile columns (see the @media rule in calendar.css) rather than
