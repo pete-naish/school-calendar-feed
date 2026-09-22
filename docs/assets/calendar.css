@@ -267,6 +267,10 @@
   gap: 0.5rem;
 }
 
+#calendar-add-hint {
+  margin-bottom: 0.75rem;
+}
+
 .cal-add-buttons {
   display: grid;
   gap: 0.35rem;
