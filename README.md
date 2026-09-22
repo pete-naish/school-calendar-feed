@@ -241,7 +241,7 @@ from the current anchor. Each calendar has an on/off toggle, remembered
 per-browser in `localStorage` (default: Whole School + FOSPS on, classes
 off) - the active view is remembered the same way. Colors are one
 categorical OKLCH hue per year group + FOSPS at a shared lightness and
-chroma, with a lighter tint for the second class in each year, and
+chroma, with a lighter tint for the alphabetically second class in each year, and
 "Everyone" (whole school) as a neutral grey rather than a 9th hue (see
 `docs/assets/calendar.css` for the values and contrast notes).
 

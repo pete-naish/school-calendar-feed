@@ -77,7 +77,7 @@
   --cal-7-text: var(--chip-text-light);
   --cal-8-text: var(--chip-text-dark);
 
-  /* Second class in each year group: a lighter tint of the year's hue,
+  /* Alphabetically second class in each year group: a lighter tint of the year's hue,
      mixed in OKLCH so the step in lightness is even across hues. The two
      classes stay recognisably one year while telling apart in the grid
      and the rail. Dark text on every tint. */

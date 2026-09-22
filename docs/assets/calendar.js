@@ -4,9 +4,8 @@ import ICAL from "./vendor/ical.min.js";
 // tool/functions/api/_shared/calendars.js and tool/app.js) - keep all four
 // in sync by hand (scripts/check_config_sync.py checks the 14 class
 // codes/labels actually match on every push - see .github/workflows/test.yml).
-// `colorVar` maps to the categorical palette in calendar.css: Reception
-// wears the school colours (RR red, RGP yellow), the other year groups and
-// FOSPS are OKLCH hues at one lightness and chroma; "Everyone" (whole
+// `colorVar` maps to the categorical palette in calendar.css: each year group
+// and FOSPS is one hue from a single palette; "Everyone" (whole
 // school) is a neutral grey rather than another hue since it's structurally
 // the "everyone" bucket, not a peer category.
 const GROUPS = [
@@ -21,14 +20,17 @@ const GROUPS = [
 const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School", dot: "dot-whole", colorVar: "--cal-neutral" };
 const FOSPS = { code: "fosps", label: "FOSPS", dot: "dot-fosps", colorVar: "--cal-8" };
 
-// The first class in a year group takes the year's hue, the second a
-// lighter tint of it (--cal-N-b in calendar.css), so siblings' classes tell
-// apart in the grid and the rail without a text prefix.
+// The alphabetically first class in a year group takes the year's hue, the
+// other a lighter tint of it (--cal-N-b in calendar.css), so siblings'
+// classes tell apart in the grid and the rail without a text prefix. By label,
+// not slot: a/b order drifts as classes are relabelled (see YEAR_GROUPS in
+// scripts/build_ics.py), and this keeps the full hue on the top tile.
 const ALL_CALENDARS = [
   WHOLE_SCHOOL,
-  ...GROUPS.flatMap((g) =>
-    g.classes.map((c, i) => ({ ...c, dot: g.dot, colorVar: i === 0 ? g.colorVar : `${g.colorVar}-b`, groupLabel: g.label }))
-  ),
+  ...GROUPS.flatMap((g) => {
+    const first = [...g.classes].sort((a, b) => a.label.localeCompare(b.label))[0];
+    return g.classes.map((c) => ({ ...c, dot: g.dot, colorVar: c === first ? g.colorVar : `${g.colorVar}-b`, groupLabel: g.label }));
+  }),
   FOSPS,
 ];
 
