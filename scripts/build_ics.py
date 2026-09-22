@@ -81,7 +81,10 @@ REQUEST_HEADERS = {
 }
 
 # --------------------------------------------------------------------------
-# Class / year-group configuration.
+# Class / year-group configuration: docs/classes.json is the single source of
+# truth, read here, by the parent page (docs/assets/calendar.js) and by the
+# class rep tool (tool/functions/api/_shared/calendars.js, which also serves
+# it to tool/app.js). Relabelling classes means editing that one file.
 #
 # `code` is a PERMANENT, GENERIC identifier for a class *slot*: "y5-a" is the
 # first class of Year 5, "y5-b" the second, "rec-a"/"rec-b" Reception's. It is
@@ -93,86 +96,43 @@ REQUEST_HEADERS = {
 # RR/RGP), but a relabel never reshuffles them, so over time the order drifts.
 # That's expected - every list parents and reps see is sorted by label anyway.
 #
-# `current_label` is what humans see: the calendar's display name, the "5HP: "
-# prefix on its event titles, and the tool/docs UI. It follows the school's own
-# label for that class, and is the ONLY thing to edit when a class is relabelled
-# (a new teacher, a new year). Doing so changes no URL, passcode or data file.
+# `label` (`current_label` below) is what humans see: the calendar's display
+# name, the "5HP: " prefix on its event titles, and the tool/docs UI. It follows
+# the school's own label for that class, and is the ONLY thing to edit when a
+# class is relabelled (a new teacher, a new year). Doing so changes no URL,
+# passcode or data file.
 #
 # `aliases` are the labels that route a school event title to this class -
-# just its current label. When a class is relabelled, update `current_label`
-# and replace its alias to match; a stale title still using an old label then
-# falls back to both of that year's classes (see below) rather than being lost.
+# just its current label, so a stale title still using an old label falls back
+# to both of that year's classes (see below) rather than being lost.
 #
 # When the school starts using a class label that isn't listed here, classify_event()
 # below still figures out the *year group* from the leading digit/R and fans the
 # event out to both of that year's classes, logging a warning so this config can
 # be updated.
 # --------------------------------------------------------------------------
-YEAR_GROUPS = [
-    {
-        "key": "reception",
-        "label": "Reception",
-        "number": "R",
-        "classes": [
-            {"code": "rec-a", "current_label": "RR", "aliases": ["RR"]},
-            {"code": "rec-b", "current_label": "RGP", "aliases": ["RGP"]},
-        ],
-    },
-    {
-        "key": "year1",
-        "label": "Year 1",
-        "number": "1",
-        "classes": [
-            {"code": "y1-a", "current_label": "1S", "aliases": ["1S"]},
-            {"code": "y1-b", "current_label": "1T", "aliases": ["1T"]},
-        ],
-    },
-    {
-        "key": "year2",
-        "label": "Year 2",
-        "number": "2",
-        "classes": [
-            {"code": "y2-a", "current_label": "2L", "aliases": ["2L"]},
-            {"code": "y2-b", "current_label": "2MS", "aliases": ["2MS"]},
-        ],
-    },
-    {
-        "key": "year3",
-        "label": "Year 3",
-        "number": "3",
-        "classes": [
-            {"code": "y3-a", "current_label": "3B", "aliases": ["3B"]},
-            {"code": "y3-b", "current_label": "3D", "aliases": ["3D"]},
-        ],
-    },
-    {
-        "key": "year4",
-        "label": "Year 4",
-        "number": "4",
-        "classes": [
-            {"code": "y4-a", "current_label": "4W", "aliases": ["4W"]},
-            {"code": "y4-b", "current_label": "4Y", "aliases": ["4Y"]},
-        ],
-    },
-    {
-        "key": "year5",
-        "label": "Year 5",
-        "number": "5",
-        "classes": [
-            {"code": "y5-a", "current_label": "5HP", "aliases": ["5HP"]},
-            {"code": "y5-b", "current_label": "5M", "aliases": ["5M"]},
-        ],
-    },
-    {
-        "key": "year6",
-        "label": "Year 6",
-        "number": "6",
-        "classes": [
-            {"code": "y6-a", "current_label": "6L", "aliases": ["6L"]},
-            {"code": "y6-b", "current_label": "6R", "aliases": ["6R"]},
-        ],
-    },
-]
+# CLASSES_FILE in the environment points the tests at a frozen copy
+# (tests/fixtures/classes.json, see tests/conftest.py), so a relabel is only
+# ever an edit to docs/classes.json - never to test expectations too.
+CLASSES_FILE = Path(os.environ.get("CLASSES_FILE") or Path(__file__).resolve().parent.parent / "docs" / "classes.json")
+
+
+def load_year_groups(path: Path = CLASSES_FILE) -> list[dict]:
+    groups = json.loads(path.read_text())["yearGroups"]
+    return [
+        {
+            "key": g["key"],
+            "label": g["label"],
+            "number": g["number"],
+            "classes": [
+                {"code": c["code"], "current_label": c["label"], "aliases": [c["label"]]} for c in g["classes"]
+            ],
+        }
+        for g in groups
+    ]
+
+
+YEAR_GROUPS = load_year_groups()
 
 # alias (uppercase) -> (year_key, canonical class code)
 ALIAS_TO_CLASS: dict[str, tuple[str, str]] = {}

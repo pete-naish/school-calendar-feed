@@ -1,6 +1,6 @@
 // Run with: node --test tool/tests/
 //
-// A class's code ("y5-a") is a permanent slot; its label ("5HP") is what the
+// A class's code ("y5-a") is a permanent slot; its label (e.g. "5HP") is what the
 // school calls it and what event titles are prefixed with. Everything that
 // reads or strips a title prefix has to use the label.
 import { test, afterEach } from "node:test";
@@ -16,6 +16,9 @@ afterEach(() => {
 });
 
 const classes = YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, group: g })));
+// Labels come from docs/classes.json and change with the school; look them up
+// rather than spelling them out, so a relabel never breaks these tests.
+const labelOf = (code) => classes.find((c) => c.code === code).label;
 
 test("every class code is a generic slot, never a label", () => {
   assert.equal(classes.length, 14);
@@ -39,10 +42,7 @@ test("only the current codes are valid calendars - the old label-shaped ones are
 });
 
 test("the title prefix is the label, whatever the code is", () => {
-  assert.equal(titlePrefixFor("rec-a"), "RR: ");
-  assert.equal(titlePrefixFor("y3-a"), "3B: "); // not "Y3-A: "
-  assert.equal(titlePrefixFor("y5-b"), "5M: ");
-  assert.equal(titlePrefixFor("y6-a"), "6L: ");
+  for (const { code, label } of classes) assert.equal(titlePrefixFor(code), `${label}: `, code); // not "Y3-A: "
   assert.equal(titlePrefixFor("fosps"), "FOSPS: ");
   assert.equal(titlePrefixFor("nonsense"), "NONSENSE: ");
 });
@@ -53,7 +53,7 @@ test("relabelling a class changes only its prefix", () => {
   try {
     entry.label = "5XY";
     assert.equal(titlePrefixFor("y5-b"), "5XY: ");
-    assert.equal(titlePrefixFor("y5-a"), "5HP: ");
+    assert.equal(titlePrefixFor("y5-a"), `${labelOf("y5-a")}: `);
     assert.equal(isValidCalendar("y5-b"), true);
   } finally {
     entry.label = before;
@@ -67,7 +67,7 @@ test("a class's school events have the label prefix taken off (not the code's)",
   const requested = [];
   globalThis.fetch = async (url) => {
     requested.push(String(url));
-    return new Response(ics("5M: Sports Day"), { status: 200 });
+    return new Response(ics(`${labelOf("y5-b")}: Sports Day`), { status: 200 });
   };
   const [event] = await fetchClassSchoolEvents("y5-b");
   assert.equal(event.title, "Sports Day");
@@ -77,7 +77,15 @@ test("a class's school events have the label prefix taken off (not the code's)",
 test("the weekly list strips the label prefix, so a code-shaped prefix would be left in", () => {
   const week = (title) =>
     buildWeekText({ calendarIcs: ics(title), wholeSchoolIcs: ics("x").replace("stpauls-77", "stpauls-78").replace("SUMMARY:x", "SUMMARY:Other"), calendar: "y5-b", weekStart: "2026-10-05" }).text;
-  assert.match(week("5M: Sports Day"), /• Sports Day/);
-  assert.doesNotMatch(week("5M: Sports Day"), /5M/);
+  const label = labelOf("y5-b");
+  assert.match(week(`${label}: Sports Day`), /• Sports Day/);
+  assert.doesNotMatch(week(`${label}: Sports Day`), new RegExp(label));
   assert.match(week("Y5-B: Sports Day"), /Y5-B: Sports Day/);
+});
+
+test("GET /api/calendars hands the page the same year groups the API uses", async () => {
+  const { onRequestGet } = await import("../functions/api/calendars.js");
+  const resp = onRequestGet();
+  assert.equal(resp.headers.get("content-type"), "application/json");
+  assert.deepEqual((await resp.json()).yearGroups, YEAR_GROUPS);
 });

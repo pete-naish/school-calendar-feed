@@ -67,8 +67,8 @@ The API gives no structured "which year/class is this for" field, so
 `scripts/build_ics.py` classifies purely from the event title:
 
 1. If the title mentions "whole school", "KS1" or "KS2" → whole-school.
-2. If it names a specific class code (from the `YEAR_GROUPS` config at the
-   top of the script) → that class only.
+2. If it names a specific class label (from `docs/classes.json`, see
+   "Changing class labels" below) → that class only.
 3. If it names exactly one year group (by "Year N", "Reception", or an
    unrecognised-but-year-shaped class code like a new teacher's initials) →
    both classes in that year group.
@@ -86,25 +86,42 @@ change). When the script sees a class-code-shaped token it doesn't recognise
 (e.g. "6Z"), it logs a warning to stderr, figures out the year group from the
 leading digit/R, and fans the event out to both of that year's classes so no
 one misses it. The build reports these in its "Calendar build problems" issue
-(see "How it works"); add the newly-seen label as an alias in `YEAR_GROUPS` in
-`scripts/build_ics.py`.
+(see "How it works"); if it's a real class, set it as that class's label in
+`docs/classes.json`.
 
-Each class in `YEAR_GROUPS` has a permanent, generic `code` - a *slot*: `rec-a`
+### Changing class labels
+
+`docs/classes.json` is the single source of truth for the year groups and
+their classes. `scripts/build_ics.py` reads it, the parent page fetches it,
+and the class rep tool bundles it (and serves it to its page from
+`GET /api/calendars`), so a relabel - one class or the whole school before a
+new year - is one edit to that file:
+
+```json
+{ "code": "y5-a", "label": "5HP" }
+```
+
+Change the `label`, push, and trigger the "Update calendar feed" workflow (or
+wait for its 6-hourly run) so every feed's event titles pick up the new
+prefix. Nothing else needs editing - the tests run against a frozen copy in
+`tests/fixtures/classes.json`, and `tests/test_classes_config.py` checks the
+live file: labels start with their year's number or R, are unique, and every
+`code` still matches the frozen copy.
+
+Each class has a permanent, generic `code` - a *slot*: `rec-a`
 and `rec-b` for Reception, `y1-a`/`y1-b` ... `y6-a`/`y6-b` for the years (a and
 b started out in alphabetical order of label, but a relabel never swaps them,
 so they drift over time; every list people see is sorted by label instead) - separate from its
-`current_label` (`5HP`, `6L`...: what the school calls it now). The code is the
+`label` (`5HP`, `6L`...: what the school calls it now). The code is the
 feed's filename and subscribe URL, the class rep's passcode key and the name of
 its data file, and it says nothing about a teacher, so it never has to change.
 It also can't be mistaken for a school label (`y3-b` is not class 3B). The
 label is what people see: the calendar's name, the tool's picker, and the
 prefix on every event title.
 
-When a class relabels (a new teacher, a new year, or a correction like 5L ->
-5M): update its `current_label` and replace its entry in `aliases` with the
-new label. That's all - no URL, passcode or data file moves. **Never change a
-`code`**, or everyone subscribed to that feed breaks. An event title still
-using an old label falls back to both classes in that year group.
+A relabel moves no URL, passcode or data file. **Never change a `code`**, or
+everyone subscribed to that feed breaks (the tests refuse it). An event title
+still using an old label falls back to both classes in that year group.
 
 ### Manual / hand-entered events (class events + FOSPS)
 
@@ -316,13 +333,6 @@ subtly wrong.
 pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
-
-`scripts/check_config_sync.py` separately checks that the 14 class
-codes/labels in `YEAR_GROUPS` haven't drifted from the 3 hand-maintained JS
-copies (`tool/functions/api/_shared/calendars.js`, `tool/app.js`,
-`docs/assets/calendar.js`) - each has a "keep in sync by hand" comment, and
-nothing previously checked that they actually were. Also run automatically
-in CI.
 
 Runs automatically on every push/PR via `.github/workflows/test.yml`.
 

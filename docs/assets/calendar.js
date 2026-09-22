@@ -1,30 +1,47 @@
 import ICAL from "./vendor/ical.min.js";
 
-// Mirrors YEAR_GROUPS in scripts/build_ics.py (and the two JS copies in
-// tool/functions/api/_shared/calendars.js and tool/app.js) - keep all four
-// in sync by hand (scripts/check_config_sync.py checks the 14 class
-// codes/labels actually match on every push - see .github/workflows/test.yml).
-// `colorVar` maps to the categorical palette in calendar.css: each year group
-// and FOSPS is one hue from a single palette; "Everyone" (whole
-// school) is a neutral grey rather than another hue since it's structurally
-// the "everyone" bucket, not a peer category.
-const GROUPS = [
-  { label: "Reception", dot: "dot-reception", colorVar: "--cal-1", classes: [{ code: "rec-a", label: "RR" }, { code: "rec-b", label: "RGP" }] },
-  { label: "Year 1", dot: "dot-year1", colorVar: "--cal-2", classes: [{ code: "y1-a", label: "1S" }, { code: "y1-b", label: "1T" }] },
-  { label: "Year 2", dot: "dot-year2", colorVar: "--cal-3", classes: [{ code: "y2-a", label: "2L" }, { code: "y2-b", label: "2MS" }] },
-  { label: "Year 3", dot: "dot-year3", colorVar: "--cal-4", classes: [{ code: "y3-a", label: "3B" }, { code: "y3-b", label: "3D" }] },
-  { label: "Year 4", dot: "dot-year4", colorVar: "--cal-5", classes: [{ code: "y4-a", label: "4W" }, { code: "y4-b", label: "4Y" }] },
-  { label: "Year 5", dot: "dot-year5", colorVar: "--cal-6", classes: [{ code: "y5-a", label: "5HP" }, { code: "y5-b", label: "5M" }] },
-  { label: "Year 6", dot: "dot-year6", colorVar: "--cal-7", classes: [{ code: "y6-a", label: "6L" }, { code: "y6-b", label: "6R" }] },
-];
+// The year groups and their classes come from docs/classes.json - the single
+// source of truth shared with scripts/build_ics.py and the class rep tool.
+// Relabel classes there, not here. If it can't be fetched the page still shows
+// the Whole School and FOSPS calendars rather than nothing.
+//
+// Each year group's look is keyed by its `key` in that file. `colorVar` maps
+// to the categorical palette in calendar.css: each year group and FOSPS is one
+// hue from a single palette; "Everyone" (whole school) is a neutral grey
+// rather than another hue since it's structurally the "everyone" bucket, not a
+// peer category.
+const GROUP_STYLES = {
+  reception: { dot: "dot-reception", colorVar: "--cal-1" },
+  year1: { dot: "dot-year1", colorVar: "--cal-2" },
+  year2: { dot: "dot-year2", colorVar: "--cal-3" },
+  year3: { dot: "dot-year3", colorVar: "--cal-4" },
+  year4: { dot: "dot-year4", colorVar: "--cal-5" },
+  year5: { dot: "dot-year5", colorVar: "--cal-6" },
+  year6: { dot: "dot-year6", colorVar: "--cal-7" },
+};
+
+async function loadYearGroups() {
+  try {
+    const resp = await fetch(new URL("../classes.json", import.meta.url));
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const { yearGroups } = await resp.json();
+    return yearGroups.map((g) => ({ ...g, ...GROUP_STYLES[g.key] }));
+  } catch (err) {
+    console.warn("Couldn't load classes.json:", err);
+    return [];
+  }
+}
+
+const GROUPS = await loadYearGroups();
 const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School", dot: "dot-whole", colorVar: "--cal-neutral" };
 const FOSPS = { code: "fosps", label: "FOSPS", dot: "dot-fosps", colorVar: "--cal-8" };
 
 // The alphabetically first class in a year group takes the year's hue, the
 // other a lighter tint of it (--cal-N-b in calendar.css), so siblings'
 // classes tell apart in the grid and the rail without a text prefix. By label,
-// not slot: a/b order drifts as classes are relabelled (see YEAR_GROUPS in
-// scripts/build_ics.py), and this keeps the full hue on the top tile.
+// not slot: a/b order drifts as classes are relabelled (see docs/classes.json
+// and YEAR_GROUPS in scripts/build_ics.py), and this keeps the full hue on the
+// top tile.
 const ALL_CALENDARS = [
   WHOLE_SCHOOL,
   ...GROUPS.flatMap((g) => {

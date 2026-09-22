@@ -3,6 +3,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { buildWeekText, defaultWeekStart, snapToMonday } from "../functions/api/_shared/weekList.js";
+import { titlePrefixFor } from "../functions/api/_shared/calendars.js";
+
+// rec-a's title prefix ("RR: " today), looked up from docs/classes.json so a
+// relabel doesn't break these.
+const PREFIX = titlePrefixFor("rec-a");
 
 const calendar = (...events) =>
   ["BEGIN:VCALENDAR", "VERSION:2.0", ...events.map((e) => ["BEGIN:VEVENT", ...e, "END:VEVENT"].flat()).flat(), "END:VCALENDAR"].join("\r\n");
@@ -15,7 +20,7 @@ function week(weekStart, { own = null, wholeSchool = EMPTY, cal = "rec-a" } = {}
 
 const PE_DAY = calendar([
   "UID:manual-pe@school-calendar-feed",
-  "SUMMARY:RR: PE Day 👟 – Wear PE Kit",
+  `SUMMARY:${PREFIX}PE Day 👟 – Wear PE Kit`,
   "DTSTART;VALUE=DATE:20260903",
   "DTEND;VALUE=DATE:20260904",
   "RRULE:FREQ=WEEKLY;UNTIL=20270128;INTERVAL=1",
@@ -42,7 +47,7 @@ test("weekly recurrence includes its UNTIL day and stops after it", () => {
 test("monthly recurrence with an interval", () => {
   const own = calendar([
     "UID:manual-m@school-calendar-feed",
-    "SUMMARY:RR: Bimonthly coffee",
+    `SUMMARY:${PREFIX}Bimonthly coffee`,
     "DTSTART;VALUE=DATE:20260915",
     "DTEND;VALUE=DATE:20260916",
     "RRULE:FREQ=MONTHLY;UNTIL=20270601;INTERVAL=2",
@@ -55,7 +60,7 @@ test("monthly recurrence with an interval", () => {
 test("timed recurring event keeps its wall-clock time across the BST to GMT change", () => {
   const own = calendar([
     "UID:manual-t@school-calendar-feed",
-    "SUMMARY:RR: Choir",
+    `SUMMARY:${PREFIX}Choir`,
     "DTSTART;TZID=Europe/London:20261015T193000",
     "DTEND;TZID=Europe/London:20261015T203000",
     "RRULE:FREQ=WEEKLY;UNTIL=20261231T235959Z;INTERVAL=1",
@@ -88,7 +93,7 @@ test("all-day multi-day event shows its range under its first day", () => {
 test("a multi-day event that began before the week is listed under Monday", () => {
   const own = calendar([
     "UID:manual-r@school-calendar-feed",
-    "SUMMARY:RR: Residential",
+    `SUMMARY:${PREFIX}Residential`,
     "DTSTART;VALUE=DATE:20261024",
     "DTEND;VALUE=DATE:20261029",
   ]);
@@ -99,7 +104,7 @@ test("a moved occurrence is its own one-off event", () => {
   const own = calendar(
     [
       "UID:manual-x@school-calendar-feed",
-      "SUMMARY:RR: Assembly",
+      `SUMMARY:${PREFIX}Assembly`,
       "DTSTART;TZID=Europe/London:20261008T090000",
       "DTEND;TZID=Europe/London:20261008T100000",
       "RRULE:FREQ=WEEKLY;UNTIL=20261231T235959Z;INTERVAL=1",
@@ -107,7 +112,7 @@ test("a moved occurrence is its own one-off event", () => {
     ],
     [
       "UID:manual-x-2026-10-15@school-calendar-feed",
-      "SUMMARY:RR: Assembly",
+      `SUMMARY:${PREFIX}Assembly`,
       "DTSTART;TZID=Europe/London:20261016T140000",
       "DTEND;TZID=Europe/London:20261016T150000",
     ]
@@ -154,9 +159,9 @@ test("whole-school login lists only whole-school events, unmarked", () => {
 
 test("within a day: all-day first, then by time", () => {
   const own = calendar(
-    ["UID:a@x", "SUMMARY:RR: Evening", "DTSTART;TZID=Europe/London:20260922T183000", "DTEND;TZID=Europe/London:20260922T193000"],
-    ["UID:b@x", "SUMMARY:RR: Morning", "DTSTART;TZID=Europe/London:20260922T083000", "DTEND;TZID=Europe/London:20260922T093000"],
-    ["UID:c@x", "SUMMARY:RR: All day", "DTSTART;VALUE=DATE:20260922", "DTEND;VALUE=DATE:20260923"]
+    ["UID:a@x", `SUMMARY:${PREFIX}Evening`, "DTSTART;TZID=Europe/London:20260922T183000", "DTEND;TZID=Europe/London:20260922T193000"],
+    ["UID:b@x", `SUMMARY:${PREFIX}Morning`, "DTSTART;TZID=Europe/London:20260922T083000", "DTEND;TZID=Europe/London:20260922T093000"],
+    ["UID:c@x", `SUMMARY:${PREFIX}All day`, "DTSTART;VALUE=DATE:20260922", "DTEND;VALUE=DATE:20260923"]
   );
   const titles = week("2026-09-21", { own }).text.split("\n").filter((l) => l.startsWith("•"));
   assert.deepEqual(titles, ["• All day", "• 8:30am Morning", "• 6:30pm Evening"]);

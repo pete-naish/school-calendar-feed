@@ -1,70 +1,19 @@
-// Mirrors YEAR_GROUPS in scripts/build_ics.py - keep the two in sync by hand
-// (no shared build step between the Python script and this JS tool;
-// scripts/check_config_sync.py checks this on every push).
+// The year groups and their classes come from docs/classes.json - the single
+// source of truth shared with scripts/build_ics.py and the parent page
+// (docs/assets/calendar.js). Relabel classes there, not here. The rep tool's
+// page gets the same list from GET /api/calendars (see ../calendars.js).
 //
 // `code` is the permanent identifier - it matches docs/calendars/<code>.ics
 // and data/manual_events/<code>.json, and must never change. `label` is
 // what's shown to reps in the picker and can be updated any time the school
-// relabels a class (see scripts/build_ics.py's `current_label` for the
-// equivalent on the .ics-generation side).
-export const YEAR_GROUPS = [
-  {
-    key: "reception",
-    label: "Reception",
-    classes: [
-      { code: "rec-a", label: "RR" },
-      { code: "rec-b", label: "RGP" },
-    ],
-  },
-  {
-    key: "year1",
-    label: "Year 1",
-    classes: [
-      { code: "y1-a", label: "1S" },
-      { code: "y1-b", label: "1T" },
-    ],
-  },
-  {
-    key: "year2",
-    label: "Year 2",
-    classes: [
-      { code: "y2-a", label: "2L" },
-      { code: "y2-b", label: "2MS" },
-    ],
-  },
-  {
-    key: "year3",
-    label: "Year 3",
-    classes: [
-      { code: "y3-a", label: "3B" },
-      { code: "y3-b", label: "3D" },
-    ],
-  },
-  {
-    key: "year4",
-    label: "Year 4",
-    classes: [
-      { code: "y4-a", label: "4W" },
-      { code: "y4-b", label: "4Y" },
-    ],
-  },
-  {
-    key: "year5",
-    label: "Year 5",
-    classes: [
-      { code: "y5-a", label: "5HP" },
-      { code: "y5-b", label: "5M" },
-    ],
-  },
-  {
-    key: "year6",
-    label: "Year 6",
-    classes: [
-      { code: "y6-a", label: "6L" },
-      { code: "y6-b", label: "6R" },
-    ],
-  },
-];
+// relabels a class.
+import CLASSES from "../../../../docs/classes.json" with { type: "json" };
+
+export const YEAR_GROUPS = CLASSES.yearGroups.map((g) => ({
+  key: g.key,
+  label: g.label,
+  classes: g.classes.map((c) => ({ code: c.code, label: c.label })),
+}));
 
 export const FOSPS = { code: "fosps", label: "FOSPS" };
 

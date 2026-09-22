@@ -179,14 +179,3 @@ def test_saved_toggles_from_the_old_reception_codes_are_carried_over():
     mapping = dict(re.findall(r'"([^"]+)":\s*"([^"]+)"', shim.group(1)))
     assert mapping == {"rec-a": "rr", "rec-b": "rgp"}
     assert set(mapping) <= CONFIGURED_CODES
-
-
-def test_the_page_lists_the_same_class_codes_and_labels_as_the_build():
-    groups = re.findall(r'\{ label: "Year \d", dot: "[^"]+", colorVar: "[^"]+", classes: \[([^\]]*)\] \}', JS)
-    reception = re.findall(r'label: "Reception"[^\n]*?classes: \[([^\]]*)\]', JS)
-    pairs = [
-        pair
-        for chunk in reception + groups
-        for pair in re.findall(r'code: "([^"]+)", label: "([^"]+)"', chunk)
-    ]
-    assert dict(pairs) == {cls["code"]: cls["current_label"] for g in build_ics.YEAR_GROUPS for cls in g["classes"]}

@@ -1,15 +1,8 @@
-// Mirrors ALL_CALENDARS in functions/api/_shared/calendars.js (and
-// YEAR_GROUPS in scripts/build_ics.py) - keep the three in sync by hand
-// (scripts/check_config_sync.py checks this on every push).
-const YEAR_GROUPS = [
-  { label: "Reception", classes: [{ code: "rec-a", label: "RR" }, { code: "rec-b", label: "RGP" }] },
-  { label: "Year 1", classes: [{ code: "y1-a", label: "1S" }, { code: "y1-b", label: "1T" }] },
-  { label: "Year 2", classes: [{ code: "y2-a", label: "2L" }, { code: "y2-b", label: "2MS" }] },
-  { label: "Year 3", classes: [{ code: "y3-a", label: "3B" }, { code: "y3-b", label: "3D" }] },
-  { label: "Year 4", classes: [{ code: "y4-a", label: "4W" }, { code: "y4-b", label: "4Y" }] },
-  { label: "Year 5", classes: [{ code: "y5-a", label: "5HP" }, { code: "y5-b", label: "5M" }] },
-  { label: "Year 6", classes: [{ code: "y6-a", label: "6L" }, { code: "y6-b", label: "6R" }] },
-];
+// The year groups and their classes: fetched from GET /api/calendars at
+// start-up (see loadCalendars()), which serves docs/classes.json - the single
+// source of truth for class codes and labels. Empty until then.
+let YEAR_GROUPS = [];
+let ALL_CALENDARS = [];
 const FOSPS = { code: "fosps", label: "FOSPS" };
 // Restricted entry - description/location editing only, see calendars.js's
 // WHOLE_SCHOOL and isWholeSchoolCalendar() on the server side.
@@ -38,11 +31,14 @@ function sortedClasses(group) {
   return [...group.classes].sort((a, b) => a.label.localeCompare(b.label));
 }
 
-const ALL_CALENDARS = [
-  { ...WHOLE_SCHOOL, yearLabel: "Whole School" },
-  ...YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, yearLabel: g.label }))),
-  { ...FOSPS, yearLabel: "Friends of St Paul's" },
-];
+function setYearGroups(groups) {
+  YEAR_GROUPS = groups;
+  ALL_CALENDARS = [
+    { ...WHOLE_SCHOOL, yearLabel: "Whole School" },
+    ...YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, yearLabel: g.label }))),
+    { ...FOSPS, yearLabel: "Friends of St Paul's" },
+  ];
+}
 
 const state = {
   calendar: null,
@@ -86,7 +82,27 @@ const el = {
   weekCopyButton: document.getElementById("week-copy-button"),
 };
 
-function init() {
+// Fills the calendar picker once the class list has arrived. Until then the
+// picker only holds its "Choose a calendar…" placeholder, so login stays
+// disabled; if the list can't be fetched, say so rather than show an empty picker.
+async function loadCalendars() {
+  let data = null;
+  try {
+    const resp = await fetch("/api/calendars");
+    if (resp.ok) data = await resp.json();
+  } catch {
+    // fall through with data = null
+  }
+  if (!data || !Array.isArray(data.yearGroups)) {
+    el.loginError.textContent = "Couldn't load the list of calendars. Check your connection and refresh the page.";
+    el.loginError.hidden = false;
+    return;
+  }
+  setYearGroups(data.yearGroups);
+  fillCalendarPicker();
+}
+
+function fillCalendarPicker() {
   const wholeSchoolOpt = document.createElement("option");
   wholeSchoolOpt.value = WHOLE_SCHOOL.code;
   wholeSchoolOpt.textContent = WHOLE_SCHOOL.label;
@@ -107,7 +123,10 @@ function init() {
   fospsOpt.value = FOSPS.code;
   fospsOpt.textContent = "FOSPS";
   el.calendarSelect.appendChild(fospsOpt);
+}
 
+function init() {
+  loadCalendars();
   el.calendarSelect.addEventListener("change", updateLoginButtonState);
   el.passcodeInput.addEventListener("input", updateLoginButtonState);
   el.passcodeInput.addEventListener("keydown", (e) => {

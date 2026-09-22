@@ -87,9 +87,8 @@ def render(report: dict, run_url: str | None = None) -> str:
             f"### Unrecognised class codes ({len(unknown)})",
             "",
             "The school's calendar used a class label the build doesn't know, so the event went to "
-            "both classes of that year instead. If it's a real class, add it as an alias in "
-            "`YEAR_GROUPS` in `scripts/build_ics.py` (`python scripts/check_config_sync.py` "
-            "checks the other copies).",
+            "both classes of that year instead. If it's a real class, set it as that class's "
+            "label in `docs/classes.json`.",
             "",
         ]
         lines += [
