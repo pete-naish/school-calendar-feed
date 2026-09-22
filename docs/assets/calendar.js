@@ -412,7 +412,13 @@ function renderTiles() {
   el.toggles.innerHTML = "";
   launchedCalendars().forEach((cal, i) => {
     const tile = document.createElement("div");
-    tile.className = "cal-tile";
+    // Whole School and FOSPS aren't half of a year-group pair, so they span
+    // both mobile columns (see the @media rule in calendar.css) rather than
+    // ending up next to an unrelated class - this relies on every launched
+    // year group contributing its classes in twos, immediately after one
+    // another, which holds as long as both of a year's classes are launched
+    // together.
+    tile.className = "cal-tile" + (cal.groupLabel ? "" : " cal-tile--wide");
     tile.style.setProperty("--tile-color", `var(${cal.colorVar})`);
     tile.style.setProperty("--i", i);
 
