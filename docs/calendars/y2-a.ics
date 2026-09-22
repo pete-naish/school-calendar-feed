@@ -3,15 +3,15 @@ VERSION:2.0
 PRODID:-//school-calendar-feed//stpauls-enfield//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-X-WR-CALNAME:St Paul's Enfield — Year 2 (2LY)
+X-WR-CALNAME:St Paul's Enfield — Year 2 (2L)
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:2LY: Information meeting for Parents - Year 1 and 2
+SUMMARY:2L: Information meeting for Parents - Year 1 and 2
 DTSTART:20260908T081500Z
 DTEND:20260908T084500Z
-DTSTAMP:20260922T154819Z
+DTSTAMP:20260922T175302Z
 UID:stpauls-850@school-calendar-feed
-LAST-MODIFIED:20260922T154819Z
+LAST-MODIFIED:20260922T175302Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=850
 END:VEVENT
