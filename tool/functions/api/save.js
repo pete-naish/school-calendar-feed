@@ -1,5 +1,5 @@
 import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
-import { checkPasscode } from "./_shared/auth.js";
+import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
 import { validateEventInput, LIMITS } from "./_shared/validate.js";
 import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.js";
 import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.js";
@@ -22,8 +22,10 @@ export async function onRequestPost({ request, env }) {
   if (!isValidCalendar(calendar)) {
     return jsonResponse({ error: "invalid_calendar" }, 400);
   }
-  if (!checkPasscode(env, calendar, passcode)) {
-    return jsonResponse({ error: "invalid_passcode" }, 401);
+  const authResult = await checkPasscode(env, calendar, passcode, request);
+  if (authResult !== "ok") {
+    const { status, body } = passcodeErrorResponse(authResult);
+    return jsonResponse(body, status);
   }
   // Whole School events come entirely from the school's own feed - this
   // tool can only edit an existing one's description (see events-update.js),

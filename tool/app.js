@@ -242,7 +242,9 @@ async function handleLogin() {
     if (status === 401) {
       el.loginError.textContent = "Wrong passcode for this calendar.";
     } else {
-      el.loginError.textContent = (data && data.error) || "Something went wrong - try again.";
+      // e.g. 429 rate_limited (see _shared/auth.js) - data.message is written
+      // for a rep to read; data.error is just a machine-readable code.
+      el.loginError.textContent = (data && data.message) || "Something went wrong - try again.";
     }
     el.loginError.hidden = false;
     return;

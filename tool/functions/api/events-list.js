@@ -1,5 +1,5 @@
 import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
-import { checkPasscode } from "./_shared/auth.js";
+import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
 import { getManualEventsFile, getJsonFile, retryable } from "./_shared/github.js";
 import { fetchWholeSchoolEvents, fetchClassSchoolEvents } from "./_shared/wholeSchool.js";
 import { applyOverrides } from "./_shared/wholeSchoolOverrides.js";
@@ -22,8 +22,10 @@ export async function onRequestPost({ request, env }) {
   if (!isValidCalendar(calendar)) {
     return jsonResponse({ error: "invalid_calendar" }, 400);
   }
-  if (!checkPasscode(env, calendar, passcode)) {
-    return jsonResponse({ error: "invalid_passcode" }, 401);
+  const authResult = await checkPasscode(env, calendar, passcode, request);
+  if (authResult !== "ok") {
+    const { status, body } = passcodeErrorResponse(authResult);
+    return jsonResponse(body, status);
   }
 
   if (isWholeSchoolCalendar(calendar)) {

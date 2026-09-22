@@ -90,7 +90,9 @@ integration.
   14 classes + FOSPS mirror `YEAR_GROUPS` in `scripts/build_ics.py` and are
   kept in sync by hand; the 16th, `whole-school`, is the restricted entry
   below and isn't mirrored from anywhere, since it has no
-  `data/manual_events/` file at all), `auth.js` (passcode check, in constant time), `github.js`
+  `data/manual_events/` file at all), `auth.js` (passcode check, in constant
+  time, and the per-calendar rate limit - see "Rate limiting" below),
+  `rateLimit.js` (that limit's policy and its KV key/IP helpers), `github.js`
   (GitHub Contents API get/commit for any JSON file in the repo, retrying a
   concurrent-edit conflict, a GitHub 5xx, or a network failure), `validate.js`
   (sanitizes/validates event data from both the LLM and the frontend form -
@@ -274,7 +276,12 @@ as before. A save where every event was a duplicate doesn't trigger one.
 1. In the Cloudflare dashboard, create a new **Pages** project connected to
    this GitHub repo. Set **root directory** to `tool/`, and leave the build
    command empty (no build step needed).
-2. Under the project's **Settings → Environment variables** (as secrets, for
+2. Under the project's **Settings → Functions → KV namespace bindings**, add a
+   binding named `RATE_LIMITS` (for both Production and Preview), pointing at
+   a KV namespace you create or reuse there - see "Rate limiting" below for
+   what this is for. Without it the tool still works, just with no throttling
+   on wrong passcode guesses.
+3. Under the project's **Settings → Environment variables** (as secrets, for
    both Production and Preview), set:
    - `CLASS_PASSWORDS` - a JSON object mapping each of the 16 calendar codes
      (`rec-a`, `rec-b`, `y1-a` ... `y6-b`, `fosps`, `whole-school`) to a
@@ -288,9 +295,9 @@ as before. A save where every event was a duplicate doesn't trigger one.
      permissions (Actions is what lets a save trigger a rebuild, see
      "Publishing changes"). Create one at
      [github.com/settings/personal-access-tokens](https://github.com/settings/personal-access-tokens).
-3. Deploy. The tool will be live at the Pages project's URL (or a custom
+4. Deploy. The tool will be live at the Pages project's URL (or a custom
    domain, if you attach one).
-4. Distribute each calendar's passcode to that class's rep (or FOSPS) - how
+5. Distribute each calendar's passcode to that class's rep (or FOSPS) - how
    you do this (a shared spreadsheet, individual messages, etc) is up to
    you; the tool has no built-in distribution mechanism. Keep the Whole
    School passcode separately, for whoever's trusted to add descriptions and locations to
@@ -321,46 +328,79 @@ font, an inline `<style>` or `style="..."`, a third-party script, an
 to make an error go away. If the tool moves to a custom domain, also turn on
 HSTS there (Cloudflare dashboard, SSL/TLS, Edge Certificates).
 
-## Rate limiting (recommended, not built in)
+## Rate limiting
 
-The tool has no rate limiting of its own - the passcode gate has no
-attempt-throttling (a weak/guessable passcode is brute-forceable with
-nothing to slow it down), and `/api/parse` costs real Anthropic API money
-per call, uncapped in aggregate for anyone who has a valid passcode.
+Every endpoint that checks a passcode (`checkPasscode()` in `_shared/auth.js`)
+enforces a limit on wrong guesses via `env.RATE_LIMITS`, a Workers KV binding:
+10 wrong guesses for one calendar from one source within 15 minutes
+(`RATE_LIMIT` in `_shared/rateLimit.js`) gets a `429 rate_limited` instead of
+being checked at all - even the *right* passcode is refused until the lockout
+clears, rather than letting a lucky late guess through. A correct guess before
+the limit clears the count, so an occasional typo costs a rep nothing. The
+limit is per (calendar, source): hammering one calendar's passcode doesn't
+lock a different class's rep out, and doesn't affect a different source
+guessing the same calendar.
 
-This is better solved at Cloudflare's edge than in application code - it's
-free on every plan and blocks abusive requests before they even reach the
-Worker:
+"Source" is the request's `CF-Connecting-IP` header, which a client can't
+spoof - Cloudflare overwrites it at its own edge before the request reaches
+this Worker. Outside Cloudflare's network (`wrangler pages dev` locally, or
+`env.RATE_LIMITS` not bound) it's "unknown" for everyone, which only makes the
+throttle broader, never a way past it - see `rateLimit.js`'s comments.
 
-1. Cloudflare dashboard → your account → **Security → WAF → Rate limiting
-   rules** (for a Pages project, this lives under the zone your custom
-   domain sits on, not the Pages project itself - if you're using the
-   default `*.pages.dev` domain with no custom domain attached, rate
-   limiting rules aren't available and you'd need to attach a domain first).
-2. **Create rule** - match requests where the path starts with `/api/parse`
-   (or `/api/` for all endpoints). A sensible starting point: **10 requests
-   per minute per IP**, action **Block** (or **Challenge** if you'd rather
-   show a CAPTCHA than a hard block).
-3. Repeat for `/api/events-list` / `/api/save` / etc if you want passcode
-   brute-forcing specifically throttled too - those don't cost API money,
-   but nothing stops rapid-fire guessing otherwise.
+This is a soft, best-effort throttle, not an exact one: Workers KV has no
+atomic increment, so a genuine burst of concurrent requests from the same
+source can lose an increment or two. Fine for slowing casual/automated
+guessing well below network speed, which is the actual goal.
+
+**Set up the KV namespace** (needed for this to do anything - without it,
+`checkPasscode()` fails open and behaves exactly as if there were no rate
+limiting at all):
+
+- **Production/Preview**: Cloudflare dashboard → the Pages project →
+  **Settings → Functions → KV namespace bindings** → add a binding named
+  `RATE_LIMITS`, pointing at a KV namespace you create (or reuse) there. Do
+  this for both Production and Preview.
+- **Local dev**: `npx wrangler pages dev . --kv RATE_LIMITS` (see "Local
+  development" below) - an ephemeral, local-only namespace, not shared with
+  production.
+
+**What this doesn't cover:** `/api/parse` costs real Anthropic API money per
+call, and this only throttles *wrong* passcode guesses - someone who already
+has a valid passcode can still call it as often as they like. Set a spend
+limit on the Anthropic key in the [Console](https://console.anthropic.com/)
+as a backstop.
 
 Separately: make sure the 16 real passcode values you chose aren't
 guessable (the placeholder in `.dev.vars.example` is literally
 `"changeme"` - obviously don't ship that).
 
+If the tool is ever on a domain whose DNS is fully hosted on Cloudflare (a
+zone, not just a CNAME to `*.pages.dev` from elsewhere), Cloudflare's own WAF
+rate limiting rules (Security → WAF → Rate limiting rules) are worth adding
+too, as a second layer that blocks abusive requests at the edge before they
+even reach this code - but they need that zone to exist, which a `CNAME`
+record from another DNS host (as `.pages.dev` custom domains often are)
+doesn't give you.
+
 ## Local development
 
 ```bash
 cp tool/.dev.vars.example tool/.dev.vars   # then fill in real test values
-cd tool && npx wrangler pages dev .
+cd tool && npx wrangler pages dev . --kv RATE_LIMITS
 ```
 
 This serves the frontend and functions locally (default `http://localhost:8788`).
 Run it from inside `tool/`: Pages looks for `functions/` in the directory you
 run it from, so `npx wrangler pages dev tool/` from the repo root serves the page
 but none of the `/api/*` endpoints (every POST comes back `405`).
-`tool/.dev.vars` is gitignored - never commit it.
+`tool/.dev.vars` is gitignored - never commit it. `--kv RATE_LIMITS` binds an
+ephemeral, local-only KV namespace for the rate limit (see "Rate limiting"
+below) - omit it to run with no rate limiting at all, same as production
+without that binding set up. Local dev has no `CF-Connecting-IP` header, so
+every request shares one "unknown" bucket per calendar - fine for exercising
+the limit, useless for testing per-source isolation (see auth.test.mjs for
+that instead). Wrangler persists local KV to `tool/.wrangler/` between runs;
+delete that directory to start clean.
 
 To exercise an endpoint directly:
 
