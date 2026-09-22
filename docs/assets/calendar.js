@@ -486,10 +486,14 @@ function renderAddActions() {
   }
 
   if (el.addHint) {
+    el.addHint.innerHTML = "";
     if (selected.length === 0) {
       el.addHint.textContent = "Pick a calendar above to get started.";
     } else if (selected.length === 1) {
-      el.addHint.textContent = `Tap your app below — it'll ask you to confirm before subscribing to ${displayName(selected[0])}.`;
+      const name = document.createElement("span");
+      name.className = "cal-highlight";
+      name.textContent = displayName(selected[0]);
+      el.addHint.append("Tap your app below — it'll ask you to confirm before subscribing to ", name, ".");
     } else {
       el.addHint.textContent = "Tap your app below, then subscribe to each calendar separately.";
     }

@@ -197,6 +197,13 @@
   text-wrap: pretty;
 }
 
+/* A calendar's name called out within otherwise-muted rail copy - not a
+   link, just brought up to full contrast. */
+.cal-highlight {
+  color: var(--cal-fg);
+  font-weight: 600;
+}
+
 .cal-main {
   min-width: 0;
 }
