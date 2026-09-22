@@ -25,10 +25,10 @@ calendar into `docs/calendars/`.
   | Year | First class | Second class |
   |---|---|---|
   | Reception | `rec-a.ics` (RR) | `rec-b.ics` (RGP) |
-  | Year 1 | `y1-a.ics` (1MS) | `y1-b.ics` (1T) |
-  | Year 2 | `y2-a.ics` (2LY) | `y2-b.ics` (2S) |
+  | Year 1 | `y1-a.ics` (1S) | `y1-b.ics` (1T) |
+  | Year 2 | `y2-a.ics` (2L) | `y2-b.ics` (2MS) |
   | Year 3 | `y3-a.ics` (3B) | `y3-b.ics` (3D) |
-  | Year 4 | `y4-a.ics` (4M) | `y4-b.ics` (4W) |
+  | Year 4 | `y4-a.ics` (4Y) | `y4-b.ics` (4W) |
   | Year 5 | `y5-a.ics` (5M) | `y5-b.ics` (5HP) |
   | Year 6 | `y6-a.ics` (6L) | `y6-b.ics` (6R) |
 
@@ -100,10 +100,10 @@ label is what people see: the calendar's name, the tool's picker, and the
 prefix on every event title.
 
 When a class relabels (a new teacher, a new year, or a correction like 5L ->
-5M): update its `current_label` and add the new label to `aliases`. That's all
-- no URL, passcode or data file moves. **Never change a `code`**, or everyone
-subscribed to that feed breaks. A class's old labels stay in `aliases` because
-they resurface in stale event titles.
+5M): update its `current_label` and replace its entry in `aliases` with the
+new label. That's all - no URL, passcode or data file moves. **Never change a
+`code`**, or everyone subscribed to that feed breaks. An event title still
+using an old label falls back to both classes in that year group.
 
 ### Manual / hand-entered events (class events + FOSPS)
 

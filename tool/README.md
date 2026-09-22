@@ -67,7 +67,7 @@ integration.
     Nothing is persisted at this step.
   - `save.js` - bulk-creates the reviewed events (from `parse.js`, or typed
     in manually). On a class calendar a draft can be ticked **"Add to all of
-    Year 1 (1MS and 1T)"**: those events are stored once, in the year's shared
+    Year 1 (1S and 1T)"**: those events are stored once, in the year's shared
     `data/manual_events/<year key>.json` (e.g. `year1.json`), rather than
     copied into each class's file, and `build_ics.py` builds them into every
     class of the year. `events-list.js` shows a class both its own events and

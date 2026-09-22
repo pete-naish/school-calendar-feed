@@ -53,13 +53,13 @@ CLASSIFY_CASES = [
     ("Reception Group 1 Start", "classes", {"rec-a", "rec-b"}),
     # Unrecognised class-code-shaped tokens fall back to both classes in
     # that year group (the label-churn case: a new teacher's initials).
-    # 6L and 5M are the school's real labels (they replaced our mistaken 6BT and
-    # 5L), so each names exactly one class...
+    # A current label names exactly one class...
     ("6L Collective Worship to parents", "classes", {"y6-a"}),
     ("5M Collective Worship", "classes", {"y5-a"}),
-    # ...and the old labels still work as aliases.
-    ("6BT Trip", "classes", {"y6-a"}),
-    ("5L Trip", "classes", {"y5-a"}),
+    # ...but a retired one (6BT/5L were our mistakes for 6L/5M) is no longer
+    # an alias, so it falls back like any unconfigured label.
+    ("6BT Trip", "classes", {"y6-a", "y6-b"}),
+    ("5L Trip", "classes", {"y5-a", "y5-b"}),
     # A label that isn't configured at all falls back to both of its year's classes.
     ("6Z Collective Worship to parents", "classes", {"y6-a", "y6-b"}),
     ("5Q Collective Worship", "classes", {"y5-a", "y5-b"}),
@@ -365,7 +365,7 @@ def test_manual_event_without_location_has_no_location():
 
 def test_load_class_manual_events_merges_the_year_groups_shared_file(tmp_path, monkeypatch):
     monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", tmp_path)
-    (tmp_path / "y1-a.json").write_text('[{"id": "own1", "title": "1MS only", "date": "2026-10-01"}]')
+    (tmp_path / "y1-a.json").write_text('[{"id": "own1", "title": "1S only", "date": "2026-10-01"}]')
     (tmp_path / "y1-b.json").write_text('[{"id": "own2", "title": "1T only", "date": "2026-10-02"}]')
     (tmp_path / "year1.json").write_text('[{"id": "shared1", "title": "Trip", "date": "2026-10-03"}]')
     ms = [raw["id"] for raw in build_ics.load_class_manual_events("y1-a", "year1")]
@@ -383,7 +383,7 @@ def test_shared_year_event_is_built_per_class_with_its_own_prefix():
     raw = {"id": "shared1", "title": "Trip to the farm", "date": "2026-10-03"}
     ms = build_ics.build_manual_event(raw, "y1-a", set())[0]
     t = build_ics.build_manual_event(raw, "y1-b", set())[0]
-    assert str(ms["summary"]) == "1MS: Trip to the farm"
+    assert str(ms["summary"]) == "1S: Trip to the farm"
     assert str(t["summary"]) == "1T: Trip to the farm"
     # Same id -> same UID in each class's own feed, like a school year-group event.
     assert str(ms["uid"]) == str(t["uid"]) == "manual-shared1@school-calendar-feed"
@@ -713,10 +713,10 @@ def test_main_still_publishes_every_calendar_when_a_manual_event_is_bad(tmp_path
 
 EXPECTED_SLOTS = {
     "reception": [("rec-a", "RR"), ("rec-b", "RGP")],
-    "year1": [("y1-a", "1MS"), ("y1-b", "1T")],
-    "year2": [("y2-a", "2LY"), ("y2-b", "2S")],
+    "year1": [("y1-a", "1S"), ("y1-b", "1T")],
+    "year2": [("y2-a", "2L"), ("y2-b", "2MS")],
     "year3": [("y3-a", "3B"), ("y3-b", "3D")],
-    "year4": [("y4-a", "4M"), ("y4-b", "4W")],
+    "year4": [("y4-a", "4Y"), ("y4-b", "4W")],
     "year5": [("y5-a", "5M"), ("y5-b", "5HP")],
     "year6": [("y6-a", "6L"), ("y6-b", "6R")],
 }
@@ -737,20 +737,18 @@ def test_a_code_names_a_slot_never_a_teacher_and_can_never_be_mistaken_for_a_lab
             assert cls["code"] == cls["code"].lower()
 
 
-def test_every_current_and_retired_label_routes_to_its_class():
+def test_every_current_label_routes_to_its_class():
     for group in build_ics.YEAR_GROUPS:
         for cls in group["classes"]:
             assert cls["current_label"] in cls["aliases"], "a class's own label must route back to it"
             for alias in cls["aliases"]:
                 assert build_ics.ALIAS_TO_CLASS[alias.upper()] == (group["key"], cls["code"])
-    assert build_ics.ALIAS_TO_CLASS["5L"] == ("year5", "y5-a")  # our mistake for 5M
-    assert build_ics.ALIAS_TO_CLASS["6BT"] == ("year6", "y6-a")  # our mistake for 6L
-    assert build_ics.ALIAS_TO_CLASS["RKJ"] == ("reception", "rec-a")  # Reception's earlier labels
-    assert build_ics.ALIAS_TO_CLASS["RKP"] == ("reception", "rec-b")
+    for retired in ("5L", "6BT", "RKJ", "RKP", "1MS", "2LY", "2S", "4M"):
+        assert retired not in build_ics.ALIAS_TO_CLASS
 
 
 def test_the_renamed_classes_are_recognised_without_a_warning(capsys):
-    for title in ("5M Collective Worship", "6L Collective Worship to parents", "5L Trip", "6BT Trip", "RKJ Trip"):
+    for title in ("5M Collective Worship", "6L Collective Worship to parents", "1S Trip", "2L Trip", "2MS Trip", "4Y Trip"):
         build_ics.classify_event(title)
     assert "unrecognised class code" not in capsys.readouterr().err
 

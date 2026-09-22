@@ -20,7 +20,7 @@ export const YEAR_GROUPS = [
     key: "year1",
     label: "Year 1",
     classes: [
-      { code: "y1-a", label: "1MS" },
+      { code: "y1-a", label: "1S" },
       { code: "y1-b", label: "1T" },
     ],
   },
@@ -28,8 +28,8 @@ export const YEAR_GROUPS = [
     key: "year2",
     label: "Year 2",
     classes: [
-      { code: "y2-a", label: "2LY" },
-      { code: "y2-b", label: "2S" },
+      { code: "y2-a", label: "2L" },
+      { code: "y2-b", label: "2MS" },
     ],
   },
   {
@@ -44,7 +44,7 @@ export const YEAR_GROUPS = [
     key: "year4",
     label: "Year 4",
     classes: [
-      { code: "y4-a", label: "4M" },
+      { code: "y4-a", label: "4Y" },
       { code: "y4-b", label: "4W" },
     ],
   },

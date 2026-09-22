@@ -95,11 +95,10 @@ REQUEST_HEADERS = {
 # label for that class, and is the ONLY thing to edit when a class is relabelled
 # (a new teacher, a new year). Doing so changes no URL, passcode or data file.
 #
-# `aliases` are every label a class has used (Reception's were "RKJ"/"RKP" and
-# are now "RR"/"RGP"; Year 6's "6BT" was our mistake for "6L") - kept rather
-# than deleted, since the school's own event titles are the only signal we get
-# and old labels can resurface in stale copy/pasted event titles. When a class
-# is relabelled, add the new label here as well as updating `current_label`.
+# `aliases` are the labels that route a school event title to this class -
+# just its current label. When a class is relabelled, update `current_label`
+# and replace its alias to match; a stale title still using an old label then
+# falls back to both of that year's classes (see below) rather than being lost.
 #
 # When the school starts using a class label that isn't listed here, classify_event()
 # below still figures out the *year group* from the leading digit/R and fans the
@@ -112,8 +111,8 @@ YEAR_GROUPS = [
         "label": "Reception",
         "number": "R",
         "classes": [
-            {"code": "rec-a", "current_label": "RR", "aliases": ["RR", "RKJ"]},
-            {"code": "rec-b", "current_label": "RGP", "aliases": ["RGP", "RKP"]},
+            {"code": "rec-a", "current_label": "RR", "aliases": ["RR"]},
+            {"code": "rec-b", "current_label": "RGP", "aliases": ["RGP"]},
         ],
     },
     {
@@ -121,7 +120,7 @@ YEAR_GROUPS = [
         "label": "Year 1",
         "number": "1",
         "classes": [
-            {"code": "y1-a", "current_label": "1MS", "aliases": ["1MS"]},
+            {"code": "y1-a", "current_label": "1S", "aliases": ["1S"]},
             {"code": "y1-b", "current_label": "1T", "aliases": ["1T"]},
         ],
     },
@@ -130,8 +129,8 @@ YEAR_GROUPS = [
         "label": "Year 2",
         "number": "2",
         "classes": [
-            {"code": "y2-a", "current_label": "2LY", "aliases": ["2LY"]},
-            {"code": "y2-b", "current_label": "2S", "aliases": ["2S"]},
+            {"code": "y2-a", "current_label": "2L", "aliases": ["2L"]},
+            {"code": "y2-b", "current_label": "2MS", "aliases": ["2MS"]},
         ],
     },
     {
@@ -148,7 +147,7 @@ YEAR_GROUPS = [
         "label": "Year 4",
         "number": "4",
         "classes": [
-            {"code": "y4-a", "current_label": "4M", "aliases": ["4M"]},
+            {"code": "y4-a", "current_label": "4Y", "aliases": ["4Y"]},
             {"code": "y4-b", "current_label": "4W", "aliases": ["4W"]},
         ],
     },
@@ -157,8 +156,7 @@ YEAR_GROUPS = [
         "label": "Year 5",
         "number": "5",
         "classes": [
-            # 5L was our mistake, not a real label: the school's Year 5 is 5M + 5HP.
-            {"code": "y5-a", "current_label": "5M", "aliases": ["5M", "5L"]},
+            {"code": "y5-a", "current_label": "5M", "aliases": ["5M"]},
             {"code": "y5-b", "current_label": "5HP", "aliases": ["5HP"]},
         ],
     },
@@ -167,8 +165,7 @@ YEAR_GROUPS = [
         "label": "Year 6",
         "number": "6",
         "classes": [
-            # Likewise 6BT was never a real label: Year 6 is 6L + 6R.
-            {"code": "y6-a", "current_label": "6L", "aliases": ["6L", "6BT"]},
+            {"code": "y6-a", "current_label": "6L", "aliases": ["6L"]},
             {"code": "y6-b", "current_label": "6R", "aliases": ["6R"]},
         ],
     },

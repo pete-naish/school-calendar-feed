@@ -11,10 +11,10 @@ import ICAL from "./vendor/ical.min.js";
 // the "everyone" bucket, not a peer category.
 const GROUPS = [
   { label: "Reception", dot: "dot-reception", colorVar: "--cal-1", classes: [{ code: "rec-a", label: "RR" }, { code: "rec-b", label: "RGP" }] },
-  { label: "Year 1", dot: "dot-year1", colorVar: "--cal-2", classes: [{ code: "y1-a", label: "1MS" }, { code: "y1-b", label: "1T" }] },
-  { label: "Year 2", dot: "dot-year2", colorVar: "--cal-3", classes: [{ code: "y2-a", label: "2LY" }, { code: "y2-b", label: "2S" }] },
+  { label: "Year 1", dot: "dot-year1", colorVar: "--cal-2", classes: [{ code: "y1-a", label: "1S" }, { code: "y1-b", label: "1T" }] },
+  { label: "Year 2", dot: "dot-year2", colorVar: "--cal-3", classes: [{ code: "y2-a", label: "2L" }, { code: "y2-b", label: "2MS" }] },
   { label: "Year 3", dot: "dot-year3", colorVar: "--cal-4", classes: [{ code: "y3-a", label: "3B" }, { code: "y3-b", label: "3D" }] },
-  { label: "Year 4", dot: "dot-year4", colorVar: "--cal-5", classes: [{ code: "y4-a", label: "4M" }, { code: "y4-b", label: "4W" }] },
+  { label: "Year 4", dot: "dot-year4", colorVar: "--cal-5", classes: [{ code: "y4-a", label: "4Y" }, { code: "y4-b", label: "4W" }] },
   { label: "Year 5", dot: "dot-year5", colorVar: "--cal-6", classes: [{ code: "y5-a", label: "5M" }, { code: "y5-b", label: "5HP" }] },
   { label: "Year 6", dot: "dot-year6", colorVar: "--cal-7", classes: [{ code: "y6-a", label: "6L" }, { code: "y6-b", label: "6R" }] },
 ];
