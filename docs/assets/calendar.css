@@ -178,12 +178,14 @@
   padding-top: 0.25rem;
 }
 
-.cal-rail h2 {
+.cal-rail h2,
+#calendar-add-label {
   margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--cal-muted);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--cal-fg);
 }
 
 .cal-rail-note {

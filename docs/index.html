@@ -140,7 +140,7 @@
 
     .facts {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: var(--s6);
       margin: var(--s12) 0 0;
     }
@@ -178,11 +178,13 @@
 
       <div class="cal-card" id="calendars" aria-labelledby="calendars-heading" role="region">
         <aside class="cal-rail">
-          <h2 id="calendars-heading" class="label">Calendars</h2>
+          <h2 id="calendars-heading" class="label">1. Pick your calendars</h2>
+          <p class="howto cal-rail-note">Most parents pick Whole School and their child's class calendar.</p>
           <div id="calendar-toggles" class="cal-tiles"></div>
           <div class="cal-add-group">
-            <p id="calendar-add-label" class="label">Add the ticked calendars to</p>
+            <p id="calendar-add-label" class="label">2. Choose your calendar app</p>
             <div id="calendar-add" class="cal-add-buttons" aria-labelledby="calendar-add-label"></div>
+            <p id="calendar-add-hint" class="howto cal-rail-note"></p>
             <div id="calendar-add-list" class="cal-add-list" hidden></div>
           </div>
           <p id="coming-soon" class="cal-rail-note">Years 1 to 6 follow once they're ready.</p>
@@ -228,8 +230,9 @@
       <dl class="facts">
         <div><dt>Source</dt><dd>
           Whole School events are copied from the school's <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">public calendar</a> every six hours. Class Reps add the class events. Free to use, and we're only human, so double-check anything important with the school.</dd></div>
-        <div><dt>Adding a calendar</dt><dd>Your calendar app opens the subscription for confirmation. Once added, new dates sync automatically.</dd></div>
-        <div><dt>Other apps</dt><dd>Paste a plain feed address into any calendar app that can subscribe by URL: <span id="ics-links"></span></dd></div>
+        <div><dt>Adding a calendar</dt><dd>Tap Apple Calendar, Google Calendar or Outlook above, then confirm when your calendar app asks. After that, new dates appear automatically — no need to check back or repeat this.</dd></div>
+        <div><dt>Other apps</dt><dd>Using a different calendar app? Copy one of these addresses and paste it wherever your app offers to "subscribe by URL" or "add calendar from internet": <span id="ics-links"></span></dd></div>
+        <div><dt>Nothing happened?</dt><dd>Try opening this page in your phone's default browser (Safari on iPhone, Chrome on Android), or use the address under "Other apps" instead.</dd></div>
       </dl>
     </main>
 

@@ -41,7 +41,7 @@ const ALL_CALENDARS = [
 // markup of its own.
 const LAUNCHED_CALENDARS = new Set([WHOLE_SCHOOL.code, FOSPS.code, "rec-a", "rec-b"]);
 
-const DEFAULT_ON = new Set([WHOLE_SCHOOL.code, FOSPS.code]);
+const DEFAULT_ON = new Set([WHOLE_SCHOOL.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
 // Toggles saved before class codes became generic (see YEAR_GROUPS in
 // scripts/build_ics.py) were keyed by Reception's labels; carry them over so a
@@ -321,6 +321,7 @@ const el = {
   toggles: document.getElementById("calendar-toggles"),
   comingSoon: document.getElementById("coming-soon"),
   addButtons: document.getElementById("calendar-add"),
+  addHint: document.getElementById("calendar-add-hint"),
   addList: document.getElementById("calendar-add-list"),
   icsLinks: document.getElementById("ics-links"),
   grid: document.getElementById("calendar-grid"),
@@ -445,7 +446,7 @@ function renderAddActions() {
     } else if (selected.length === 0) {
       control = document.createElement("span");
       control.setAttribute("aria-disabled", "true");
-      control.title = "Tick a calendar first";
+      control.title = "Pick a calendar first";
     } else {
       control = document.createElement("button");
       control.type = "button";
@@ -473,6 +474,16 @@ function renderAddActions() {
       el.addList.appendChild(link);
     }
     el.addList.hidden = false;
+  }
+
+  if (el.addHint) {
+    if (selected.length === 0) {
+      el.addHint.textContent = "Pick a calendar above to get started.";
+    } else if (selected.length === 1) {
+      el.addHint.textContent = `Tap an app above — it'll ask you to confirm before adding ${displayName(selected[0])}.`;
+    } else {
+      el.addHint.textContent = "Tap an app above, then add each calendar it lists separately — each app can only add one at a time.";
+    }
   }
 }
 
