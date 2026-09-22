@@ -489,9 +489,9 @@ function renderAddActions() {
     if (selected.length === 0) {
       el.addHint.textContent = "Pick a calendar above to get started.";
     } else if (selected.length === 1) {
-      el.addHint.textContent = `Tap your app below — it'll ask you to confirm before adding ${displayName(selected[0])}.`;
+      el.addHint.textContent = `Tap your app below — it'll ask you to confirm before subscribing to ${displayName(selected[0])}.`;
     } else {
-      el.addHint.textContent = "Tap your app below, then add each calendar separately.";
+      el.addHint.textContent = "Tap your app below, then subscribe to each calendar separately.";
     }
   }
 }
