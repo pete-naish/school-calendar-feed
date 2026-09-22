@@ -326,11 +326,11 @@
   margin: 0;
   padding: 0.25rem 0 0 1.1rem;
   font-size: 0.8125rem;
-  list-style: disc;
+  list-style: "\2192\a0";
 }
 
 .cal-add-list li {
-  padding-left: 0.15rem;
+  padding-left: 0.35rem;
 }
 
 .cal-add-list a {
