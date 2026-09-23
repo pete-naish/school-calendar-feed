@@ -217,3 +217,18 @@ def test_saved_toggles_from_the_old_reception_codes_are_carried_over():
     mapping = dict(re.findall(r'"([^"]+)":\s*"([^"]+)"', shim.group(1)))
     assert mapping == {"rec-a": "rr", "rec-b": "rgp"}
     assert set(mapping) <= CONFIGURED_CODES
+
+
+# --- favicons ---
+
+
+def test_every_linked_icon_exists():
+    """favicon.svg (with a dark-mode variant), favicon.ico for browsers that
+    don't take SVG icons, and apple-touch-icon.png for iOS home screens. The
+    .ico and .png are rendered from the SVG's light variant."""
+    icons = re.findall(r'<link rel="(?:icon|apple-touch-icon)" href="([^"]+)"', INDEX)
+    assert set(icons) == {"favicon.ico", "favicon.svg", "apple-touch-icon.png"}
+    for icon in icons:
+        assert (DOCS / icon).is_file(), f"{icon} is missing"
+    assert (DOCS / "favicon.ico").read_bytes()[:4] == b"\x00\x00\x01\x00"
+    assert (DOCS / "apple-touch-icon.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
