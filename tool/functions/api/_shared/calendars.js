@@ -29,8 +29,8 @@ export const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School" };
 // (for grouping in the picker UI).
 export const ALL_CALENDARS = [
   { ...WHOLE_SCHOOL, yearLabel: "Whole School" },
-  ...YEAR_GROUPS.flatMap((group) => group.classes.map((cls) => ({ ...cls, yearLabel: group.label }))),
   { ...FOSPS, yearLabel: "Friends of St Paul's" },
+  ...YEAR_GROUPS.flatMap((group) => group.classes.map((cls) => ({ ...cls, yearLabel: group.label }))),
 ];
 
 // The "5HP: " a calendar's event titles start with in its published feed (see

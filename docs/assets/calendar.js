@@ -32,11 +32,11 @@ const FOSPS = { code: "fosps", label: "FOSPS", dot: "dot-fosps", colorVar: "--ca
 // top tile.
 const ALL_CALENDARS = [
   WHOLE_SCHOOL,
+  FOSPS,
   ...GROUPS.flatMap((g) => {
     const first = [...g.classes].sort((a, b) => a.label.localeCompare(b.label))[0];
     return g.classes.map((c) => ({ ...c, dot: g.dot, colorVar: c === first ? g.colorVar : `${g.colorVar}-b`, groupLabel: g.label }));
   }),
-  FOSPS,
 ];
 
 // Which calendars are launched. Only these get a row in the rail (preview
@@ -48,6 +48,7 @@ const ALL_CALENDARS = [
 // markup of its own. All classes are launched now.
 const LAUNCHED_CALENDARS = new Set([
   WHOLE_SCHOOL.code,
+  FOSPS.code,
   "rec-a", "rec-b",
   "y1-a", "y1-b",
   "y2-a", "y2-b",
@@ -55,10 +56,9 @@ const LAUNCHED_CALENDARS = new Set([
   "y4-a", "y4-b",
   "y5-a", "y5-b",
   "y6-a", "y6-b",
-  FOSPS.code,
 ]);
 
-const DEFAULT_ON = new Set([WHOLE_SCHOOL.code]);
+const DEFAULT_ON = new Set([WHOLE_SCHOOL.code, FOSPS.code]);
 const STORAGE_KEY = "stpauls-calendar-toggles";
 // Toggles saved before class codes became generic (see YEAR_GROUPS in
 // scripts/build_ics.py) were keyed by Reception's labels; carry them over so a
@@ -547,7 +547,7 @@ function renderIcsLinks() {
 function renderComingSoon() {
   if (!el.comingSoon) return;
   const pendingGroups = GROUPS.filter((g) => g.classes.some((c) => !LAUNCHED_CALENDARS.has(c.code)));
-  const pendingTop = [FOSPS, WHOLE_SCHOOL].filter((cal) => !LAUNCHED_CALENDARS.has(cal.code));
+  const pendingTop = [WHOLE_SCHOOL, FOSPS].filter((cal) => !LAUNCHED_CALENDARS.has(cal.code));
   if (pendingGroups.length === 0 && pendingTop.length === 0) {
     el.comingSoon.hidden = true;
     return;

@@ -35,6 +35,7 @@ function setYearGroups(groups) {
   YEAR_GROUPS = groups;
   ALL_CALENDARS = [
     { ...WHOLE_SCHOOL, yearLabel: "Whole School" },
+  { ...FOSPS, yearLabel: "Friends of St Paul's" },
     ...YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, yearLabel: g.label }))),
     { ...FOSPS, yearLabel: "Friends of St Paul's" },
   ];
@@ -108,6 +109,11 @@ function fillCalendarPicker() {
   wholeSchoolOpt.textContent = WHOLE_SCHOOL.label;
   el.calendarSelect.appendChild(wholeSchoolOpt);
 
+  const fospsOpt = document.createElement("option");
+  fospsOpt.value = FOSPS.code;
+  fospsOpt.textContent = FOSPS.label;
+  el.calendarSelect.appendChild(fospsOpt);
+
   for (const group of YEAR_GROUPS) {
     const optgroup = document.createElement("optgroup");
     optgroup.label = group.label;
@@ -119,10 +125,6 @@ function fillCalendarPicker() {
     }
     el.calendarSelect.appendChild(optgroup);
   }
-  const fospsOpt = document.createElement("option");
-  fospsOpt.value = FOSPS.code;
-  fospsOpt.textContent = "FOSPS";
-  el.calendarSelect.appendChild(fospsOpt);
 }
 
 function init() {
