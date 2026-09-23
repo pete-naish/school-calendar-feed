@@ -2,7 +2,12 @@
 anyone but this site: every request from a parent's browser to a third party
 tells that party their IP address and that they looked at a school calendar.
 Fonts are served from docs/assets/fonts/ rather than Google Fonts for that
-reason; this keeps it that way."""
+reason; this keeps it that way.
+
+The one exception is STATS_HOST: the class rep tool's own Cloudflare Pages
+project, which gets a beacon only when a parent clicks a subscribe link (never
+on page load) and keeps nothing from it but an anonymous monthly tally per
+calendar and app (tool/functions/api/subscribe-click.js)."""
 
 from __future__ import annotations
 
@@ -24,6 +29,7 @@ JS = (DOCS / "assets" / "calendar.js").read_text()
 ASSETS = DOCS / "assets"
 FONTS = ASSETS / "fonts"
 VENDOR = ASSETS / "vendor"
+STATS_HOST = "calendar-admin.nai.sh"
 
 
 def _absolute_hosts(urls):
@@ -48,14 +54,25 @@ def _loaded_hosts() -> dict[str, set[str]]:
     css_loads = lambda text: re.findall(r"@import\s+(?:url\()?[\"']?([^\"')\s;]+)", text, re.I) + re.findall(
         r"url\(\s*[\"']?([^\"')]+)", text, re.I
     )
-    js_loads = re.findall(r"\bimport\s*(?:[\w*{}\s,]+from\s*)?\(?\s*[\"']([^\"']+)", JS) + re.findall(
-        r"\bfetch\(\s*[\"'`]([^\"'`]+)", JS
+    js_loads = (
+        re.findall(r"\bimport\s*(?:[\w*{}\s,]+from\s*)?\(?\s*[\"']([^\"']+)", JS)
+        + _call_targets("fetch", JS)
+        + _call_targets("sendBeacon", JS)
     )
     return {
         "index.html": _absolute_hosts(html_loads + css_loads(INDEX)),
         "calendar.css": _absolute_hosts(css_loads(CSS)),
         "calendar.js": _absolute_hosts(js_loads),
     }
+
+
+def _call_targets(fn: str, js: str) -> list[str]:
+    """The URLs passed to fn(...) - a string literal, or a constant naming one
+    (`const STATS_URL = "https://..."`)."""
+    constants = dict(re.findall(r"\bconst\s+(\w+)\s*=\s*[\"'`]([^\"'`]+)[\"'`]", js))
+    targets = re.findall(rf"\b{fn}\(\s*[\"'`]([^\"'`]+)", js)
+    targets += [constants.get(name, name) for name in re.findall(rf"\b{fn}\(\s*([A-Za-z_]\w*)", js)]
+    return targets
 
 
 def test_no_google_fonts_anywhere():
@@ -65,9 +82,27 @@ def test_no_google_fonts_anywhere():
 
 
 def test_page_loads_nothing_from_third_parties():
-    """Not fonts, not scripts (ical.js is vendored in assets/vendor/), nothing."""
-    for name, hosts in _loaded_hosts().items():
-        assert not hosts, f"{name} loads from {sorted(hosts)}"
+    """Not fonts, not scripts (ical.js is vendored in assets/vendor/), nothing -
+    bar the click-count beacon to the rep tool's own endpoint (see the module
+    docstring), which is checked separately below."""
+    hosts = _loaded_hosts()
+    hosts["calendar.js"] -= {STATS_HOST}
+    for name, found in hosts.items():
+        assert not found, f"{name} loads from {sorted(found)}"
+
+
+def test_the_click_count_host_only_ever_gets_a_beacon():
+    """It's reached by sendBeacon() from a click handler, never fetched,
+    imported or embedded - so merely opening the page tells it nothing."""
+    assert _absolute_hosts(_call_targets("sendBeacon", JS)) == {STATS_HOST}
+    for name, text in {"index.html": INDEX, "calendar.css": CSS}.items():
+        assert STATS_HOST not in text, name
+    assert STATS_HOST not in _absolute_hosts(_call_targets("fetch", JS))
+
+
+def test_the_scanner_would_notice_a_beacon_via_a_constant():
+    js = 'const URL_X = "https://tracker.example/b";\nnavigator.sendBeacon(URL_X, "{}");'
+    assert _absolute_hosts(_call_targets("sendBeacon", js)) == {"tracker.example"}
 
 
 def test_the_scanner_would_notice_a_cdn_import():

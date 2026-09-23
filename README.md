@@ -267,6 +267,14 @@ chroma, with a lighter tint for the alphabetically second class in each year, an
 "Everyone" (whole school) as a neutral grey rather than a 9th hue (see
 `docs/assets/calendar.css` for the values and contrast notes).
 
+Clicking a subscribe link sends one anonymous beacon (`{calendar, platform}`,
+nothing else) to the class rep tool's `/api/subscribe-click`, which keeps a
+monthly count per calendar and app - a rough indication of uptake, since
+GitHub Pages has no logs to count feed fetches from. It's the only request
+the page makes beyond its own origin, and never on page load
+(`tests/test_public_site.py` checks both). See `tool/README.md`'s "Subscribe
+click counts".
+
 Because `ical.js`'s own offset math for an `add_missing_timezones()`-style
 (RDATE-list) `VTIMEZONE` doesn't reliably resolve the correct side of a DST
 change, `calendar.js` registers the embedded `VTIMEZONE` (for EXDATE/RRULE

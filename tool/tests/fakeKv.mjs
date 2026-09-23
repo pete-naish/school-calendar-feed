@@ -24,6 +24,10 @@ export class FakeKV {
     return this.#store.has(key);
   }
 
+  get size() {
+    return this.#store.size;
+  }
+
   expireAll() {
     this.#store.clear();
   }

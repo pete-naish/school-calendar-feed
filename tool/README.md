@@ -96,7 +96,9 @@ integration.
   below and isn't mirrored from anywhere, since it has no
   `data/manual_events/` file at all), `auth.js` (passcode check, in constant
   time, and the per-calendar rate limit - see "Rate limiting" below),
-  `rateLimit.js` (that limit's policy and its KV key/IP helpers), `github.js`
+  `rateLimit.js` (that limit's policy and its KV key/IP helpers),
+  `clickStats.js` (the subscribe-click counter's allowed values and KV key -
+  see "Subscribe click counts" below), `github.js`
   (GitHub Contents API get/commit for any JSON file in the repo, retrying a
   concurrent-edit conflict, a GitHub 5xx, or a network failure), `validate.js`
   (sanitizes/validates event data from both the LLM and the frontend form -
@@ -284,7 +286,9 @@ as before. A save where every event was a duplicate doesn't trigger one.
    binding named `RATE_LIMITS` (for both Production and Preview), pointing at
    a KV namespace you create or reuse there - see "Rate limiting" below for
    what this is for. Without it the tool still works, just with no throttling
-   on wrong passcode guesses.
+   on wrong passcode guesses. Add a second binding named `STATS` the same
+   way, pointing at its own namespace - see "Subscribe click counts" below.
+   Without it, clicks just aren't counted.
 3. Under the project's **Settings → Environment variables** (as secrets, for
    both Production and Preview), set:
    - `CLASS_PASSWORDS` - a JSON object mapping each of the 16 calendar codes
@@ -385,6 +389,37 @@ too, as a second layer that blocks abusive requests at the edge before they
 even reach this code - but they need that zone to exist, which a `CNAME`
 record from another DNS host (as `.pages.dev` custom domains often are)
 doesn't give you.
+
+## Subscribe click counts
+
+`POST /api/subscribe-click` (`functions/api/subscribe-click.js`) is the one
+endpoint the *public* landing page calls, and has no passcode. When a parent
+clicks a subscribe link there (a platform button, a per-calendar link under
+one, or a plain feed address under "Other apps"), `docs/assets/calendar.js`
+sends a `navigator.sendBeacon()` holding `{calendar, platform}`, and this adds
+one to a monthly counter in `env.STATS`:
+
+    clicks:2026-09:rec-a:apple = 7
+
+That's all that's stored - no IP, user agent, cookie or identifier. Both
+values are checked against fixed lists (`_shared/clickStats.js`), and beacons
+without `Origin: https://calendar.nai.sh` are ignored; it always answers 204.
+The page only sends beacons when served from calendar.nai.sh, so local
+testing never counts.
+
+What the numbers mean: subscribe *clicks*, not active subscribers - someone
+who clicks and then cancels in their calendar app still counts, and someone
+who copies a feed address without clicking it doesn't. The Origin check is a
+junk filter, not protection (anyone can forge it with curl), and like the
+rate limit it's best-effort (no atomic increment in KV). Treat the counts as
+a rough indication.
+
+**Set up**: add a KV namespace binding named `STATS` (Production and Preview)
+under **Settings → Functions → KV namespace bindings**, pointing at a new
+namespace. Without it the endpoint is a silent no-op.
+
+**Reading the counts**: Cloudflare dashboard → **Storage & databases → KV** →
+the `STATS` namespace lists every key with its value.
 
 ## Local development
 

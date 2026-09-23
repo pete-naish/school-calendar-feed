@@ -373,6 +373,29 @@ function feedUrls(cal) {
   return { https, webcal: https.replace(/^https?:/, "webcal:") };
 }
 
+// Anonymous subscribe-click counts: one beacon per subscribe link clicked,
+// holding only which calendar and which app - no cookies, no identifiers, and
+// nothing sent on page load. The endpoint is the class rep tool's own
+// (tool/functions/api/subscribe-click.js), which keeps a monthly tally per
+// pair and nothing else. Only the live site counts, so local testing doesn't.
+const STATS_URL = "https://calendar-admin.nai.sh/api/subscribe-click";
+const STATS_HOST = "calendar.nai.sh";
+
+function tagClick(link, cal, platform) {
+  link.dataset.cal = cal.code;
+  link.dataset.platform = platform;
+}
+
+function countClick(event) {
+  const link = event.target.closest("a[data-cal]");
+  if (!link || window.location.hostname !== STATS_HOST) return;
+  try {
+    navigator.sendBeacon(STATS_URL, JSON.stringify({ calendar: link.dataset.cal, platform: link.dataset.platform }));
+  } catch {
+    // Never let counting get in the way of subscribing.
+  }
+}
+
 function displayName(cal) {
   return cal.groupLabel ? `${cal.groupLabel} ${cal.label}` : cal.label;
 }
@@ -482,6 +505,7 @@ function renderAddActions() {
     if (selected.length === 1) {
       control = document.createElement("a");
       control.href = platform.url(selected[0]);
+      tagClick(control, selected[0], platform.key);
       control.setAttribute("aria-label", `Add ${displayName(selected[0])} to ${platform.label}`);
     } else if (selected.length === 0) {
       control = document.createElement("span");
@@ -508,6 +532,7 @@ function renderAddActions() {
       const item = document.createElement("li");
       const link = document.createElement("a");
       link.href = platform.url(cal);
+      tagClick(link, cal, platform.key);
       link.textContent = `Subscribe to ${displayName(cal)}`;
       item.appendChild(link);
       el.addList.appendChild(item);
@@ -537,6 +562,7 @@ function renderIcsLinks() {
   for (const cal of displayOrder()) {
     const link = document.createElement("a");
     link.href = feedUrls(cal).https;
+    tagClick(link, cal, "link");
     link.textContent = displayName(cal);
     el.icsLinks.appendChild(link);
   }
@@ -845,6 +871,10 @@ async function init() {
     render();
   });
   el.refreshButton.addEventListener("click", handleRefresh);
+  // Delegated, since renderAddActions() rebuilds these links on every tick.
+  for (const container of [el.addButtons, el.addList, el.icsLinks]) {
+    container?.addEventListener("click", countClick);
+  }
   for (const btn of el.viewButtons) {
     btn.addEventListener("click", () => {
       const newView = btn.dataset.view;
