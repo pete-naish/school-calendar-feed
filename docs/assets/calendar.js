@@ -66,6 +66,12 @@ const STORAGE_KEY = "stpauls-calendar-toggles";
 const LEGACY_TOGGLE_KEYS = { "rec-a": "rr", "rec-b": "rgp" };
 const VIEW_STORAGE_KEY = "stpauls-calendar-view";
 const VIEWS = ["month", "week", "day"];
+// Which "Subscribe to ..." links (one per platform + calendar) have been
+// clicked, so a parent working through several can see which are done. Per
+// tab session only: sessionStorage survives the Google/Outlook links
+// navigating away and back, but a later visit starts fresh, since a click
+// isn't proof the subscription actually went through.
+const CLICKED_STORAGE_KEY = "stpauls-subscribe-clicked";
 
 const TODAY = new Date();
 const WINDOW_START = ICAL.Time.fromJSDate(addDays(TODAY, -90), true);
@@ -189,6 +195,24 @@ function saveView(view) {
     localStorage.setItem(VIEW_STORAGE_KEY, view);
   } catch {
     // localStorage unavailable - view choice just won't persist
+  }
+}
+
+function loadClickedLinks() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(CLICKED_STORAGE_KEY));
+    if (Array.isArray(saved)) return new Set(saved);
+  } catch {
+    // sessionStorage unavailable or unreadable - start with nothing clicked
+  }
+  return new Set();
+}
+
+function saveClickedLinks(clicked) {
+  try {
+    sessionStorage.setItem(CLICKED_STORAGE_KEY, JSON.stringify([...clicked]));
+  } catch {
+    // sessionStorage unavailable - the grey-out just won't survive a reload
   }
 }
 
@@ -358,6 +382,7 @@ const el = {
 };
 
 let toggleState = loadToggleState();
+const clickedLinks = loadClickedLinks();
 let dayIndex = new Map();
 let currentView = loadView();
 let viewedDate = normalizeAnchor(TODAY, currentView);
@@ -534,6 +559,13 @@ function renderAddActions() {
       link.href = platform.url(cal);
       tagClick(link, cal, platform.key);
       link.textContent = `Subscribe to ${displayName(cal)}`;
+      const clickedKey = `${platform.key}:${cal.code}`;
+      link.classList.toggle("is-clicked", clickedLinks.has(clickedKey));
+      link.addEventListener("click", () => {
+        clickedLinks.add(clickedKey);
+        saveClickedLinks(clickedLinks);
+        link.classList.add("is-clicked");
+      });
       item.appendChild(link);
       el.addList.appendChild(item);
     }

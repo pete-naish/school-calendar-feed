@@ -369,6 +369,13 @@
   text-underline-offset: 0.2em;
 }
 
+/* Already clicked this session (see CLICKED_STORAGE_KEY in calendar.js), so a
+   parent subscribing to several can see which are left. */
+.cal-add-list a.is-clicked {
+  color: var(--cal-muted);
+  font-weight: 400;
+}
+
 /* Plain feed addresses in the facts strip, for apps not covered above. */
 #ics-links a {
   color: inherit;
