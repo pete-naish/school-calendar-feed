@@ -188,6 +188,20 @@ button.link-button {
   margin-top: 1rem;
 }
 
+#past-events {
+  margin-top: 1.5rem;
+}
+
+#past-events summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+#past-cards .event-card {
+  opacity: 0.85;
+}
+
 .ws-title {
   margin: 0 0 0.15rem;
   font-size: 1rem;

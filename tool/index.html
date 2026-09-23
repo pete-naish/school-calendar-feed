@@ -68,8 +68,12 @@
         <h3>Your calendar's events</h3>
         <p id="school-events-notice" class="hint" hidden>Events marked <span class="badge">From school calendar</span> come from the school's own feed - only their location and description can be edited here.</p>
         <p id="existing-loading" class="hint">Loading…</p>
-        <p id="existing-empty" class="hint" hidden>No events saved yet.</p>
+        <p id="existing-empty" class="hint" hidden>No upcoming events.</p>
         <div id="existing-cards"></div>
+        <details id="past-events" hidden>
+          <summary>Past events (<span id="past-count">0</span>)</summary>
+          <div id="past-cards"></div>
+        </details>
       </section>
     </section>
   </main>

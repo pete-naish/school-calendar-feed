@@ -35,9 +35,8 @@ function setYearGroups(groups) {
   YEAR_GROUPS = groups;
   ALL_CALENDARS = [
     { ...WHOLE_SCHOOL, yearLabel: "Whole School" },
-  { ...FOSPS, yearLabel: "Friends of St Paul's" },
-    ...YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, yearLabel: g.label }))),
     { ...FOSPS, yearLabel: "Friends of St Paul's" },
+    ...YEAR_GROUPS.flatMap((g) => g.classes.map((c) => ({ ...c, yearLabel: g.label }))),
   ];
 }
 
@@ -71,6 +70,9 @@ const el = {
   existingLoading: document.getElementById("existing-loading"),
   existingEmpty: document.getElementById("existing-empty"),
   existingCards: document.getElementById("existing-cards"),
+  pastEvents: document.getElementById("past-events"),
+  pastCount: document.getElementById("past-count"),
+  pastCards: document.getElementById("past-cards"),
   schoolEventsNotice: document.getElementById("school-events-notice"),
   cardTemplate: document.getElementById("event-card-template"),
   weekListButton: document.getElementById("week-list-button"),
@@ -302,6 +304,9 @@ function handleSwitchCalendar() {
   el.pasteTextarea.value = "";
   el.draftCards.innerHTML = "";
   el.existingCards.innerHTML = "";
+  el.pastCards.innerHTML = "";
+  el.pastEvents.open = false;
+  el.pastEvents.hidden = true;
   el.saveSuccess.hidden = true;
   el.weekListPanel.hidden = true;
   el.weekListError.hidden = true;
@@ -701,6 +706,53 @@ function formatEventDate(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// Today's date (YYYY-MM-DD) in London, where the school is - not the
+// browser's own timezone.
+function todayIso() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+}
+
+// The last day an event touches: its end date, a repeat's until date, or a
+// moved occurrence's new date, whichever is latest. ISO dates compare as
+// strings.
+function eventLastDay(event) {
+  const days = [event.date, event.end_date, event.recurrence && event.recurrence.until];
+  for (const exc of event.exceptions || []) {
+    if (exc.action === "moved") days.push(exc.new_date);
+  }
+  return days.filter(Boolean).reduce((a, b) => (b > a ? b : a));
+}
+
+// Past once its last day is over - so a weekly series stays upcoming until
+// its final occurrence, and a trip until its last day.
+function isPastEvent(event, today) {
+  return eventLastDay(event) < today;
+}
+
+// Upcoming events in date order, then past ones newest first in the folded
+// "Past events" section, so the list a rep lands on doesn't fill up with
+// last term's events.
+function renderEventLists(events, makeCard) {
+  el.existingLoading.hidden = true;
+  el.existingCards.innerHTML = "";
+  el.pastCards.innerHTML = "";
+  const today = todayIso();
+  const past = [];
+  for (const event of events) {
+    if (isPastEvent(event, today)) past.push(event);
+    else el.existingCards.appendChild(makeCard(event));
+  }
+  for (const event of past.reverse()) el.pastCards.appendChild(makeCard(event));
+  updateEventListState();
+}
+
+function updateEventListState() {
+  const pastTotal = el.pastCards.children.length;
+  el.existingEmpty.hidden = el.existingCards.children.length > 0;
+  el.pastCount.textContent = pastTotal;
+  el.pastEvents.hidden = pastTotal === 0;
+}
+
 // The date, plus the start (and end) time when the event has one.
 function formatEventWhen(event) {
   const date = formatEventDate(event.date);
@@ -716,13 +768,7 @@ function formatEventWhen(event) {
 // save button.
 function renderWholeSchoolEvents(events) {
   el.schoolEventsNotice.hidden = true;
-  el.existingLoading.hidden = true;
-  el.existingCards.innerHTML = "";
-  el.existingEmpty.hidden = events.length > 0;
-
-  for (const event of events) {
-    el.existingCards.appendChild(createSchoolEventCard(event));
-  }
+  renderEventLists(events, createSchoolEventCard);
 }
 
 // The same card also stands in for a school-sourced event in a class's own
@@ -805,34 +851,27 @@ async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
 }
 
 function renderExistingEvents(events) {
-  el.existingLoading.hidden = true;
-  el.existingCards.innerHTML = "";
-  el.existingEmpty.hidden = events.length > 0;
-
   el.schoolEventsNotice.hidden = !events.some((e) => e.school_event);
+  renderEventLists(events, (event) => (event.school_event ? createSchoolEventCard(event) : createExistingEventCard(event)));
+}
 
-  for (const event of events) {
-    if (event.school_event) {
-      el.existingCards.appendChild(createSchoolEventCard(event));
-      continue;
-    }
-    const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
-    fillCardFields(node, event);
-    wireCardDefaultEndTime(node);
-    wireRecurrenceToggle(node);
-    wireExceptionsSection(node, event.exceptions, { shared: Boolean(event.year_group) });
-    setupYearGroupControls(node, { saved: true, shared: Boolean(event.year_group) });
+function createExistingEventCard(event) {
+  const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
+  fillCardFields(node, event);
+  wireCardDefaultEndTime(node);
+  wireRecurrenceToggle(node);
+  wireExceptionsSection(node, event.exceptions, { shared: Boolean(event.year_group) });
+  setupYearGroupControls(node, { saved: true, shared: Boolean(event.year_group) });
 
-    const saveButton = node.querySelector(".card-save-button");
-    saveButton.hidden = false;
-    saveButton.addEventListener("click", () => handleUpdateExisting(node, event.id, saveButton));
+  const saveButton = node.querySelector(".card-save-button");
+  saveButton.hidden = false;
+  saveButton.addEventListener("click", () => handleUpdateExisting(node, event.id, saveButton));
 
-    const removeButton = node.querySelector(".card-remove-button");
-    removeButton.textContent = "Delete";
-    removeButton.addEventListener("click", () => handleDeleteExisting(node, event.id, removeButton));
+  const removeButton = node.querySelector(".card-remove-button");
+  removeButton.textContent = "Delete";
+  removeButton.addEventListener("click", () => handleDeleteExisting(node, event.id, removeButton));
 
-    el.existingCards.appendChild(node);
-  }
+  return node;
 }
 
 async function handleUpdateExisting(card, id, button) {
@@ -902,7 +941,7 @@ async function handleDeleteExisting(card, id, button) {
   }
 
   card.remove();
-  el.existingEmpty.hidden = el.existingCards.children.length > 0;
+  updateEventListState();
 }
 
 init();
