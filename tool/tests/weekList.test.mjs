@@ -86,7 +86,7 @@ test("all-day multi-day event shows its range under its first day", () => {
     "DTEND;VALUE=DATE:20261101",
   ]);
   const { text } = week("2026-10-26", { wholeSchool });
-  assert.match(text, /\*Tue 27 Oct\*\n• Half Term Break \(Tue 27 Oct – Sat 31 Oct\) — Whole School/);
+  assert.match(text, /\*Tue 27 Oct\*\n• Whole School: Half Term Break \(Tue 27 Oct – Sat 31 Oct\)/);
   assert.equal(week("2026-10-19", { wholeSchool }).count, 0);
 });
 
@@ -155,7 +155,7 @@ test("HTML in a description is cleaned; location is unescaped; whole-school is m
       "*What's on this week (Mon 21 – Sun 27 Sep)*",
       "",
       "*Tue 22 Sep*",
-      "• Nasal Flu Spray — Whole School",
+      "• Whole School: Nasal Flu Spray",
       "  Location: School hall, main entrance",
       "  R/KS1 AM",
       "  KS2 PM",
@@ -166,7 +166,7 @@ test("HTML in a description is cleaned; location is unescaped; whole-school is m
 
 test("folded lines are rejoined", () => {
   const wholeSchool = "BEGIN:VEVENT\r\nUID:stpauls-4@school-calendar-feed\r\nSUMMARY:Long \r\n title here\r\nDTSTART;VALUE=DATE:20260922\r\nEND:VEVENT";
-  assert.match(week("2026-09-21", { wholeSchool }).text, /• Long title here/);
+  assert.match(week("2026-09-21", { wholeSchool }).text, /• Whole School: Long title here/);
 });
 
 test("whole-school login lists only whole-school events, unmarked", () => {

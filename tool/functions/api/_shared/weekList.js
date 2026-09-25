@@ -142,8 +142,8 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
     for (const item of dayItems) {
       const time = item.startTime ? `${formatTime(item.startTime)} ` : "";
       const range = item.endDay > item.startDay ? ` (${shortDate(item.startDay)} – ${shortDate(item.endDay)})` : "";
-      const source = item.wholeSchool && calendar !== "whole-school" ? " — Whole School" : "";
-      lines.push(`• ${time}${item.title}${range}${source}`);
+      const source = item.wholeSchool && calendar !== "whole-school" ? "Whole School: " : "";
+      lines.push(`• ${time}${source}${item.title}${range}`);
       if (item.location) lines.push(`  Location: ${item.location}`);
       for (const line of item.description) lines.push(`  ${line}`);
     }

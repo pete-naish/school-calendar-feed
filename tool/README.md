@@ -196,7 +196,8 @@ writes: recurrences are `DAILY`/`WEEKLY`/`MONTHLY` with `INTERVAL` and
 one-off event, so a week's occurrences are worked out with plain
 London-calendar-date arithmetic (no ical.js, no time-zone maths). School
 descriptions contain raw HTML, which is stripped. Whole-school events are
-marked "— Whole School" in a class's list.
+prefixed "Whole School:" in a class's list, matching the "FOSPS:" prefix
+FOSPS events already carry.
 
 Tests: `node --test "tool/tests/*.test.mjs"` (no dependencies; also run in CI).
 
