@@ -178,14 +178,15 @@ events, their existence is the school's call.
 
 Every calendar entry (Whole School included) has a **What's on this week**
 button that builds the Sunday WhatsApp message: the calendar's own events
-plus the whole-school ones for one Monday-Sunday week, grouped by day
+plus the whole-school ones (and, for a class, the FOSPS ones, shown with their
+`FOSPS:` prefix) for one Monday-Sunday week, grouped by day
 (`*bold*` day headings, `•` bullets, then location and description). The text
 lands in an editable box with a **Copy for WhatsApp** button, and the ‹ ›
 arrows step to other weeks. The default week is this one - or, on a Sunday
 (London time), the coming one.
 
 `/api/week` (`functions/api/week.js`, logic in `_shared/weekList.js`) reads
-the *published* `<calendar>.ics` and `whole-school.ics` rather than the source
+the *published* `<calendar>.ics`, `whole-school.ics` and `fosps.ics` rather than the source
 JSON, so it shows what parents' calendar apps show - closure days, cancelled
 and moved occurrences, and description/location edits are already applied -
 but an edit saved just now only appears once the triggered rebuild has

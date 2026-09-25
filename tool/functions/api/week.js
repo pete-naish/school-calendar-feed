@@ -1,4 +1,4 @@
-import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
+import { FOSPS, isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
 import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
 import { retryable } from "./_shared/github.js";
 import { fetchIcsText, isoToDay, dayToIso } from "./_shared/ics.js";
@@ -14,9 +14,10 @@ function isValidIsoDate(value) {
 }
 
 // The "What's on this week" WhatsApp list for the signed-in calendar: its own
-// events plus whole-school ones, Monday-Sunday, read from the published .ics
-// files (see _shared/weekList.js). `week_start` (any date in the wanted week)
-// is optional; the default is this week, or next week on a Sunday.
+// events plus whole-school ones (and FOSPS ones, for a class), Monday-Sunday,
+// read from the published .ics files (see _shared/weekList.js). `week_start`
+// (any date in the wanted week) is optional; the default is this week, or next
+// week on a Sunday.
 export async function onRequestPost({ request, env }) {
   let body;
   try {
@@ -41,14 +42,17 @@ export async function onRequestPost({ request, env }) {
 
   const weekStart = requestedWeek ? snapToMonday(requestedWeek) : defaultWeekStart();
 
+  const isClass = !isWholeSchoolCalendar(calendar) && calendar !== FOSPS.code;
+
   try {
-    const [wholeSchoolIcs, calendarIcs] = await retryable(() =>
+    const [wholeSchoolIcs, calendarIcs, fospsIcs] = await retryable(() =>
       Promise.all([
         fetchIcsText("whole-school.ics"),
         isWholeSchoolCalendar(calendar) ? null : fetchIcsText(`${calendar}.ics`),
+        isClass ? fetchIcsText(`${FOSPS.code}.ics`) : null,
       ])
     );
-    const { text, count } = buildWeekText({ calendarIcs, wholeSchoolIcs, calendar, weekStart });
+    const { text, count } = buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs, calendar, weekStart });
     return jsonResponse({ week_start: weekStart, week_end: weekEnd(weekStart), text, count });
   } catch (err) {
     return jsonResponse(readErrorResponse(err), 502);

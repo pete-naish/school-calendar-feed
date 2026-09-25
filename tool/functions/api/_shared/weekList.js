@@ -1,6 +1,7 @@
 // Builds the "What's on this week" list class reps paste into their class
 // WhatsApp group each Sunday, from the site's published .ics files (see
-// ics.js): the calendar's own events plus whole-school ones, for one
+// ics.js): the calendar's own events plus whole-school ones (and, for a
+// class, FOSPS ones), for one
 // Monday-Sunday week. Reading the published feeds means closure days,
 // cancelled/moved occurrences and description/location edits are already
 // applied, exactly as parents' calendar apps see them.
@@ -110,13 +111,16 @@ function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = f
 }
 
 // `calendarIcs` is the logged-in calendar's own .ics text (null for Whole
-// School, whose events are all in `wholeSchoolIcs`). Returns the WhatsApp
+// School, whose events are all in `wholeSchoolIcs`). `fospsIcs` is FOSPS's
+// .ics text for a class calendar, else null; those events keep their
+// "FOSPS: " prefix so parents can tell them apart. Returns the WhatsApp
 // text (*bold* day headings, • bullets) and how many events it lists.
-export function buildWeekText({ calendarIcs, wholeSchoolIcs, calendar, weekStart }) {
+export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, calendar, weekStart }) {
   const weekStartDay = isoToDay(weekStart);
   const items = [
     ...(calendarIcs ? collectItems(calendarIcs, weekStartDay, { titlePrefix: titlePrefixFor(calendar) }) : []),
     ...collectItems(wholeSchoolIcs, weekStartDay, { wholeSchool: true }),
+    ...(fospsIcs ? collectItems(fospsIcs, weekStartDay) : []),
   ];
 
   // A multi-day event that began before the week is listed under Monday.

@@ -14,8 +14,8 @@ const calendar = (...events) =>
 
 const EMPTY = calendar();
 
-function week(weekStart, { own = null, wholeSchool = EMPTY, cal = "rec-a" } = {}) {
-  return buildWeekText({ calendarIcs: own, wholeSchoolIcs: wholeSchool, calendar: cal, weekStart });
+function week(weekStart, { own = null, wholeSchool = EMPTY, fosps = null, cal = "rec-a" } = {}) {
+  return buildWeekText({ calendarIcs: own, wholeSchoolIcs: wholeSchool, fospsIcs: fosps, calendar: cal, weekStart });
 }
 
 const PE_DAY = calendar([
@@ -88,6 +88,24 @@ test("all-day multi-day event shows its range under its first day", () => {
   const { text } = week("2026-10-26", { wholeSchool });
   assert.match(text, /\*Tue 27 Oct\*\n• Half Term Break \(Tue 27 Oct – Sat 31 Oct\) — Whole School/);
   assert.equal(week("2026-10-19", { wholeSchool }).count, 0);
+});
+
+test("FOSPS events are listed with their FOSPS prefix", () => {
+  const fosps = calendar([
+    "UID:manual-wf@school-calendar-feed",
+    "SUMMARY:FOSPS: Winter Fair",
+    "DTSTART;TZID=Europe/London:20261205T120000",
+    "DTEND;TZID=Europe/London:20261205T150000",
+  ]);
+  const own = calendar([
+    "UID:manual-x@school-calendar-feed",
+    `SUMMARY:${PREFIX}Class assembly`,
+    "DTSTART;TZID=Europe/London:20261204T090000",
+    "DTEND;TZID=Europe/London:20261204T093000",
+  ]);
+  const { text, count } = week("2026-11-30", { own, fosps });
+  assert.equal(count, 2);
+  assert.match(text, /\*Fri 4 Dec\*\n• 9am Class assembly\n\n\*Sat 5 Dec\*\n• 12pm FOSPS: Winter Fair$/);
 });
 
 test("a multi-day event that began before the week is listed under Monday", () => {
