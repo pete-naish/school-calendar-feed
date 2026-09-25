@@ -37,5 +37,18 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "9d9324a69303",
+    "title": "Wreath Making",
+    "date": "2026-12-08",
+    "end_date": "2026-12-09",
+    "time": null,
+    "end_time": null,
+    "description": null,
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
