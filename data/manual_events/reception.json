@@ -28,5 +28,18 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "85b8964dbdd5",
+    "title": "Harvest Vegetable Donations",
+    "date": "2026-09-30",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": "Bring vegetables such as carrots, cabbages, broccoli, small pumpkins and leeks for the Harvest learning topic. We will only need a few of each vegetable for each class.",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
