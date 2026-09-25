@@ -347,7 +347,6 @@ async function handleExtract() {
   for (const event of data.events || []) {
     addDraftCard(event);
   }
-  el.pasteTextarea.value = "";
 }
 
 const DEFAULT_MINUTES = 60;
@@ -647,6 +646,7 @@ async function handleSaveAll() {
   el.saveSuccess.textContent = `${data.saved} event(s) saved${skipped}. They'll appear in the calendar ${wait}.`;
   el.saveSuccess.hidden = false;
   el.draftCards.innerHTML = "";
+  el.pasteTextarea.value = "";
   updateDraftControlsVisibility();
 
   const listResult = await apiCall("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
