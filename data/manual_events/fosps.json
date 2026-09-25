@@ -11,5 +11,31 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "2057ca168318",
+    "title": "Pre-Loved Uniform & Fancy Dress Sale",
+    "date": "2026-10-09",
+    "end_date": null,
+    "time": "15:00",
+    "end_time": "16:00",
+    "description": null,
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
+  },
+  {
+    "id": "b9c55517796b",
+    "title": "Winter Fair",
+    "date": "2026-11-28",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": null,
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
