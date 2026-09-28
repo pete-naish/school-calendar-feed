@@ -796,3 +796,33 @@ def test_manual_events_for_a_class_live_under_its_generic_code(tmp_path, monkeyp
     (tmp_path / "y6-a.json").write_text('[{"id": "own", "title": "6L only", "date": "2026-10-01"}]')
     (tmp_path / "year6.json").write_text('[{"id": "shared", "title": "Year 6", "date": "2026-10-02"}]')
     assert [raw["id"] for raw in build_ics.load_class_manual_events("y6-a", "year6")] == ["own", "shared"]
+
+
+# --- apply_school_event_corrections() ---------------------------------------
+
+
+def test_school_event_correction_moves_all_day_event_dates():
+    raw = [{"id": 874, "title": "Half Term Break", "allDay": True, "start": "2026-10-27", "end": "2026-11-01"}]
+    corrected = build_ics.apply_school_event_corrections(raw, {"874": {"start": "2026-10-26", "end": "2026-10-30"}})
+    # `end` in the file is the last day; the raw/DTEND end is exclusive.
+    assert (corrected[0]["start"], corrected[0]["end"]) == ("2026-10-26", "2026-10-31")
+    assert raw[0]["start"] == "2026-10-27"  # the fetched dict isn't mutated
+
+
+def test_school_event_correction_drives_closure_dates():
+    raw = [{"id": 874, "title": "Half Term Break", "allDay": True, "start": "2026-10-27", "end": "2026-11-01"}]
+    corrected = build_ics.apply_school_event_corrections(raw, {"874": {"start": "2026-10-26", "end": "2026-10-30"}})
+    closures = build_ics.collect_closure_dates(corrected)
+    assert date(2026, 10, 26) in closures
+    assert date(2026, 10, 31) not in closures
+
+
+def test_school_event_correction_ignores_timed_events_and_unknown_ids():
+    raw = [{"id": 1, "title": "Assembly", "allDay": False, "start": "2026-10-27T09:00:00"}]
+    corrections = {"1": {"start": "2026-10-26"}, "999": {"start": "2026-10-26"}}
+    assert build_ics.apply_school_event_corrections(raw, corrections) == raw
+
+
+def test_load_school_event_corrections_missing_file_returns_empty(tmp_path, monkeypatch):
+    monkeypatch.setattr(build_ics, "SCHOOL_EVENT_CORRECTIONS_PATH", tmp_path / "missing.json")
+    assert build_ics.load_school_event_corrections() == {}

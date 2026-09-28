@@ -68,6 +68,14 @@ WHOLE_SCHOOL_OVERRIDES_PATH = Path(__file__).resolve().parent.parent / "data" / 
 
 _OVERRIDE_FIELDS = ("description", "location")
 
+# Date corrections for school-sourced all-day events the school has entered
+# with the wrong dates, hand-edited only (the class rep tool never writes
+# here, and can't edit dates) - {"<school event id>": {"start": "YYYY-MM-DD",
+# "end": "YYYY-MM-DD", "note": "..."}}, `end` being the LAST day (inclusive,
+# unlike DTEND), `note` just for humans. Applied to the raw event before
+# anything else reads it, so the corrected dates also drive closure_dates.
+SCHOOL_EVENT_CORRECTIONS_PATH = Path(__file__).resolve().parent.parent / "data" / "school_event_corrections.json"
+
 LONDON = ZoneInfo("Europe/London")
 UTC = timezone.utc
 
@@ -725,6 +733,35 @@ def save_whole_school_overrides(overrides: dict[str, dict[str, str]]) -> None:
         f.write("\n")
 
 
+def load_school_event_corrections() -> dict[str, dict]:
+    if not SCHOOL_EVENT_CORRECTIONS_PATH.exists():
+        return {}
+    with SCHOOL_EVENT_CORRECTIONS_PATH.open() as f:
+        return json.load(f)
+
+
+def apply_school_event_corrections(raw_events: list[dict], corrections: dict[str, dict]) -> list[dict]:
+    """The raw events with any date correction laid over them (as a copy -
+    the fetched dicts aren't mutated). Only all-day events are corrected; a
+    correction for a timed event, or one whose id isn't in the feed, is
+    ignored with a warning rather than failing the build."""
+    live_ids = {str(raw["id"]) for raw in raw_events}
+    for event_id in corrections.keys() - live_ids:
+        if raw_events:
+            print(f"WARNING: date correction for school event {event_id} matches nothing in the feed", file=sys.stderr)
+    corrected = []
+    for raw in raw_events:
+        correction = corrections.get(str(raw["id"]))
+        if correction and not raw.get("allDay"):
+            print(f"WARNING: ignoring date correction for timed school event {raw['id']}", file=sys.stderr)
+        elif correction:
+            start = date.fromisoformat(correction["start"])
+            last = date.fromisoformat(correction.get("end", correction["start"]))
+            raw = {**raw, "start": start.isoformat(), "end": (last + timedelta(days=1)).isoformat()}
+        corrected.append(raw)
+    return corrected
+
+
 def make_calendar(name: str, events: list[Event]) -> Calendar:
     cal = Calendar()
     cal.add("prodid", f"-//{UID_DOMAIN}//stpauls-enfield//EN")
@@ -758,7 +795,7 @@ def write_build_report(path: str, calendar_counts: dict[str, int]) -> None:
 def main() -> None:
     BUILD_PROBLEMS.clear()
     calendar_counts: dict[str, int] = {}
-    raw_events = fetch_events()
+    raw_events = apply_school_event_corrections(fetch_events(), load_school_event_corrections())
     if not raw_events:
         _note_problem(
             "school_feed_empty",

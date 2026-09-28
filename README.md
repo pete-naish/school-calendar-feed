@@ -236,6 +236,24 @@ events that were routed to a class calendar instead: a class's tool entry
 lists them (flagged as coming from the school's calendar) with the same
 description/location-only editing.
 
+### Correcting a school event's dates
+
+When the school's own calendar has an all-day event on the wrong dates (e.g.
+a half term entered a day late), `data/school_event_corrections.json` fixes
+it in our feeds without waiting on the school. It's hand-edited only - the
+class rep tool never touches it:
+
+```json
+{"874": {"start": "2026-10-26", "end": "2026-10-30", "note": "why"}}
+```
+
+Keyed by the school event id (from its UID), `end` is the last day
+(inclusive), `note` is just for humans. The corrected dates are used
+everywhere, including the closure dates that skip recurring class events.
+Timed events aren't supported. Once the school fixes its own entry (or the
+event leaves the feed) the entry is redundant and can be deleted - a
+correction whose id is no longer in the feed only logs a warning.
+
 ## Calendar preview (`docs/index.html`)
 
 The landing page embeds an interactive calendar (`docs/assets/calendar.js`,
