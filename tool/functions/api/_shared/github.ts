@@ -1,5 +1,6 @@
 import { yearGroupFor } from "./calendars.ts";
-import type { ApiError, Env, ManualEvent } from "./types.ts";
+import type { ApiError, ManualEvent } from "./types.ts";
+import type { Env } from "./env.ts";
 
 // What a commit mutator returns to write something: the new data plus anything
 // the caller wants back (e.g. a `saved` count). An ApiError instead aborts

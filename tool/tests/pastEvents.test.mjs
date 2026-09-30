@@ -1,18 +1,9 @@
 // Run with: node --test tool/tests/
 //
-// Which events app.js files under "Past events". app.js is a plain browser
-// script with no exports, so the helpers are cut out of its real source and
-// run here - the code under test is the code that ships.
+// Which events the tool files under "Past events" (appHelpers.ts).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import vm from "node:vm";
-
-const source = readFileSync(new URL("../app.js", import.meta.url), "utf8");
-const helpers = source.match(/function eventLastDay[\s\S]*?function isPastEvent\(event, today\) \{[\s\S]*?\n\}\n/);
-assert.ok(helpers, "the past-event helpers should be in app.js");
-
-const { eventLastDay, isPastEvent } = vm.runInNewContext(`${helpers[0]}; ({ eventLastDay, isPastEvent })`);
+import { eventLastDay, isPastEvent } from "../appHelpers.ts";
 
 const TODAY = "2026-09-23";
 

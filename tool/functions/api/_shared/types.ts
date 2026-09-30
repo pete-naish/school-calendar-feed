@@ -1,17 +1,7 @@
 // Shapes shared across the API, and with the tool's page (app.ts imports these
-// as types only). Dates are "YYYY-MM-DD" and times "HH:MM" (Europe/London)
+// as types only, so nothing here may depend on the Workers runtime - that's
+// env.ts). Dates are "YYYY-MM-DD" and times "HH:MM" (Europe/London)
 // throughout.
-
-// The Pages project's secrets and KV bindings (see tool/README.md). Both KV
-// bindings are optional: without RATE_LIMITS the passcode check fails open,
-// and without STATS subscribe clicks aren't counted.
-export interface Env {
-  CLASS_PASSWORDS: string;
-  ANTHROPIC_API_KEY: string;
-  GITHUB_TOKEN: string;
-  RATE_LIMITS?: KVNamespace;
-  STATS?: KVNamespace;
-}
 
 // What a request body is before anything has checked it.
 export type RequestBody = Record<string, unknown>;
@@ -89,11 +79,12 @@ export interface SchoolEvent {
   correction?: { note: string; school: SpanFields | null };
 }
 
-// POST /api/events-list: a class's own and year-shared manual events plus its
-// school events, or (for Whole School) just the school's events, unflagged.
-export type ListedEvent =
+// POST /api/events-list, for a class: its own and year-shared manual events
+// plus the school events routed to it (flagged `school_event`, and
+// `year_group` when the sibling class has them too).
+export type ClassListedEvent =
   | (ManualEvent & { year_group?: true; school_event?: undefined })
-  | (SchoolEvent & { school_event?: true; year_group?: boolean });
+  | (SchoolEvent & { school_event: true; year_group: boolean });
 
 export type PersonalDetailKind = "mobile" | "email" | "whatsapp";
 
@@ -151,8 +142,10 @@ export interface SaveResponse {
   rebuild_triggered: boolean;
 }
 
+// A class calendar gets ClassListedEvent[]; Whole School just the school's own
+// events, unflagged.
 export interface ListResponse {
-  events: ListedEvent[];
+  events: ClassListedEvent[] | SchoolEvent[];
 }
 
 export interface UpdateResponse {
@@ -170,11 +163,4 @@ export interface WeekResponse {
   week_end: string;
   text: string;
   count: number;
-}
-
-// The part of a Pages Functions context the endpoints use (the tests pass
-// just this).
-export interface ApiContext {
-  request: Request;
-  env: Env;
 }

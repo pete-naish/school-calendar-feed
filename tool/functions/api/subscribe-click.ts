@@ -12,7 +12,8 @@
 // Like rateLimit.js, it's best-effort - KV has no atomic increment, so two
 // clicks landing at once can count as one - and a no-op with no binding.
 import { STATS_ORIGIN, clickKey, isValidClick } from "./_shared/clickStats.ts";
-import type { ApiContext, RequestBody } from "./_shared/types.ts";
+import type { RequestBody } from "./_shared/types.ts";
+import type { ApiContext } from "./_shared/env.ts";
 
 const noContent = () => new Response(null, { status: 204 });
 

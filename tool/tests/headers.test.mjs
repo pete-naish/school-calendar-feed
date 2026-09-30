@@ -121,12 +121,14 @@ test("index.html loads only its own script and stylesheet, with no inline script
   for (const [, src] of html.matchAll(/\bsrc="([^"]*)"/gi)) assert.doesNotMatch(src, /^(https?:)?\/\//, src);
 });
 
-test("app.js and style.css use nothing the CSP would block", () => {
-  const js = read("app.js");
-  assert.doesNotMatch(js, /\beval\s*\(|new Function\b|setTimeout\(\s*["'`]|setInterval\(\s*["'`]/);
-  assert.doesNotMatch(js, /setAttribute\(\s*["']style["']|\.cssText\b|insertAdjacentHTML|document\.write/);
-  assert.doesNotMatch(js, /innerHTML\s*=\s*[^"'\s;]/, "innerHTML may only be cleared");
-  for (const [, url] of js.matchAll(/\bfetch\(\s*["'`]([^"'`]+)/g)) assert.match(url, /^\//, `fetch to ${url}`);
+test("the page's scripts and style.css use nothing the CSP would block", () => {
+  for (const file of ["app.js", "appHelpers.js"]) {
+    const js = read(file);
+    assert.doesNotMatch(js, /\beval\s*\(|new Function\b|setTimeout\(\s*["'`]|setInterval\(\s*["'`]/);
+    assert.doesNotMatch(js, /setAttribute\(\s*["']style["']|\.cssText\b|insertAdjacentHTML|document\.write/);
+    assert.doesNotMatch(js, /innerHTML\s*=\s*[^"'\s;]/, "innerHTML may only be cleared");
+    for (const [, url] of js.matchAll(/\bfetch\(\s*["'`]([^"'`]+)/g)) assert.match(url, /^\//, `fetch to ${url}`);
+  }
   const css = read("style.css");
   assert.doesNotMatch(css, /@import|url\(\s*["']?(https?:)?\/\//i);
 });

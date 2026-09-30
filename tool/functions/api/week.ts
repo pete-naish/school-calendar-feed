@@ -4,7 +4,8 @@ import { retryable } from "./_shared/github.ts";
 import { fetchIcsText, isoToDay, dayToIso } from "./_shared/ics.ts";
 import { buildWeekText, defaultWeekStart, snapToMonday, weekEnd } from "./_shared/weekList.ts";
 import { readErrorResponse } from "./_shared/errors.ts";
-import type { ApiContext, RequestBody } from "./_shared/types.ts";
+import type { RequestBody } from "./_shared/types.ts";
+import type { ApiContext } from "./_shared/env.ts";
 
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });

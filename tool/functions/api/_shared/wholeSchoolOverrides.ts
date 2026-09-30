@@ -6,7 +6,7 @@
 // school's own description (and as the LOCATION the school's feed never
 // has) on every build.
 import { commitJsonFile } from "./github.ts";
-import type { Env } from "./types.ts";
+import type { Env } from "./env.ts";
 
 export type Override = { description?: string; location?: string };
 

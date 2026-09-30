@@ -1,24 +1,12 @@
 // Run with: node --test tool/tests/
 //
-// The "Save anyway" button logic in app.js. app.js is a plain browser script
-// with no exports, so the helpers are cut out of its real source and run
-// against fake buttons - the code under test is the code that ships.
+// The "Save anyway" button logic in appHelpers.ts, run against fake buttons.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import vm from "node:vm";
+import { isConfirmPublic, armPublicConfirm, disarmPublicConfirm, confirmPublicField } from "../appHelpers.ts";
 
-const source = readFileSync(new URL("../app.js", import.meta.url), "utf8");
-const helpers = source.match(/function isConfirmPublic[\s\S]*?function confirmPublicField\(button\) \{[\s\S]*?\n\}\n/);
-assert.ok(helpers, "the confirm helpers should be in app.js");
-
-const { isConfirmPublic, armPublicConfirm, disarmPublicConfirm, confirmPublicField } = vm.runInNewContext(
-  `${helpers[0]}; ({ isConfirmPublic, armPublicConfirm, disarmPublicConfirm, confirmPublicField })`
-);
-
-// Objects made inside the vm context have a different Object.prototype, which
-// strict deepEqual rejects, so compare what they hold rather than what they are.
-const plain = (value) => JSON.parse(JSON.stringify(value));
+const source = readFileSync(new URL("../app.ts", import.meta.url), "utf8");
 
 // A button and its error line as the handlers see them; `watch` records the
 // "input" listener so the test can fire it, as an edit to the card would.
@@ -47,12 +35,12 @@ test("isConfirmPublic is only a 409 whose error is confirm_public", () => {
 
 test("arming shows the message, turns the button into Save anyway, and confirms the next save", () => {
   const { button, errorEl, watch } = fixture("Save changes");
-  assert.deepEqual(plain(confirmPublicField(button)), {});
+  assert.deepEqual(confirmPublicField(button), {});
   armPublicConfirm(button, "Save changes", errorEl, "Ring 07700? Save anyway?", watch);
   assert.equal(button.textContent, "Save anyway");
   assert.equal(errorEl.textContent, "Ring 07700? Save anyway?");
   assert.equal(errorEl.hidden, false);
-  assert.deepEqual(plain(confirmPublicField(button)), { confirm_public: true });
+  assert.deepEqual(confirmPublicField(button), { confirm_public: true });
 });
 
 test("the label comes back as it was even though the button said 'Saving…' when the server answered", () => {
@@ -63,7 +51,7 @@ test("the label comes back as it was even though the button said 'Saving…' whe
   armPublicConfirm(button, "Save changes", errorEl, "msg", watch);
   disarmPublicConfirm(button);
   assert.equal(button.textContent, "Save changes");
-  assert.deepEqual(plain(confirmPublicField(button)), {});
+  assert.deepEqual(confirmPublicField(button), {});
   assert.equal(button.dataset.label, undefined);
 });
 
@@ -82,7 +70,7 @@ test("any edit takes the confirmation back and hides the message, once", () => {
   watch.edit();
   assert.equal(button.textContent, "Save all");
   assert.equal(errorEl.hidden, true);
-  assert.deepEqual(plain(confirmPublicField(button)), {});
+  assert.deepEqual(confirmPublicField(button), {});
 });
 
 test("it can be armed again after being disarmed, or re-armed while armed, without corrupting the label", () => {

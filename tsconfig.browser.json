@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "newLine": "lf"
   },
-  "files": []
+  "files": ["tool/app.ts", "tool/appHelpers.ts"]
 }

@@ -5,7 +5,8 @@ import { fetchWholeSchoolEvents, fetchClassSchoolEvents } from "./_shared/wholeS
 import { applyOverrides } from "./_shared/wholeSchoolOverrides.ts";
 import { applyCorrections, CORRECTIONS_PATH } from "./_shared/schoolEventCorrections.ts";
 import { readErrorResponse } from "./_shared/errors.ts";
-import type { ApiContext, RequestBody } from "./_shared/types.ts";
+import type { RequestBody } from "./_shared/types.ts";
+import type { ApiContext } from "./_shared/env.ts";
 
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });

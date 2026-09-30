@@ -16,7 +16,8 @@
 import { commitJsonFile } from "./github.ts";
 import { isSchoolEventId } from "./wholeSchoolOverrides.ts";
 import { isoToDay, dayToIso, londonDayAndTime } from "./ics.ts";
-import type { Env, SchoolEvent, SpanFields } from "./types.ts";
+import type { SchoolEvent, SpanFields } from "./types.ts";
+import type { Env } from "./env.ts";
 
 export type Correction = { start: string; end: string; note: string };
 // A published event's own start and end, in the file's format.

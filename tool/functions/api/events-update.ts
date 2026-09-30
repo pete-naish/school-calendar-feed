@@ -7,7 +7,8 @@ import { commitWholeSchoolOverride } from "./_shared/wholeSchoolOverrides.ts";
 import { commitSchoolEventCorrection, schoolSpan, validateCorrection } from "./_shared/schoolEventCorrections.ts";
 import { fetchClassSchoolEvents, fetchWholeSchoolEvents } from "./_shared/wholeSchool.ts";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
-import type { ApiContext, Env, EventFields, RequestBody, SchoolEvent } from "./_shared/types.ts";
+import type { EventFields, RequestBody, SchoolEvent } from "./_shared/types.ts";
+import type { ApiContext, Env } from "./_shared/env.ts";
 import type { Override } from "./_shared/wholeSchoolOverrides.ts";
 import type { Correction } from "./_shared/schoolEventCorrections.ts";
 

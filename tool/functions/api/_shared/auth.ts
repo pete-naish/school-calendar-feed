@@ -4,7 +4,8 @@
 // time anyway, so how long a guess takes to be refused never says how much of
 // it was right.
 import { RATE_LIMIT, clientIp, rateLimitKey } from "./rateLimit.ts";
-import type { ApiError, Env } from "./types.ts";
+import type { ApiError } from "./types.ts";
+import type { Env } from "./env.ts";
 
 export type AuthResult = "ok" | "wrong_passcode" | "rate_limited";
 
