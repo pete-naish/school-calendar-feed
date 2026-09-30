@@ -159,7 +159,6 @@ test("HTML in a description is cleaned; location is unescaped", () => {
       "> Location: School hall, main entrance",
       "> R/KS1 AM",
       "> KS2 PM",
-      ">",
       "> Forms due Monday",
     ].join("\n")
   );

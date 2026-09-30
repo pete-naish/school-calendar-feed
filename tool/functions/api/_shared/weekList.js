@@ -161,10 +161,10 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
       const range = item.endDay > item.startDay ? ` (${shortDate(item.startDay)} – ${shortDate(item.endDay)})` : "";
       lines.push(`• ${time}${item.title}${range}`);
       // Details go in a WhatsApp quote block, which sets them apart from the
-      // titles and keeps wrapped lines indented. A bare ">" keeps a blank
-      // line between paragraphs inside the quote.
+      // titles and keeps wrapped lines indented. Blank lines between
+      // paragraphs are dropped: WhatsApp shows a bare ">" literally.
       const details = [...(item.location ? [`Location: ${item.location}`] : []), ...item.description];
-      lines.push(...details.map((line) => (line ? `> ${line}` : ">")));
+      lines.push(...details.filter(Boolean).map((line) => `> ${line}`));
     }
   }
 
