@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -817,10 +817,24 @@ def test_school_event_correction_drives_closure_dates():
     assert date(2026, 10, 31) not in closures
 
 
-def test_school_event_correction_ignores_timed_events_and_unknown_ids():
-    raw = [{"id": 1, "title": "Assembly", "allDay": False, "start": "2026-10-27T09:00:00"}]
-    corrections = {"1": {"start": "2026-10-26"}, "999": {"start": "2026-10-26"}}
+def test_school_event_correction_ignores_mismatched_shapes_and_unknown_ids():
+    raw = [
+        {"id": 1, "title": "Assembly", "allDay": False, "start": "2026-10-27T09:00:00"},
+        {"id": 2, "title": "Inset Day", "allDay": True, "start": "2026-10-27"},
+    ]
+    corrections = {"1": {"start": "2026-10-26"}, "2": {"start": "2026-10-26T09:00"}, "999": {"start": "2026-10-26"}}
     assert build_ics.apply_school_event_corrections(raw, corrections) == raw
+
+
+def test_school_event_correction_changes_timed_event_end_only():
+    raw = [{"id": 861, "title": "Welcome Service", "allDay": False, "start": "2026-09-30T14:30:00"}]
+    corrected = build_ics.apply_school_event_corrections(raw, {"861": {"end": "2026-09-30T15:05"}})
+    start, end = build_ics._parse_timed(corrected[0])
+    assert (start, end) == (
+        datetime(2026, 9, 30, 13, 30, tzinfo=timezone.utc),
+        datetime(2026, 9, 30, 14, 5, tzinfo=timezone.utc),
+    )
+    assert "end" not in raw[0]
 
 
 def test_load_school_event_corrections_missing_file_returns_empty(tmp_path, monkeypatch):

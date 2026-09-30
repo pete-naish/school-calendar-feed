@@ -68,12 +68,14 @@ WHOLE_SCHOOL_OVERRIDES_PATH = Path(__file__).resolve().parent.parent / "data" / 
 
 _OVERRIDE_FIELDS = ("description", "location")
 
-# Date corrections for school-sourced all-day events the school has entered
-# with the wrong dates, hand-edited only (the class rep tool never writes
-# here, and can't edit dates) - {"<school event id>": {"start": "YYYY-MM-DD",
-# "end": "YYYY-MM-DD", "note": "..."}}, `end` being the LAST day (inclusive,
-# unlike DTEND), `note` just for humans. Applied to the raw event before
-# anything else reads it, so the corrected dates also drive closure_dates.
+# Date/time corrections for school-sourced events the school has entered
+# wrongly, hand-edited only (the class rep tool never writes here, and can't
+# edit dates) - {"<school event id>": {"start": ..., "end": ..., "note": "..."}},
+# `note` just for humans. For an all-day event `start`/`end` are
+# "YYYY-MM-DD", `end` being the LAST day (inclusive, unlike DTEND). For a
+# timed event they're London-local "YYYY-MM-DDTHH:MM", either one optional
+# (an omitted one keeps the school's value). Applied to the raw event before
+# anything else reads it, so corrected dates also drive closure_dates.
 SCHOOL_EVENT_CORRECTIONS_PATH = Path(__file__).resolve().parent.parent / "data" / "school_event_corrections.json"
 
 LONDON = ZoneInfo("Europe/London")
@@ -741,10 +743,11 @@ def load_school_event_corrections() -> dict[str, dict]:
 
 
 def apply_school_event_corrections(raw_events: list[dict], corrections: dict[str, dict]) -> list[dict]:
-    """The raw events with any date correction laid over them (as a copy -
-    the fetched dicts aren't mutated). Only all-day events are corrected; a
-    correction for a timed event, or one whose id isn't in the feed, is
-    ignored with a warning rather than failing the build."""
+    """The raw events with any date/time correction laid over them (as a
+    copy - the fetched dicts aren't mutated). A correction whose id isn't in
+    the feed, or whose shape doesn't match the event (dates for a timed
+    event, times for an all-day one), is ignored with a warning rather than
+    failing the build."""
     live_ids = {str(raw["id"]) for raw in raw_events}
     for event_id in corrections.keys() - live_ids:
         if raw_events:
@@ -752,9 +755,16 @@ def apply_school_event_corrections(raw_events: list[dict], corrections: dict[str
     corrected = []
     for raw in raw_events:
         correction = corrections.get(str(raw["id"]))
-        if correction and not raw.get("allDay"):
-            print(f"WARNING: ignoring date correction for timed school event {raw['id']}", file=sys.stderr)
-        elif correction:
+        if not correction:
+            pass
+        elif not raw.get("allDay"):
+            if all("T" in correction.get(key, "T") for key in ("start", "end")):
+                raw = {**raw, **{key: correction[key] for key in ("start", "end") if key in correction}}
+            else:
+                print(f"WARNING: ignoring all-day correction for timed school event {raw['id']}", file=sys.stderr)
+        elif "T" in correction["start"] + correction.get("end", ""):
+            print(f"WARNING: ignoring timed correction for all-day school event {raw['id']}", file=sys.stderr)
+        else:
             start = date.fromisoformat(correction["start"])
             last = date.fromisoformat(correction.get("end", correction["start"]))
             raw = {**raw, "start": start.isoformat(), "end": (last + timedelta(days=1)).isoformat()}

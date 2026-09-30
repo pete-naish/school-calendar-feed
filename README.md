@@ -236,21 +236,26 @@ events that were routed to a class calendar instead: a class's tool entry
 lists them (flagged as coming from the school's calendar) with the same
 description/location-only editing.
 
-### Correcting a school event's dates
+### Correcting a school event's dates or times
 
-When the school's own calendar has an all-day event on the wrong dates (e.g.
-a half term entered a day late), `data/school_event_corrections.json` fixes
-it in our feeds without waiting on the school. It's hand-edited only - the
-class rep tool never touches it:
+When the school's own calendar has an event on the wrong dates (e.g. a half
+term entered a day late) or with the wrong times, `data/school_event_corrections.json`
+fixes it in our feeds without waiting on the school. It's hand-edited only -
+the class rep tool never touches it:
 
 ```json
-{"874": {"start": "2026-10-26", "end": "2026-10-30", "note": "why"}}
+{
+  "874": {"start": "2026-10-26", "end": "2026-10-30", "note": "why"},
+  "861": {"end": "2026-09-30T15:05", "note": "why"}
+}
 ```
 
-Keyed by the school event id (from its UID), `end` is the last day
-(inclusive), `note` is just for humans. The corrected dates are used
-everywhere, including the closure dates that skip recurring class events.
-Timed events aren't supported. Once the school fixes its own entry (or the
+Keyed by the school event id (from its UID), `note` is just for humans. For
+an all-day event, `start`/`end` are dates and `end` is the last day
+(inclusive). For a timed event they're London-local `YYYY-MM-DDTHH:MM`
+datetimes, and either can be left out to keep the school's value. The
+corrected dates are used everywhere, including the closure dates that skip
+recurring class events. Once the school fixes its own entry (or the
 event leaves the feed) the entry is redundant and can be deleted - a
 correction whose id is no longer in the feed only logs a warning.
 
