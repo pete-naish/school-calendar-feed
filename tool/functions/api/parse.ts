@@ -3,7 +3,7 @@ import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
 import { validateExtractedEvents } from "./_shared/validate.ts";
 import { getNextTermEndDate } from "./_shared/termEnd.ts";
 import { extractionErrorResponse } from "./_shared/errors.ts";
-import type { RequestBody } from "./_shared/types.ts";
+import type { RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext } from "./_shared/env.ts";
 
 // The parts of the Messages API response this reads.

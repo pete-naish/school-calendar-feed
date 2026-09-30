@@ -5,7 +5,7 @@ import { fetchWholeSchoolEvents, fetchClassSchoolEvents } from "./_shared/wholeS
 import { applyOverrides } from "./_shared/wholeSchoolOverrides.ts";
 import { applyCorrections, CORRECTIONS_PATH } from "./_shared/schoolEventCorrections.ts";
 import { readErrorResponse } from "./_shared/errors.ts";
-import type { RequestBody } from "./_shared/types.ts";
+import type { RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext } from "./_shared/env.ts";
 
 function jsonResponse(obj: unknown, status = 200) {

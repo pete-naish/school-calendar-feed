@@ -1,7 +1,7 @@
 // The rep tool page's helpers that don't touch the page itself, in their own
 // module so the tests can import them (tool/tests/appConfirm.test.mjs,
 // pastEvents.test.mjs). app.ts is everything else.
-import type { ApiError, EventException } from "./functions/api/_shared/types.ts";
+import type { ApiError, EventException } from "./functions/api/_shared/types.d.ts";
 
 // What apiCall() in app.ts resolves to. `data` is null when the body wasn't
 // JSON; a successful call's body is taken to be what the endpoint promises.

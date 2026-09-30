@@ -1,5 +1,5 @@
 import { yearGroupFor } from "./calendars.ts";
-import type { ApiError, ManualEvent } from "./types.ts";
+import type { ApiError, ManualEvent } from "./types.d.ts";
 import type { Env } from "./env.ts";
 
 // What a commit mutator returns to write something: the new data plus anything

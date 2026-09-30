@@ -12,8 +12,7 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
-    "verbatimModuleSyntax": true,
-    "skipLibCheck": true
+    "verbatimModuleSyntax": true
   },
   "include": ["tool/functions/**/*.ts"]
 }

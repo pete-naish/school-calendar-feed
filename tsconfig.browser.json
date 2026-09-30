@@ -12,7 +12,6 @@
     "removeComments": false,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true,
     "newLine": "lf"
   },
   "files": ["tool/app.ts", "tool/appHelpers.ts"]

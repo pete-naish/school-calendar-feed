@@ -1,6 +1,6 @@
 import { toTitleCase } from "./titleCase.ts";
 import { YEAR_GROUPS } from "./calendars.ts";
-import type { EventException, EventFields, Recurrence, RecurrenceFreq } from "./types.ts";
+import type { EventException, EventFields, Recurrence, RecurrenceFreq } from "./types.d.ts";
 
 // Input straight from a request or the model, before anything has checked it.
 type Loose = Record<string, unknown>;

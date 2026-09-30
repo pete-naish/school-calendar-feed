@@ -15,7 +15,7 @@
 // value already is one, and a `...Z` instant is converted, so nothing
 // downstream needs to think about time zones or DST.
 
-import type { RecurrenceFreq } from "./types.ts";
+import type { RecurrenceFreq } from "./types.d.ts";
 
 export interface DayAndTime {
   day: number;

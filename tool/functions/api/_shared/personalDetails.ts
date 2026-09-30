@@ -15,7 +15,7 @@
 // It does not try to spot names, children, or addresses - that would flag every
 // pub and school hall - so it's a safety net, not a guarantee.
 
-import type { ApiError, PersonalDetail, PersonalDetailKind } from "./types.ts";
+import type { ApiError, PersonalDetail, PersonalDetailKind } from "./types.d.ts";
 
 type Finding = { kind: PersonalDetailKind; text: string };
 

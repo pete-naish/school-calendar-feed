@@ -2,7 +2,7 @@
 // can actually act on, instead of a raw "GitHub PUT failed: 503 ..." - the
 // detailed error still goes to the Cloudflare Functions log via
 // console.error for anyone actually debugging it.
-import type { ApiError } from "./types.ts";
+import type { ApiError } from "./types.d.ts";
 
 // The HTTP status for a `{ error }` a commit helper returned without writing
 // anything: an event that isn't there is a 404, a file with no room left a

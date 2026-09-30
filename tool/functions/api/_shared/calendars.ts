@@ -8,7 +8,7 @@
 // what's shown to reps in the picker and can be updated any time the school
 // relabels a class.
 import CLASSES from "../../../../docs/classes.js";
-import type { ClassEntry, YearGroup } from "./types.ts";
+import type { ClassEntry, YearGroup } from "./types.d.ts";
 
 export const YEAR_GROUPS: YearGroup[] = CLASSES.yearGroups.map((g) => ({
   key: g.key,

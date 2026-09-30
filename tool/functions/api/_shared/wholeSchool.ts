@@ -17,7 +17,7 @@
 
 import { fetchIcsText, unescapeIcsText, parseDateTime, dayToIso } from "./ics.ts";
 import { titlePrefixFor } from "./calendars.ts";
-import type { SchoolEvent } from "./types.ts";
+import type { SchoolEvent } from "./types.d.ts";
 
 const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 

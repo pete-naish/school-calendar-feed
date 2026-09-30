@@ -2,7 +2,7 @@ import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.ts";
 import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
 import { commitEventById, triggerRebuild } from "./_shared/github.ts";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
-import type { RequestBody } from "./_shared/types.ts";
+import type { RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext } from "./_shared/env.ts";
 
 function jsonResponse(obj: unknown, status = 200) {

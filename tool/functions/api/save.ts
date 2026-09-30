@@ -4,7 +4,7 @@ import { validateEventInput, LIMITS } from "./_shared/validate.ts";
 import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.ts";
 import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.ts";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
-import type { EventFields, ManualEvent, PersonalDetail, RequestBody } from "./_shared/types.ts";
+import type { EventFields, ManualEvent, PersonalDetail, RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext, Env } from "./_shared/env.ts";
 
 function jsonResponse(obj: unknown, status = 200) {

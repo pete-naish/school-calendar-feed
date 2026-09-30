@@ -18,7 +18,7 @@ import type {
   UpdateResponse,
   WeekResponse,
   YearGroup,
-} from "./functions/api/_shared/types.ts";
+} from "./functions/api/_shared/types.d.ts";
 
 // The element `selector` finds inside `root`. The page's templates always
 // have it, so a miss is a bug - which throws on first use, as it always has.
