@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.browser.json",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.browser.json --noEmit",
-    "test:tool": "node --test \"tool/tests/*.test.mjs\""
+    "test:tool": "node --test \"tool/tests/*.test.mjs\"",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260930.2",

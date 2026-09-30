@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Rebuilds the pages' .js from their .ts and refuses the commit if that changes
+# a .js that isn't staged. The pages are served straight from the repo with no
+# build step, so a .ts change committed without its rebuilt .js ships stale.
+#
+# Enabled by `npm install` (the "prepare" script sets core.hooksPath to
+# .githooks). Skip it once with `git commit --no-verify`; CI still checks.
+set -u
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+GENERATED=(docs/assets/calendar.js tool/app.js tool/appHelpers.js)
+
+if [ ! -d node_modules ]; then
+  echo "pre-commit: node_modules is missing - run npm install first." >&2
+  exit 1
+fi
+
+if ! build_output=$(npm run -s build 2>&1); then
+  echo "pre-commit: npm run build failed:" >&2
+  echo "$build_output" >&2
+  exit 1
+fi
+
+stale=$(git diff --name-only -- "${GENERATED[@]}")
+if [ -n "$stale" ]; then
+  echo "pre-commit: npm run build changed files that aren't staged:" >&2
+  echo "$stale" | sed 's/^/  /' >&2
+  echo "Stage them (git add) and commit again." >&2
+  exit 1
+fi

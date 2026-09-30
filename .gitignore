@@ -7,3 +7,4 @@ tool/node_modules/
 tool/.wrangler/
 
 node_modules/
+.claude/scheduled_tasks.lock

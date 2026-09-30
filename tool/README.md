@@ -25,7 +25,9 @@ via Cloudflare's zero-build-command git integration:
 
 `npm run typecheck` checks both under `strict` (`tsconfig.json` for the
 Functions, `tsconfig.browser.json` for the pages - the parent page's
-`docs/assets/calendar.ts` too). One-off setup: `npm install` at the repo root.
+`docs/assets/calendar.ts` too). One-off setup: `npm install` at the repo root,
+which also turns on a git pre-commit hook (`.githooks/pre-commit`) that runs
+the build and refuses a commit whose rebuilt `.js` isn't staged.
 
 ## How it works
 
