@@ -252,3 +252,41 @@ test("an event crossing noon shows am and pm; one with no end shows just its sta
   assert.match(text, /• 11am–1pm Trip/);
   assert.match(text, /• 3:15pm Pickup/);
 });
+
+test("future dates list next week's one-off events on one line each, without details", () => {
+  const own = calendar(
+    [
+      "UID:manual-a@school-calendar-feed",
+      `SUMMARY:${PREFIX}Class assembly`,
+      "DTSTART;TZID=Europe/London:20261022T090000",
+      "DTEND;TZID=Europe/London:20261022T093000",
+      "DESCRIPTION:Parents welcome",
+      "LOCATION:Hall",
+    ],
+    ["UID:manual-b@school-calendar-feed", `SUMMARY:${PREFIX}This week`, "DTSTART;VALUE=DATE:20261014", "DTEND;VALUE=DATE:20261015"]
+  );
+  const wholeSchool = calendar([
+    "UID:stpauls-9@school-calendar-feed",
+    "SUMMARY:Half Term Break",
+    "DTSTART;VALUE=DATE:20261024",
+    "DTEND;VALUE=DATE:20261102",
+  ]);
+  const { text, count } = week("2026-10-12", { own, wholeSchool });
+  assert.equal(count, 1);
+  assert.match(
+    text,
+    /\n\n\*Future dates\*\n• Thu 22 Oct: 9–9:30am Class assembly\n• Sat 24 Oct – Sun 1 Nov: Whole School: Half Term Break$/
+  );
+});
+
+test("future dates leave out recurring events and ones already listed this week", () => {
+  const own = calendar([
+    "UID:manual-r@school-calendar-feed",
+    `SUMMARY:${PREFIX}Residential`,
+    "DTSTART;VALUE=DATE:20261017",
+    "DTEND;VALUE=DATE:20261021",
+  ]);
+  const text = [PE_DAY, own].map((ics) => week("2026-10-12", { own: ics }).text);
+  assert.doesNotMatch(text[0], /Future dates/);
+  assert.doesNotMatch(text[1], /Future dates/);
+});

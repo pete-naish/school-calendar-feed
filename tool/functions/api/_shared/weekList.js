@@ -1,10 +1,10 @@
 // Builds the "What's on this week" list class reps paste into their class
 // WhatsApp group each Sunday, from the site's published .ics files (see
 // ics.js): the calendar's own events plus whole-school ones (and, for a
-// class, FOSPS ones), for one
-// Monday-Sunday week. Reading the published feeds means closure days,
-// cancelled/moved occurrences and description/location edits are already
-// applied, exactly as parents' calendar apps see them.
+// class, FOSPS ones), for one Monday-Sunday week, then a "Future dates"
+// heads-up for the week after. Reading the published feeds means closure
+// days, cancelled/moved occurrences and description/location edits are
+// already applied, exactly as parents' calendar apps see them.
 
 import { parseIcsEvents, isoToDay, dayToIso, weekdayIndex, dayParts, londonDayAndTime } from "./ics.js";
 import { titlePrefixFor } from "./calendars.js";
@@ -119,6 +119,7 @@ function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = f
         description: descriptionLines(event.description),
         location: event.location,
         wholeSchool,
+        recurring: Boolean(event.rrule),
       });
     }
   }
@@ -132,11 +133,13 @@ function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = f
 // text (*bold* day headings, • bullets) and how many events it lists.
 export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, calendar, weekStart }) {
   const weekStartDay = isoToDay(weekStart);
-  const items = [
-    ...(calendarIcs ? collectItems(calendarIcs, weekStartDay, { titlePrefix: titlePrefixFor(calendar) }) : []),
-    ...collectItems(wholeSchoolIcs, weekStartDay, { wholeSchool: true }),
-    ...(fospsIcs ? collectItems(fospsIcs, weekStartDay) : []),
+  const itemsFor = (startDay) => [
+    ...(calendarIcs ? collectItems(calendarIcs, startDay, { titlePrefix: titlePrefixFor(calendar) }) : []),
+    ...collectItems(wholeSchoolIcs, startDay, { wholeSchool: true }),
+    ...(fospsIcs ? collectItems(fospsIcs, startDay) : []),
   ];
+  const items = itemsFor(weekStartDay);
+  const sourceOf = (item) => (item.wholeSchool && calendar !== "whole-school" ? "Whole School: " : "");
 
   // A multi-day event that began before the week is listed under Monday.
   const byDay = new Map();
@@ -157,8 +160,7 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
     dayItems.forEach((item, i) => {
       const time = item.startTime ? `${formatTimeRange(item.startTime, item.endTime)} ` : "";
       const range = item.endDay > item.startDay ? ` (${shortDate(item.startDay)} – ${shortDate(item.endDay)})` : "";
-      const source = item.wholeSchool && calendar !== "whole-school" ? "Whole School: " : "";
-      lines.push(`• ${time}${source}${item.title}${range}`);
+      lines.push(`• ${time}${sourceOf(item)}${item.title}${range}`);
       // Details aren't indented: WhatsApp only indents the first line, so a
       // long line wraps back to the margin and looks ragged. A divider marks
       // where they end instead, if another of the day's events follows.
@@ -166,6 +168,22 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
       lines.push(...details);
       if (details.length && i < dayItems.length - 1) lines.push(DIVIDER);
     });
+  }
+
+  // A heads-up for the following week: one line per event, no details, and
+  // no recurring events (PE days etc.) since parents already know those.
+  // Anything that started this week was listed above.
+  const nextWeekStartDay = weekStartDay + 7;
+  const future = itemsFor(nextWeekStartDay)
+    .filter((item) => !item.recurring && item.startDay >= nextWeekStartDay)
+    .sort((a, b) => a.startDay - b.startDay || (a.startTime ?? "").localeCompare(b.startTime ?? "") || a.title.localeCompare(b.title));
+  if (future.length) {
+    lines.push("", "*Future dates*");
+    for (const item of future) {
+      const when = item.endDay > item.startDay ? `${shortDate(item.startDay)} – ${shortDate(item.endDay)}` : shortDate(item.startDay);
+      const time = item.startTime ? `${formatTimeRange(item.startTime, item.endTime)} ` : "";
+      lines.push(`• ${when}: ${time}${sourceOf(item)}${item.title}`);
+    }
   }
   return { text: lines.join("\n"), count: items.length };
 }
