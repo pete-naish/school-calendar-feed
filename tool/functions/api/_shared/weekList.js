@@ -10,6 +10,7 @@ import { parseIcsEvents, isoToDay, dayToIso, weekdayIndex, dayParts, londonDayAn
 import { titlePrefixFor } from "./calendars.js";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DIVIDER = "──────────";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function shortDate(day, { withMonth = true } = {}) {
@@ -139,14 +140,18 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
     const dayItems = byDay.get(day).sort(
       (a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? "") || a.title.localeCompare(b.title)
     );
-    for (const item of dayItems) {
+    dayItems.forEach((item, i) => {
       const time = item.startTime ? `${formatTime(item.startTime)} ` : "";
       const range = item.endDay > item.startDay ? ` (${shortDate(item.startDay)} – ${shortDate(item.endDay)})` : "";
       const source = item.wholeSchool && calendar !== "whole-school" ? "Whole School: " : "";
       lines.push(`• ${time}${source}${item.title}${range}`);
-      if (item.location) lines.push(`  Location: ${item.location}`);
-      for (const line of item.description) lines.push(`  ${line}`);
-    }
+      // Details aren't indented: WhatsApp only indents the first line, so a
+      // long line wraps back to the margin and looks ragged. A divider marks
+      // where they end instead, if another of the day's events follows.
+      const details = [...(item.location ? [`Location: ${item.location}`] : []), ...item.description];
+      lines.push(...details);
+      if (details.length && i < dayItems.length - 1) lines.push(DIVIDER);
+    });
   }
   return { text: lines.join("\n"), count: items.length };
 }

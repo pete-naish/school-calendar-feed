@@ -156,10 +156,42 @@ test("HTML in a description is cleaned; location is unescaped; whole-school is m
       "",
       "*Tue 22 Sep*",
       "• Whole School: Nasal Flu Spray",
-      "  Location: School hall, main entrance",
-      "  R/KS1 AM",
-      "  KS2 PM",
-      "  Forms due Monday",
+      "Location: School hall, main entrance",
+      "R/KS1 AM",
+      "KS2 PM",
+      "Forms due Monday",
+    ].join("\n")
+  );
+});
+
+test("a divider follows an event's details only when another event follows that day", () => {
+  const wholeSchool = calendar(
+    [
+      "UID:stpauls-6@school-calendar-feed",
+      "SUMMARY:Harvest Donations",
+      "DTSTART;VALUE=DATE:20260930",
+      "DTEND;VALUE=DATE:20261001",
+      "DESCRIPTION:Bring vegetables",
+    ],
+    [
+      "UID:stpauls-7@school-calendar-feed",
+      "SUMMARY:Welcome Service",
+      "DTSTART;TZID=Europe/London:20260930T143000",
+      "DTEND;TZID=Europe/London:20260930T150500",
+      "DESCRIPTION:Walking to church",
+    ]
+  );
+  assert.equal(
+    week("2026-09-28", { wholeSchool, cal: "whole-school" }).text,
+    [
+      "*What's on this week (Mon 28 Sep – Sun 4 Oct)*",
+      "",
+      "*Wed 30 Sep*",
+      "• Harvest Donations",
+      "Bring vegetables",
+      "──────────",
+      "• 2:30pm Welcome Service",
+      "Walking to church",
     ].join("\n")
   );
 });
