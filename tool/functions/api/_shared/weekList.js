@@ -10,7 +10,6 @@ import { parseIcsEvents, isoToDay, dayToIso, weekdayIndex, dayParts, londonDayAn
 import { titlePrefixFor } from "./calendars.js";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DIVIDER = "──────────";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function shortDate(day, { withMonth = true } = {}) {
@@ -104,7 +103,7 @@ export function descriptionLines(text) {
     .filter((line, i, lines) => line || (lines[i - 1] && lines.slice(i + 1).some(Boolean)));
 }
 
-function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = false } = {}) {
+function collectItems(icsText, weekStartDay, { titlePrefix = "" } = {}) {
   const items = [];
   for (const event of parseIcsEvents(icsText)) {
     const title = titlePrefix && event.title.startsWith(titlePrefix) ? event.title.slice(titlePrefix.length) : event.title;
@@ -118,7 +117,6 @@ function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = f
         endTime: endDay === startDay ? event.endTime : null,
         description: descriptionLines(event.description),
         location: event.location,
-        wholeSchool,
         recurring: Boolean(event.rrule),
       });
     }
@@ -129,17 +127,18 @@ function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = f
 // `calendarIcs` is the logged-in calendar's own .ics text (null for Whole
 // School, whose events are all in `wholeSchoolIcs`). `fospsIcs` is FOSPS's
 // .ics text for a class calendar, else null; those events keep their
-// "FOSPS: " prefix so parents can tell them apart. Returns the WhatsApp
-// text (*bold* day headings, • bullets) and how many events it lists.
+// "FOSPS: " prefix so parents can tell them apart; whole-school ones aren't
+// marked, since which calendar added an event doesn't matter to parents.
+// Returns the WhatsApp text (*bold* day headings, • bullets, > quoted
+// details) and how many events it lists.
 export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, calendar, weekStart }) {
   const weekStartDay = isoToDay(weekStart);
   const itemsFor = (startDay) => [
     ...(calendarIcs ? collectItems(calendarIcs, startDay, { titlePrefix: titlePrefixFor(calendar) }) : []),
-    ...collectItems(wholeSchoolIcs, startDay, { wholeSchool: true }),
+    ...collectItems(wholeSchoolIcs, startDay),
     ...(fospsIcs ? collectItems(fospsIcs, startDay) : []),
   ];
   const items = itemsFor(weekStartDay);
-  const sourceOf = (item) => (item.wholeSchool && calendar !== "whole-school" ? "Whole School: " : "");
 
   // A multi-day event that began before the week is listed under Monday.
   const byDay = new Map();
@@ -149,7 +148,7 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
     byDay.get(day).push(item);
   }
 
-  const lines = [`*What's on this week (${weekLabel(weekStartDay)})*`];
+  const lines = [`*This week: ${weekLabel(weekStartDay)}*`];
   if (items.length === 0) lines.push("", "Nothing scheduled this week.");
 
   for (const day of [...byDay.keys()].sort((a, b) => a - b)) {
@@ -157,17 +156,16 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
     const dayItems = byDay.get(day).sort(
       (a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? "") || a.title.localeCompare(b.title)
     );
-    dayItems.forEach((item, i) => {
+    for (const item of dayItems) {
       const time = item.startTime ? `${formatTimeRange(item.startTime, item.endTime)} ` : "";
       const range = item.endDay > item.startDay ? ` (${shortDate(item.startDay)} – ${shortDate(item.endDay)})` : "";
-      lines.push(`• ${time}${sourceOf(item)}${item.title}${range}`);
-      // Details aren't indented: WhatsApp only indents the first line, so a
-      // long line wraps back to the margin and looks ragged. A divider marks
-      // where they end instead, if another of the day's events follows.
+      lines.push(`• ${time}${item.title}${range}`);
+      // Details go in a WhatsApp quote block, which sets them apart from the
+      // titles and keeps wrapped lines indented. A bare ">" keeps a blank
+      // line between paragraphs inside the quote.
       const details = [...(item.location ? [`Location: ${item.location}`] : []), ...item.description];
-      lines.push(...details);
-      if (details.length && i < dayItems.length - 1) lines.push(DIVIDER);
-    });
+      lines.push(...details.map((line) => (line ? `> ${line}` : ">")));
+    }
   }
 
   // A heads-up for the following week: one line per event, no details, and
@@ -182,7 +180,7 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
     for (const item of future) {
       const when = item.endDay > item.startDay ? `${shortDate(item.startDay)} – ${shortDate(item.endDay)}` : shortDate(item.startDay);
       const time = item.startTime ? `${formatTimeRange(item.startTime, item.endTime)} ` : "";
-      lines.push(`• ${when}: ${time}${sourceOf(item)}${item.title}`);
+      lines.push(`• *${when}* ${time}${item.title}`);
     }
   }
   return { text: lines.join("\n"), count: items.length };

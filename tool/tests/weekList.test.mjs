@@ -30,7 +30,7 @@ const PE_DAY = calendar([
 test("weekly recurrence lists its occurrence and strips the class prefix", () => {
   const { text, count } = week("2026-10-12", { own: PE_DAY });
   assert.equal(count, 1);
-  assert.equal(text, "*What's on this week (Mon 12 – Sun 18 Oct)*\n\n*Thu 15 Oct*\n• PE Day 👟 – Wear PE Kit");
+  assert.equal(text, "*This week: Mon 12 – Sun 18 Oct*\n\n*Thu 15 Oct*\n• PE Day 👟 – Wear PE Kit");
 });
 
 test("weekly recurrence skips EXDATE days", () => {
@@ -86,7 +86,7 @@ test("all-day multi-day event shows its range under its first day", () => {
     "DTEND;VALUE=DATE:20261101",
   ]);
   const { text } = week("2026-10-26", { wholeSchool });
-  assert.match(text, /\*Tue 27 Oct\*\n• Whole School: Half Term Break \(Tue 27 Oct – Sat 31 Oct\)/);
+  assert.match(text, /\*Tue 27 Oct\*\n• Half Term Break \(Tue 27 Oct – Sat 31 Oct\)/);
   assert.equal(week("2026-10-19", { wholeSchool }).count, 0);
 });
 
@@ -140,7 +140,7 @@ test("a moved occurrence is its own one-off event", () => {
   assert.match(text, /\*Fri 16 Oct\*\n• 2–3pm Assembly/);
 });
 
-test("HTML in a description is cleaned; location is unescaped; whole-school is marked", () => {
+test("HTML in a description is cleaned; location is unescaped", () => {
   const wholeSchool = calendar([
     "UID:stpauls-3@school-calendar-feed",
     "SUMMARY:Nasal Flu Spray",
@@ -152,20 +152,20 @@ test("HTML in a description is cleaned; location is unescaped; whole-school is m
   assert.equal(
     week("2026-09-21", { wholeSchool }).text,
     [
-      "*What's on this week (Mon 21 – Sun 27 Sep)*",
+      "*This week: Mon 21 – Sun 27 Sep*",
       "",
       "*Tue 22 Sep*",
-      "• Whole School: Nasal Flu Spray",
-      "Location: School hall, main entrance",
-      "R/KS1 AM",
-      "KS2 PM",
-      "",
-      "Forms due Monday",
+      "• Nasal Flu Spray",
+      "> Location: School hall, main entrance",
+      "> R/KS1 AM",
+      "> KS2 PM",
+      ">",
+      "> Forms due Monday",
     ].join("\n")
   );
 });
 
-test("a divider follows an event's details only when another event follows that day", () => {
+test("each event's details are quoted beneath it", () => {
   const wholeSchool = calendar(
     [
       "UID:stpauls-6@school-calendar-feed",
@@ -185,14 +185,13 @@ test("a divider follows an event's details only when another event follows that 
   assert.equal(
     week("2026-09-28", { wholeSchool, cal: "whole-school" }).text,
     [
-      "*What's on this week (Mon 28 Sep – Sun 4 Oct)*",
+      "*This week: Mon 28 Sep – Sun 4 Oct*",
       "",
       "*Wed 30 Sep*",
       "• Harvest Donations",
-      "Bring vegetables",
-      "──────────",
+      "> Bring vegetables",
       "• 2:30–3:05pm Welcome Service",
-      "Walking to church",
+      "> Walking to church",
     ].join("\n")
   );
 });
@@ -203,10 +202,10 @@ test("blank lines between description paragraphs are kept, collapsed to one", ()
 
 test("folded lines are rejoined", () => {
   const wholeSchool = "BEGIN:VEVENT\r\nUID:stpauls-4@school-calendar-feed\r\nSUMMARY:Long \r\n title here\r\nDTSTART;VALUE=DATE:20260922\r\nEND:VEVENT";
-  assert.match(week("2026-09-21", { wholeSchool }).text, /• Whole School: Long title here/);
+  assert.match(week("2026-09-21", { wholeSchool }).text, /• Long title here/);
 });
 
-test("whole-school login lists only whole-school events, unmarked", () => {
+test("whole-school login lists only whole-school events", () => {
   const wholeSchool = calendar(["UID:stpauls-5@school-calendar-feed", "SUMMARY:INSET DAY", "DTSTART;VALUE=DATE:20260902", "DTEND;VALUE=DATE:20260903"]);
   const { text } = buildWeekText({ calendarIcs: null, wholeSchoolIcs: wholeSchool, calendar: "whole-school", weekStart: "2026-08-31" });
   assert.match(text, /• INSET DAY$/);
@@ -223,7 +222,7 @@ test("within a day: all-day first, then by time", () => {
 });
 
 test("the heading spans months when the week does", () => {
-  assert.match(week("2026-09-28").text, /^\*What's on this week \(Mon 28 Sep – Sun 4 Oct\)\*/);
+  assert.match(week("2026-09-28").text, /^\*This week: Mon 28 Sep – Sun 4 Oct\*/);
 });
 
 test("defaultWeekStart: Sunday looks ahead, other days use this week", () => {
@@ -275,7 +274,7 @@ test("future dates list next week's one-off events on one line each, without det
   assert.equal(count, 1);
   assert.match(
     text,
-    /\n\n\*Future dates\*\n• Thu 22 Oct: 9–9:30am Class assembly\n• Sat 24 Oct – Sun 1 Nov: Whole School: Half Term Break$/
+    /\n\n\*Future dates\*\n• \*Thu 22 Oct\* 9–9:30am Class assembly\n• \*Sat 24 Oct – Sun 1 Nov\* Half Term Break$/
   );
 });
 
