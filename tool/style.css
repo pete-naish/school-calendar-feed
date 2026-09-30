@@ -9,6 +9,8 @@
   --error: #b3261e;
   --success: #1a7a3c;
   --card-bg: #f7f7f7;
+  --warning: #9a5b00;
+  --warning-bg: #fff6e5;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +24,8 @@
     --error: #ff6b60;
     --success: #6bd48f;
     --card-bg: #222226;
+    --warning: #f0b35a;
+    --warning-bg: #2e2616;
   }
 }
 
@@ -227,6 +231,45 @@ button.link-button {
 
 .ws-flag {
   margin: -0.3rem 0 0.6rem;
+}
+
+.badge.badge-warning {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.date-correction {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+
+.date-correction summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.date-correction[open] summary {
+  margin-bottom: 0.6rem;
+}
+
+.correction-warning {
+  border: 1px solid var(--warning);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: var(--warning-bg);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.correction-warning p {
+  margin: 0.3rem 0;
+}
+
+.correction-confirm {
+  font-weight: 600;
 }
 
 .badge {

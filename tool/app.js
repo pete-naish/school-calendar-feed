@@ -777,7 +777,7 @@ function renderWholeSchoolEvents(events) {
 function createSchoolEventCard(event) {
   const node = el.wholeSchoolCardTemplate.content.firstElementChild.cloneNode(true);
   node.querySelector(".ws-title").textContent = event.title;
-  node.querySelector(".ws-date").textContent = formatEventWhen(event);
+  node.querySelector(".ws-date").textContent = formatSchoolSpan(event);
   node.querySelector(".field-description").value = event.description || "";
   node.querySelector(".field-location").value = event.location || "";
 
@@ -796,7 +796,199 @@ function createSchoolEventCard(event) {
   const saved = { description: (event.description || "").trim(), location: event.location || "" };
   const saveButton = node.querySelector(".card-save-button");
   saveButton.addEventListener("click", () => handleUpdateWholeSchoolEvent(node, event.id, saveButton, saved));
+  setupDateCorrection(node, event);
   return node;
+}
+
+// --- Correcting a school event's date/time -----------------------------------
+//
+// For when the school's own calendar is wrong. It changes the event for every
+// family subscribed to it, and for a closure day which days recurring class
+// events skip, so it's kept out of the way (a closed <details>), explains what
+// it does, needs a reason, and takes two clicks: the first spells out the
+// change, the second makes it. See functions/api/_shared/schoolEventCorrections.js.
+
+// Same keywords as _CLOSURE_KEYWORDS in scripts/build_ics.py.
+const CLOSURE_KEYWORDS = /\bINSET\b|\bHALF TERM\b|\bHOLIDAY\b/i;
+
+function formatDayDate(iso) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+}
+
+// "Tue 27 Oct 2026 – Sat 31 Oct 2026", "Wed 7 Oct 2026, 14:30–15:30".
+function formatSchoolSpan({ date, end_date, time, end_time }) {
+  if (time) return `${formatDayDate(date)}, ${time}${end_time ? `–${end_time}` : ""}`;
+  if (end_date && end_date !== date) return `${formatDayDate(date)} – ${formatDayDate(end_date)}`;
+  return formatDayDate(date);
+}
+
+// Who a correction reaches, for the warning and the confirmation.
+function correctionAudience(event) {
+  if (state.calendar === WHOLE_SCHOOL.code) return "every family subscribed to the Whole School calendar";
+  const group = currentYearGroup();
+  if (event.year_group && group) return `every family subscribed to ${yearGroupDescription(group)}`;
+  return `every family subscribed to ${calendarLabelFor(state.calendar)}`;
+}
+
+// The corrected {start, end} in the file's format, or an error to show.
+function readCorrection(card, event) {
+  const value = (cls) => card.querySelector(cls).value;
+  if (!event.time) {
+    const start = value(".correction-start-date");
+    const end = value(".correction-end-date") || start;
+    if (!start) return { error: "Choose the first day." };
+    if (end < start) return { error: "The last day can't be before the first day." };
+    return { start, end, span: { date: start, end_date: end } };
+  }
+  const date = value(".correction-date");
+  const time = value(".correction-time");
+  const endTime = value(".correction-end-time");
+  if (!date || !time || !endTime) return { error: "Choose the date, start time and end time." };
+  if (endTime <= time) return { error: "The end time must be after the start time." };
+  return { start: `${date}T${time}`, end: `${date}T${endTime}`, span: { date, end_date: date, time, end_time: endTime } };
+}
+
+function setupDateCorrection(card, event) {
+  const section = card.querySelector(".date-correction");
+  // Past events don't matter any more, and a timed event running over several
+  // days has no same-day end time to correct (the server refuses both too).
+  if (isPastEvent(event, todayIso()) || (event.time && !event.end_time)) return;
+  section.hidden = false;
+
+  const school = event.correction ? event.correction.school : event;
+  if (event.correction) {
+    card.querySelector(".ws-corrected").hidden = false;
+    const was = school ? `School's calendar says ${formatSchoolSpan(school)}.` : "";
+    const why = event.correction.note ? ` Reason: ${event.correction.note}` : "";
+    card.querySelector(".ws-corrected-text").textContent = `${was}${why}`.trim();
+  }
+  card.querySelector(".correction-audience").textContent = correctionAudience(event);
+  card.querySelector(".correction-closure").hidden = !CLOSURE_KEYWORDS.test(event.title);
+  card.querySelector(".correction-school").textContent = school
+    ? `School's calendar says: ${formatSchoolSpan(school)}`
+    : "";
+
+  if (event.time) {
+    card.querySelector(".correction-timed").hidden = false;
+    card.querySelector(".correction-date").value = event.date;
+    card.querySelector(".correction-time").value = event.time;
+    card.querySelector(".correction-end-time").value = event.end_time;
+    wireDefaultEndTime(card.querySelector(".correction-time"), card.querySelector(".correction-end-time"), {
+      minutes: () => eventMinutes(event.time, event.end_time),
+    });
+  } else {
+    card.querySelector(".correction-all-day").hidden = false;
+    card.querySelector(".correction-start-date").value = event.date;
+    card.querySelector(".correction-end-date").value = event.end_date || event.date;
+  }
+  const min = todayIso();
+  for (const input of section.querySelectorAll('input[type="date"]')) input.min = min;
+
+  const saveButton = card.querySelector(".correction-save-button");
+  const undoButton = card.querySelector(".correction-undo-button");
+  undoButton.hidden = !event.correction;
+  // Any change after the first click takes the confirmation back - it no
+  // longer describes what would be saved.
+  section.addEventListener("input", () => disarmCorrection(card));
+
+  saveButton.addEventListener("click", () => {
+    const errorEl = card.querySelector(".correction-error");
+    errorEl.hidden = true;
+    const read = readCorrection(card, event);
+    const note = card.querySelector(".correction-note").value.replace(/\s+/g, " ").trim();
+    const error = read.error || (note.length < 5 ? 'Say how you know the right date or time (e.g. "Newsletter 25 Sep").' : null);
+    if (error) {
+      errorEl.textContent = error;
+      errorEl.hidden = false;
+      return;
+    }
+    if (formatSchoolSpan(read.span) === formatSchoolSpan(event)) {
+      errorEl.textContent = "That's the date it already has.";
+      errorEl.hidden = false;
+      return;
+    }
+    const message = `Change "${event.title}" from ${formatSchoolSpan(event)} to ${formatSchoolSpan(read.span)} for ${correctionAudience(event)}?`;
+    submitCorrection(card, event, saveButton, message, "Yes, change it for everyone", { start: read.start, end: read.end, note });
+  });
+  undoButton.addEventListener("click", () => {
+    const back = school ? ` (${formatSchoolSpan(school)})` : "";
+    const message = `Put "${event.title}" back to the school's own date${back} for ${correctionAudience(event)}?`;
+    submitCorrection(card, event, undoButton, message, "Yes, go back to the school's date", null);
+  });
+}
+
+function disarmCorrection(card) {
+  card.querySelector(".correction-confirm").hidden = true;
+  for (const button of card.querySelectorAll(".correction-save-button, .correction-undo-button")) {
+    if (button.dataset.label) button.textContent = button.dataset.label;
+    delete button.dataset.label;
+    delete button.dataset.armed;
+  }
+}
+
+// First click: say exactly what will change and arm the button. Second click
+// on the same (still armed) button: save.
+async function submitCorrection(card, event, button, message, armedLabel, correction) {
+  const confirmEl = card.querySelector(".correction-confirm");
+  const errorEl = card.querySelector(".correction-error");
+  if (button.dataset.armed !== "1") {
+    disarmCorrection(card);
+    confirmEl.textContent = message;
+    confirmEl.hidden = false;
+    button.dataset.label = button.textContent;
+    button.dataset.armed = "1";
+    button.textContent = armedLabel;
+    return;
+  }
+
+  const label = button.dataset.label;
+  button.disabled = true;
+  button.textContent = "Saving…";
+  const { ok, data } = await apiCall("/api/events-update", {
+    calendar: state.calendar,
+    passcode: state.passcode,
+    id: event.id,
+    ...(state.calendar !== WHOLE_SCHOOL.code && { school_event: true }),
+    date_correction: correction,
+  });
+  button.disabled = false;
+  disarmCorrection(card);
+  if (!ok) {
+    errorEl.textContent = (data && data.message) || "Couldn't save that - try again.";
+    errorEl.hidden = false;
+    button.textContent = label;
+    return;
+  }
+
+  // Show the event as it now stands. Where the school's own dates aren't
+  // known (a correction made by hand, then undone), the list is reloaded.
+  const school = event.correction ? event.correction.school : { date: event.date, end_date: event.end_date, time: event.time, end_time: event.end_time };
+  if (!school) {
+    await reloadEventList();
+    return;
+  }
+  const { correction: _old, ...base } = event;
+  let updated = { ...base, ...school };
+  if (correction) {
+    const [date, time] = correction.start.split("T");
+    const [endDate, endTime] = correction.end.split("T");
+    const span = { date, end_date: endDate, time: time || null, end_time: endTime || null };
+    const same = ["date", "end_date", "time", "end_time"].every((k) => (span[k] || null) === (school[k] || null));
+    updated = same ? updated : { ...updated, ...span, correction: { note: correction.note, school } };
+  }
+  const fresh = createSchoolEventCard(updated);
+  const status = fresh.querySelector(".correction-confirm");
+  status.textContent = "Saved ✓ - the calendars update in a few minutes, and people's calendar apps pick it up on their next refresh.";
+  status.hidden = false;
+  fresh.querySelector(".date-correction").open = true;
+  card.replaceWith(fresh);
+}
+
+async function reloadEventList() {
+  const { ok, data } = await apiCall("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
+  if (!ok) return;
+  if (state.calendar === WHOLE_SCHOOL.code) renderWholeSchoolEvents(data.events);
+  else renderExistingEvents(data.events);
 }
 
 async function handleUpdateWholeSchoolEvent(card, id, button, saved) {

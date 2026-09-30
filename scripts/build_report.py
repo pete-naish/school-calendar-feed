@@ -97,7 +97,24 @@ def render(report: dict, run_url: str | None = None) -> str:
         ]
         lines.append("")
 
-    known = {"school_feed_empty", "skipped_manual_event", "unrecognised_class_code"}
+    dropped = _of_kind(report, "school_event_correction_dropped")
+    if dropped:
+        lines += [
+            f"### Date corrections dropped ({len(dropped)})",
+            "",
+            "A rep corrected these school events' dates in the rep tool, then the school changed "
+            "the event on its own calendar, so the feeds now show the school's new dates. "
+            "Check they're right; if not, correct the event again in the rep tool.",
+            "",
+        ]
+        lines += [
+            f"- {code(p.get('title', '?'))}: school now says {code(p.get('school', '?'))}, "
+            f"was corrected to {code(p.get('corrected', '?'))}"
+            for p in dropped
+        ]
+        lines.append("")
+
+    known = {"school_feed_empty", "skipped_manual_event", "unrecognised_class_code", "school_event_correction_dropped"}
     other = [p for p in problems if p.get("kind") not in known]
     if other:
         lines += [f"### Other ({len(other)})", ""]

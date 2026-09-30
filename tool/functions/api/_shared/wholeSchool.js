@@ -30,7 +30,8 @@ const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 // `time`/`end_time` are the Europe/London "HH:MM" start and end (the feed
 // holds them as UTC instants), or null for an all-day event / one with no end.
 // An end on a later day than the start is left null rather than shown as if
-// it were the same day.
+// it were the same day. `end_date` is the last day the event touches
+// (inclusive - an all-day DTEND is the day after).
 export function extractEvents(icsText) {
   const blocks = icsText.split("BEGIN:VEVENT").slice(1);
   const events = [];
@@ -51,10 +52,13 @@ export function extractEvents(icsText) {
     if (!start) continue;
     const end = dtendMatch && parseDateTime(dtendMatch[1].trim());
 
+    const endDay = end ? (end.time === null ? end.day - 1 : end.day) : start.day;
+
     events.push({
       id: idMatch[1],
       title: unescapeIcsText(summaryMatch[1].trim()),
       date: dayToIso(start.day),
+      end_date: dayToIso(Math.max(endDay, start.day)),
       time: start.time,
       end_time: start.time && end && end.time && end.day === start.day ? end.time : null,
       description: descMatch ? unescapeIcsText(descMatch[1].replace(/\r?\n /g, "")) : "",

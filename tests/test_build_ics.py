@@ -837,6 +837,57 @@ def test_school_event_correction_changes_timed_event_end_only():
     assert "end" not in raw[0]
 
 
+# --- prune_school_event_corrections() ---------------------------------------
+
+_HALF_TERM = {"id": 874, "title": "Half Term Break", "allDay": True, "start": "2026-10-27", "end": "2026-11-01"}
+_TOOL_CORRECTION = {"start": "2026-10-26", "end": "2026-10-30", "school_start": "2026-10-27", "school_end": "2026-10-31"}
+
+
+@pytest.fixture
+def no_build_problems():
+    build_ics.BUILD_PROBLEMS.clear()
+    yield
+    build_ics.BUILD_PROBLEMS.clear()
+
+
+def test_school_span_matches_the_corrections_format():
+    assert build_ics._school_span(_HALF_TERM) == ("2026-10-27", "2026-10-31")
+    timed = {"id": 1, "allDay": False, "start": "2026-10-07T09:00:00"}
+    assert build_ics._school_span(timed) == ("2026-10-07T09:00", "2026-10-07T10:00")
+
+
+def test_tool_correction_kept_while_school_unchanged(no_build_problems):
+    corrections = {"874": _TOOL_CORRECTION}
+    assert build_ics.prune_school_event_corrections(corrections, [_HALF_TERM]) == corrections
+    assert build_ics.BUILD_PROBLEMS == []
+
+
+def test_tool_correction_pruned_once_the_school_agrees(no_build_problems):
+    fixed = {**_HALF_TERM, "start": "2026-10-26", "end": "2026-10-31"}
+    assert build_ics.prune_school_event_corrections({"874": _TOOL_CORRECTION}, [fixed]) == {}
+    assert build_ics.BUILD_PROBLEMS == []
+
+
+def test_tool_correction_dropped_and_reported_when_the_school_changes_the_event(no_build_problems):
+    moved = {**_HALF_TERM, "start": "2026-10-28", "end": "2026-11-02"}
+    assert build_ics.prune_school_event_corrections({"874": _TOOL_CORRECTION}, [moved]) == {}
+    [problem] = build_ics.BUILD_PROBLEMS
+    assert problem["kind"] == "school_event_correction_dropped"
+    assert problem["school"] == "2026-10-28 - 2026-11-01"
+
+
+def test_timed_tool_correction_compares_london_times():
+    raw = {"id": 861, "title": "Welcome Service", "allDay": False, "start": "2026-09-30T14:30:00", "end": "2026-09-30T15:30:00"}
+    correction = {"start": "2026-09-30T14:30", "end": "2026-09-30T15:05", "school_start": "2026-09-30T14:30", "school_end": "2026-09-30T15:30"}
+    assert build_ics.prune_school_event_corrections({"861": correction}, [raw]) == {"861": correction}
+
+
+def test_hand_written_and_unknown_corrections_left_alone():
+    corrections = {"874": {"start": "2026-10-28"}, "999": _TOOL_CORRECTION}
+    assert build_ics.prune_school_event_corrections(corrections, [_HALF_TERM]) == corrections
+    assert build_ics.prune_school_event_corrections({"874": _TOOL_CORRECTION}, []) == {"874": _TOOL_CORRECTION}
+
+
 def test_load_school_event_corrections_missing_file_returns_empty(tmp_path, monkeypatch):
     monkeypatch.setattr(build_ics, "SCHOOL_EVENT_CORRECTIONS_PATH", tmp_path / "missing.json")
     assert build_ics.load_school_event_corrections() == {}

@@ -4,6 +4,7 @@ import { validateEventInput, cleanOptionalLocation, overrideLengthError } from "
 import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.js";
 import { commitEventById, triggerRebuild, retryable } from "./_shared/github.js";
 import { commitWholeSchoolOverride } from "./_shared/wholeSchoolOverrides.js";
+import { commitSchoolEventCorrection, schoolSpan, validateCorrection } from "./_shared/schoolEventCorrections.js";
 import { fetchClassSchoolEvents, fetchWholeSchoolEvents } from "./_shared/wholeSchool.js";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.js";
 
@@ -42,6 +43,30 @@ function overrideChanges(body) {
   return changes;
 }
 
+// A date/time correction for a school event (`date_correction` in the body:
+// {start, end, note}, or null to go back to the school's own dates) - kept
+// apart from description/location edits, so a request is one or the other and
+// a description save can never carry a date change with it. `published` is
+// the event as the caller's own feed has it, which is what proves the
+// passcode may touch it.
+async function correctSchoolEvent(env, calendar, id, published, input) {
+  let correction = null;
+  if (input !== null) {
+    const checked = validateCorrection(published, input);
+    if (checked.error) return jsonResponse({ error: "validation_failed", message: checked.error }, 400);
+    correction = checked.correction;
+  }
+  const result = await commitSchoolEventCorrection(env, id, correction, {
+    school: schoolSpan(published),
+    by: calendar,
+    label: `"${published.title}"`,
+  });
+  if (result.error) return jsonResponse(result, resultStatus(result));
+  return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
+}
+
+const wantsDateCorrection = (body) => Object.prototype.hasOwnProperty.call(body, "date_correction");
+
 export async function onRequestPost({ request, env }) {
   let body;
   try {
@@ -73,6 +98,17 @@ export async function onRequestPost({ request, env }) {
   // completely different, much smaller write than the regular manual-event
   // path below.
   if (isWholeSchoolCalendar(calendar)) {
+    if (wantsDateCorrection(body)) {
+      try {
+        const published = (await retryable(() => fetchWholeSchoolEvents())).find((e) => e.id === id);
+        if (!published) {
+          return jsonResponse({ error: "not_found", message: "That event isn't in the whole-school calendar." }, 404);
+        }
+        return await correctSchoolEvent(env, calendar, id, published, body.date_correction);
+      } catch (err) {
+        return jsonResponse(commitErrorResponse(err), 502);
+      }
+    }
     const changes = overrideChanges(body);
     if (Object.keys(changes).length === 0) {
       return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description or location given." }, 400);
@@ -106,6 +142,17 @@ export async function onRequestPost({ request, env }) {
   // this class's published feed are accepted, so a class passcode can't be
   // used to rewrite some other class's - or a whole-school - event.
   if (body.school_event === true) {
+    if (wantsDateCorrection(body)) {
+      try {
+        const published = (await retryable(() => fetchClassSchoolEvents(calendar))).find((e) => e.id === id);
+        if (!published) {
+          return jsonResponse({ error: "not_found", message: "That event isn't in this calendar's school events." }, 404);
+        }
+        return await correctSchoolEvent(env, calendar, id, published, body.date_correction);
+      } catch (err) {
+        return jsonResponse(commitErrorResponse(err), 502);
+      }
+    }
     const changes = overrideChanges(body);
     if (Object.keys(changes).length === 0) {
       return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description or location given." }, 400);

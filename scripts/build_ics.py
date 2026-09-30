@@ -69,13 +69,18 @@ WHOLE_SCHOOL_OVERRIDES_PATH = Path(__file__).resolve().parent.parent / "data" / 
 _OVERRIDE_FIELDS = ("description", "location")
 
 # Date/time corrections for school-sourced events the school has entered
-# wrongly, hand-edited only (the class rep tool never writes here, and can't
-# edit dates) - {"<school event id>": {"start": ..., "end": ..., "note": "..."}},
+# wrongly - {"<school event id>": {"start": ..., "end": ..., "note": "..."}},
 # `note` just for humans. For an all-day event `start`/`end` are
 # "YYYY-MM-DD", `end` being the LAST day (inclusive, unlike DTEND). For a
 # timed event they're London-local "YYYY-MM-DDTHH:MM", either one optional
 # (an omitted one keeps the school's value). Applied to the raw event before
 # anything else reads it, so corrected dates also drive closure_dates.
+#
+# Hand-edited, or written by the class rep tool (see tool/README.md), which
+# also records `school_start`/`school_end` - what the school's calendar said
+# when the correction was made, in the same format - and `by`, the calendar
+# whose passcode made it. Those let prune_school_event_corrections() notice
+# the school changing the event afterwards.
 SCHOOL_EVENT_CORRECTIONS_PATH = Path(__file__).resolve().parent.parent / "data" / "school_event_corrections.json"
 
 LONDON = ZoneInfo("Europe/London")
@@ -742,6 +747,65 @@ def load_school_event_corrections() -> dict[str, dict]:
         return json.load(f)
 
 
+def _school_span(raw: dict) -> tuple[str, str]:
+    """A raw event's start and end in the corrections file's own format (and
+    as the published .ics shows them, which is what the class rep tool reads
+    them from): all-day dates with an inclusive last day, or London-local
+    "YYYY-MM-DDTHH:MM" datetimes, a missing end being the default hour."""
+    if raw.get("allDay"):
+        start, end = _parse_all_day(raw)
+        return start.isoformat(), (max(end, start + timedelta(days=1)) - timedelta(days=1)).isoformat()
+    start_dt, end_dt = _parse_timed(raw)
+    return tuple(dt.astimezone(LONDON).strftime("%Y-%m-%dT%H:%M") for dt in (start_dt, end_dt))
+
+
+def prune_school_event_corrections(corrections: dict[str, dict], raw_events: list[dict]) -> dict[str, dict]:
+    """Drop corrections made by the class rep tool (the ones recording what the
+    school's calendar said at the time, `school_start`/`school_end`) that no
+    longer apply:
+
+    - the school's calendar now says what the correction says - the school
+      fixed its own entry, so the correction is redundant;
+    - the school's calendar says something else again - the school changed
+      the event after the rep corrected it, so the correction was made against
+      dates that are gone. The school wins: the correction is dropped and
+      reported as a build problem so someone checks the new dates.
+
+    Hand-written entries (no `school_start`) and ones for events not in the
+    fetch are left alone, so an empty fetch drops nothing."""
+    by_id = {str(raw["id"]): raw for raw in raw_events}
+    kept: dict[str, dict] = {}
+    for event_id, correction in corrections.items():
+        raw = by_id.get(event_id)
+        if raw is None or "school_start" not in correction:
+            kept[event_id] = correction
+            continue
+        school = _school_span(raw)
+        title = _clean(raw.get("title"))
+        if _school_span(apply_school_event_corrections([raw], {event_id: correction})[0]) == school:
+            print(f"Pruned date correction for school event {event_id} (the school's calendar now agrees)", file=sys.stderr)
+        elif school != (correction["school_start"], correction.get("school_end")):
+            _note_problem(
+                "school_event_correction_dropped",
+                f"the school changed the dates of {title!r} (event {event_id}) after a rep corrected them, "
+                f"so the correction ({correction.get('start')} - {correction.get('end')}) was dropped",
+                event=event_id,
+                title=title,
+                school=f"{school[0]} - {school[1]}",
+                corrected=f"{correction.get('start')} - {correction.get('end')}",
+            )
+        else:
+            kept[event_id] = correction
+    return kept
+
+
+def save_school_event_corrections(corrections: dict[str, dict]) -> None:
+    # Same formatting as save_whole_school_overrides(), for the same reason.
+    with SCHOOL_EVENT_CORRECTIONS_PATH.open("w") as f:
+        json.dump(corrections, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+
 def apply_school_event_corrections(raw_events: list[dict], corrections: dict[str, dict]) -> list[dict]:
     """The raw events with any date/time correction laid over them (as a
     copy - the fetched dicts aren't mutated). A correction whose id isn't in
@@ -805,7 +869,12 @@ def write_build_report(path: str, calendar_counts: dict[str, int]) -> None:
 def main() -> None:
     BUILD_PROBLEMS.clear()
     calendar_counts: dict[str, int] = {}
-    raw_events = apply_school_event_corrections(fetch_events(), load_school_event_corrections())
+    fetched = fetch_events()
+    loaded_corrections = load_school_event_corrections()
+    corrections = prune_school_event_corrections(loaded_corrections, fetched)
+    if corrections != loaded_corrections:
+        save_school_event_corrections(corrections)
+    raw_events = apply_school_event_corrections(fetched, corrections)
     if not raw_events:
         _note_problem(
             "school_feed_empty",

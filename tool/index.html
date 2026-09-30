@@ -176,6 +176,7 @@
       <h4 class="ws-title"></h4>
       <p class="ws-date hint"></p>
       <p class="ws-flag hint" hidden><span class="badge">From school calendar</span> <span class="ws-shared-note"></span></p>
+      <p class="ws-corrected hint" hidden><span class="badge badge-warning">Date corrected</span> <span class="ws-corrected-text"></span></p>
       <label>Location <span class="optional">(optional)</span>
         <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
       </label>
@@ -186,6 +187,46 @@
       <div class="card-actions">
         <button type="button" class="card-save-button">Save changes</button>
       </div>
+      <!-- Dates are the school's: correcting them is deliberately tucked away,
+           with its own save, so a description edit can never move an event. -->
+      <details class="date-correction" hidden>
+        <summary>School's date or time wrong? Correct it…</summary>
+        <div class="correction-warning">
+          <p><strong>Only use this if the school's calendar is wrong and you're sure of the real date or time.</strong>
+            It changes this event for <span class="correction-audience"></span>. The school's own calendar won't change.</p>
+          <p class="correction-closure" hidden>This is a day school is closed, so recurring class events (PE etc.) will be skipped on the corrected dates instead.</p>
+        </div>
+        <p class="correction-school hint"></p>
+        <div class="field-row correction-all-day" hidden>
+          <label>First day
+            <input type="date" class="correction-start-date">
+          </label>
+          <label>Last day
+            <input type="date" class="correction-end-date">
+          </label>
+        </div>
+        <div class="field-row correction-timed" hidden>
+          <label>Date
+            <input type="date" class="correction-date">
+          </label>
+          <label>Start time
+            <input type="time" class="correction-time">
+          </label>
+          <label>End time
+            <input type="time" class="correction-end-time">
+          </label>
+        </div>
+        <label>How do you know?
+          <input type="text" class="correction-note" maxlength="300" placeholder="e.g. Newsletter 25 Sep says Mon 26 – Fri 30">
+        </label>
+        <p class="hint">Kept with the change so others can see why. It's public, so no names or contact details.</p>
+        <p class="correction-confirm" hidden></p>
+        <p class="correction-error error" hidden></p>
+        <div class="card-actions">
+          <button type="button" class="correction-save-button">Correct date</button>
+          <button type="button" class="secondary-button correction-undo-button" hidden>Go back to the school's date</button>
+        </div>
+      </details>
     </div>
   </template>
 

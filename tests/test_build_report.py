@@ -370,3 +370,10 @@ def test_no_report_file_means_no_github_calls_and_no_failure(tmp_path):
     assert result.returncode == 0
     assert calls == [] and summary == ""
     assert "No build report was written" in result.stdout
+
+
+def test_dropped_correction_gets_its_own_section():
+    report = {"problems": [{"kind": "school_event_correction_dropped", "message": "m", "title": "Half Term", "school": "2026-10-28 - 2026-11-01", "corrected": "2026-10-26 - 2026-10-30"}]}
+    text = build_report.render(report)
+    assert "### Date corrections dropped (1)" in text
+    assert "Other" not in text

@@ -87,7 +87,8 @@ integration.
   - `events-list.js` / `events-update.js` / `events-delete.js` - list,
     amend, or remove an already-saved event by its stable `id`. For the
     Whole School entry, `events-list.js` and `events-update.js` instead
-    read/write a description/location override (see below); `events-delete.js`
+    read/write a description/location override or a date correction (see
+    below); `events-delete.js`
     rejects it outright, same as `save.js`.
 - `functions/api/_shared/` - `calendars.js` (the 16 valid calendar codes -
   the 14 classes come from `docs/classes.js`, the single source of truth
@@ -114,7 +115,10 @@ integration.
   (lists current whole-school events the same way - by reading the
   published `.ics` - rather than re-implementing `build_ics.py`'s
   classification logic in JS), `wholeSchoolOverrides.js` (commits a
-  description/location override to `data/whole_school_overrides.json`).
+  description/location override to `data/whole_school_overrides.json`),
+  `schoolEventCorrections.js` (validates and commits a school event's
+  date/time correction to `data/school_event_corrections.json` - see
+  "Correcting a school event's date or time" below).
 
 ## Whole School events
 
@@ -122,13 +126,14 @@ The **Whole School** entry in the calendar picker is deliberately much more
 restricted than every other calendar: it can only edit an already-published
 whole-school event's *description* (e.g. adding parking or kit notes to an
 inset day) and *location* (the school's feed never has one, so this adds
-rather than replaces) - adding, deleting, or editing anything else about an
-event (title, date, recurrence, ...) is disabled both in the UI (a simpler
-read-mostly card with just description and location boxes - no other
-fields, no "Add events" section at all) and re-checked server-side in every
-endpoint (`save.js`/`events-delete.js`/`parse.js` reject this calendar
-outright; `events-update.js` accepts only a `description` and/or
-`location`). It also only accepts an id that's in the published `whole-school.ics` (as a
+rather than replaces), plus correct its date or time behind a warning (see
+"Correcting a school event's date or time" below) - adding, deleting, or
+editing anything else about an event (title, recurrence, ...) is disabled
+both in the UI (a simpler read-mostly card with just description and
+location boxes - no other fields, no "Add events" section at all) and
+re-checked server-side in every endpoint (`save.js`/`events-delete.js`/`parse.js`
+reject this calendar outright; `events-update.js` accepts only a
+`description` and/or `location`, or a `date_correction`). It also only accepts an id that's in the published `whole-school.ics` (as a
 class's school-event edit only accepts one in its own feed), and
 `commitWholeSchoolOverride()` refuses anything but a numeric school event id,
 so nothing else can become a key in `data/whole_school_overrides.json`.
@@ -173,6 +178,52 @@ school event id, so a year-wide event's edit reaches both classes). The id
 must be in that class's published feed, so a class passcode can't edit some
 other class's or a whole-school event. There is no delete: like Whole School
 events, their existence is the school's call.
+
+### Correcting a school event's date or time
+
+When the school's own calendar has an event on the wrong date or with the
+wrong times, a rep can correct it on that event's card: Whole School events
+from the Whole School entry, and a class's school events from that class's
+entry (the id must be in the caller's own published feed, as for
+description edits). The correction goes into
+`data/school_event_corrections.json`, which `scripts/build_ics.py` already
+applies (see the main README's "Correcting a school event's dates or
+times"). It's the riskiest edit the tool offers - it changes the event for
+every family subscribed to it, and for an inset day, half term or holiday it
+also changes which days recurring class events are skipped - so the UI is
+deliberately careful:
+
+- It's tucked into a closed "School's date or time wrong? Correct it…"
+  section with its own save button, apart from the description/location
+  save, so a description edit can never move an event (the server takes
+  either a `date_correction` or description/location, never both).
+- The section warns who it affects ("every family subscribed to all of
+  Year 5 (5HP and 5M)"), adds a closure-day note when the title has the same
+  keywords the build uses, and always shows what the school's calendar says.
+- A reason ("How do you know?") is required. It's stored as `note` and put in
+  the commit message.
+- Saving takes two clicks: the first spells out the change ("Change "Half
+  Term" from … to … for …?") and arms the button, and any edit disarms it.
+- A corrected event shows a **Date corrected** badge with the school's
+  dates and the reason, and a **Go back to the school's date** button (also
+  two clicks) that removes the entry.
+
+The request is `date_correction: {start, end, note}` in the file's own
+format (all-day dates with an inclusive last day, or same-day London
+`YYYY-MM-DDTHH:MM`), or `date_correction: null` to undo. The server
+(`_shared/schoolEventCorrections.js`) refuses past events, a start in the
+past or more than ~a year ahead, a timed end that isn't after the start on
+the same day, a timed event that runs over several days, and a reason
+shorter than 5 or longer than 300 characters. It records the school's own
+values as `school_start`/`school_end` on the first correction (keeping the
+recorded ones on a re-correction, since what's published then is already
+corrected), plus `by` (the calendar code). A correction back to exactly the
+school's values just removes the entry. With the school's values recorded,
+the build prunes a correction once the school agrees with it, and drops it
+with a build-problems report if the school changes the event some other way.
+`events-list.js` merges the file in (`applyCorrections`), so a pending
+correction shows straight away with a `correction: {note, school}` field
+for the badge.
 
 ## Weekly list ("What's on this week")
 

@@ -222,9 +222,11 @@ come straight from the school's own API on every 6-hourly build, so
 there's no `data/manual_events/whole-school.json` to edit. [The class rep
 tool](tool/README.md) still has a **Whole School** calendar entry with its
 own passcode, but it can only edit an already-published event's
-*description* (e.g. adding parking or kit notes to an inset day) and add a
-*location* (the school's feed has none) - never its title, date, or whether
-it exists at all, since none of that is this tool's to control; adding and
+*description* (e.g. adding parking or kit notes to an inset day), add a
+*location* (the school's feed has none) and - behind a warning - correct its
+dates or times when the school has them wrong (see "Correcting a school
+event's dates or times" below). It never changes an event's title or whether
+it exists at all, since neither is this tool's to control; adding and
 deleting events is disabled entirely for this entry. Saved edits live in
 `data/whole_school_overrides.json`
 (`{"<school event id>": {"description": "...", "location": "..."}}`, either
@@ -240,12 +242,15 @@ description/location-only editing.
 
 When the school's own calendar has an event on the wrong dates (e.g. a half
 term entered a day late) or with the wrong times, `data/school_event_corrections.json`
-fixes it in our feeds without waiting on the school. It's hand-edited only -
-the class rep tool never touches it:
+fixes it in our feeds without waiting on the school. Reps can make corrections
+in [the class rep tool](tool/README.md#correcting-a-school-events-date-or-time)
+(the same passcode rules as description edits), or you can edit the file by hand:
 
 ```json
 {
-  "874": {"start": "2026-10-26", "end": "2026-10-30", "note": "why"},
+  "874": {"start": "2026-10-26", "end": "2026-10-30",
+          "school_start": "2026-10-27", "school_end": "2026-10-31",
+          "note": "why", "by": "whole-school"},
   "861": {"end": "2026-09-30T15:05", "note": "why"}
 }
 ```
@@ -255,9 +260,17 @@ an all-day event, `start`/`end` are dates and `end` is the last day
 (inclusive). For a timed event they're London-local `YYYY-MM-DDTHH:MM`
 datetimes, and either can be left out to keep the school's value. The
 corrected dates are used everywhere, including the closure dates that skip
-recurring class events. Once the school fixes its own entry (or the
-event leaves the feed) the entry is redundant and can be deleted - a
-correction whose id is no longer in the feed only logs a warning.
+recurring class events.
+
+`school_start`/`school_end` (in the same format) record what the school's
+calendar said when the correction was made. The tool always writes them, and
+`by` records whose passcode made the correction. With them, each build checks
+the correction still makes sense: once the school's calendar says the same
+thing, the entry is redundant and gets pruned. If the school changes the event
+to something else, the correction is dropped (the school wins) and shows up in
+the "Calendar build problems" issue so someone can check the new dates. An
+entry without them is never pruned, so delete it by hand once the school fixes
+its entry. A correction whose id is no longer in the feed only logs a warning.
 
 ## Calendar preview (`docs/index.html`)
 

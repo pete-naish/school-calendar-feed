@@ -49,7 +49,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           for attempt in 1 2 3; do
             # data/ is included for build_ics.py pruning stale whole-school
-            # description overrides (data/whole_school_overrides.json).
+            # description overrides (data/whole_school_overrides.json) and
+            # date corrections (data/school_event_corrections.json).
             if git diff --quiet -- docs/calendars/ data/; then
               echo "No changes to calendar feeds"
               exit 0

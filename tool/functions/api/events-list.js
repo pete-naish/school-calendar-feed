@@ -3,6 +3,7 @@ import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
 import { getManualEventsFile, getJsonFile, retryable } from "./_shared/github.js";
 import { fetchWholeSchoolEvents, fetchClassSchoolEvents } from "./_shared/wholeSchool.js";
 import { applyOverrides } from "./_shared/wholeSchoolOverrides.js";
+import { applyCorrections, CORRECTIONS_PATH } from "./_shared/schoolEventCorrections.js";
 import { readErrorResponse } from "./_shared/errors.js";
 
 function jsonResponse(obj, status = 200) {
@@ -30,10 +31,14 @@ export async function onRequestPost({ request, env }) {
 
   if (isWholeSchoolCalendar(calendar)) {
     try {
-      const [events, overrides] = await retryable(() =>
-        Promise.all([fetchWholeSchoolEvents(), getJsonFile(env, "data/whole_school_overrides.json", {})])
+      const [events, overrides, corrections] = await retryable(() =>
+        Promise.all([
+          fetchWholeSchoolEvents(),
+          getJsonFile(env, "data/whole_school_overrides.json", {}),
+          getJsonFile(env, CORRECTIONS_PATH, {}),
+        ])
       );
-      return jsonResponse({ events: applyOverrides(events, overrides.data) });
+      return jsonResponse({ events: applyCorrections(applyOverrides(events, overrides.data), corrections.data) });
     } catch (err) {
       return jsonResponse(readErrorResponse(err), 502);
     }
@@ -51,17 +56,18 @@ export async function onRequestPost({ request, env }) {
     // feed has them too, i.e. they're year-wide and an edit reaches both.
     const group = yearGroupFor(calendar);
     const siblings = group ? group.classes.filter((cls) => cls.code !== calendar) : [];
-    const [own, shared, schoolEvents, siblingSchoolEvents, overrides] = await retryable(() =>
+    const [own, shared, schoolEvents, siblingSchoolEvents, overrides, corrections] = await retryable(() =>
       Promise.all([
         getManualEventsFile(env, calendar),
         group ? getManualEventsFile(env, group.key) : { events: [] },
         fetchClassSchoolEvents(calendar),
         Promise.all(siblings.map((cls) => fetchClassSchoolEvents(cls.code))),
         getJsonFile(env, "data/whole_school_overrides.json", {}),
+        getJsonFile(env, CORRECTIONS_PATH, {}),
       ])
     );
     const siblingIds = new Set(siblingSchoolEvents.flat().map((e) => e.id));
-    const school = applyOverrides(schoolEvents, overrides.data).map((e) => ({
+    const school = applyCorrections(applyOverrides(schoolEvents, overrides.data), corrections.data).map((e) => ({
       ...e,
       school_event: true,
       year_group: siblingIds.has(e.id),

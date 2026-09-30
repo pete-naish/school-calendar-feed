@@ -51,3 +51,18 @@ test("manual (non-school) events are skipped", () => {
   const manual = ["UID:manual-1@school-calendar-feed", "SUMMARY:Manual", "DTSTART:20260925T081500Z"];
   assert.deepEqual(extractEvents(calendar(manual)), []);
 });
+
+test("end_date is the last day an event touches", () => {
+  const [allDay, oneDay, timed, noEnd] = extractEvents(
+    calendar(
+      event(874, "DTSTART;VALUE=DATE:20261026", "DTEND;VALUE=DATE:20261031"),
+      event(863, "DTSTART;VALUE=DATE:20261007", "DTEND;VALUE=DATE:20261008"),
+      event(3, "DTSTART:20260925T170000Z", "DTEND:20260926T090000Z"),
+      event(2, "DTSTART:20260925T081500Z")
+    )
+  );
+  assert.equal(allDay.end_date, "2026-10-30");
+  assert.equal(oneDay.end_date, "2026-10-07");
+  assert.equal(timed.end_date, "2026-09-26");
+  assert.equal(noEnd.end_date, "2026-09-25");
+});
