@@ -20,7 +20,7 @@ from build_ics import read_classes_file  # noqa: E402
 
 LIVE = read_classes_file(ROOT / "docs" / "classes.js")
 FROZEN = read_classes_file(ROOT / "tests" / "fixtures" / "classes.js")
-PAGE_JS = (ROOT / "docs" / "assets" / "calendar.js").read_text()
+PAGE_JS = (ROOT / "docs" / "assets" / "calendar.ts").read_text()
 
 
 def _codes(config):
@@ -57,15 +57,15 @@ def test_labels_are_unique_and_never_look_like_a_code():
 
 
 def test_the_parent_page_has_a_colour_for_every_year_group():
-    styles = re.search(r"const GROUP_STYLES = \{(.*?)\n\};", PAGE_JS, re.S)
-    assert styles, "GROUP_STYLES not found in calendar.js"
+    styles = re.search(r"const GROUP_STYLES\b[^=]*= \{(.*?)\n\};", PAGE_JS, re.S)
+    assert styles, "GROUP_STYLES not found in calendar.ts"
     styled = set(re.findall(r"^\s*(\w+): \{", styles.group(1), re.M))
     assert styled == {g["key"] for g in LIVE["yearGroups"]}
 
 
 def test_no_copy_of_the_class_list_is_left_in_code():
     """The four hand-kept copies this file replaced must not creep back."""
-    for path in ["docs/assets/calendar.js", "tool/app.js", "tool/functions/api/_shared/calendars.js", "scripts/build_ics.py"]:
+    for path in ["docs/assets/calendar.ts", "tool/app.ts", "tool/functions/api/_shared/calendars.ts", "scripts/build_ics.py"]:
         source = (ROOT / path).read_text()
         assert not re.search(r"""["']y\d-[ab]["']\s*,\s*["']?(label|current_label)""", source), path
         assert not re.search(r"""code["']?:\s*["']y\d-[ab]["']\s*,\s*["']?(current_)?label""", source), path

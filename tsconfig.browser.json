@@ -12,7 +12,10 @@
     "removeComments": false,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
+    // ical.js's bundled types don't pass on their own. The API's shared
+    // types.d.ts is still checked, by tsconfig.json.
+    "skipLibCheck": true,
     "newLine": "lf"
   },
-  "files": ["tool/app.ts", "tool/appHelpers.ts"]
+  "files": ["docs/assets/calendar.ts", "tool/app.ts", "tool/appHelpers.ts"]
 }
