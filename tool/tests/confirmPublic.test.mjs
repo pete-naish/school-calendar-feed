@@ -50,7 +50,7 @@ const updateEvent = (id, event, extra = {}) => post(update, { calendar: "y5-b", 
 
 const MOBILE = "07700 900123";
 
-// --- new events (save.js) ---
+// --- new events (save.ts) ---
 
 test("a new event with a mobile number is held for confirmation, and nothing is written", async () => {
   const puts = fakeSite();
@@ -126,7 +126,7 @@ test("PII is checked on what was validated: a 'url' field can't smuggle text pas
   assert.equal(puts.length, 1);
 });
 
-// --- editing a saved event (events-update.js) ---
+// --- editing a saved event (events-update.ts) ---
 
 const saved = (description) => ({ id: "e1", title: "Coffee", date: "2026-10-01", time: "09:00", end_time: null, description, location: null, url: null, recurrence: null, exceptions: [] });
 const edit = (description, extra = {}) => ({ title: "Coffee", date: "2026-10-01", time: "10:00", description, ...extra });

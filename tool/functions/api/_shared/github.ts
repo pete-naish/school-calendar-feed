@@ -112,7 +112,7 @@ function backoff(attempt: number) {
 
 // Retries any thrown error (network failure, GitHub 5xx via
 // getManualEventsFile's own throw) up to MAX_ATTEMPTS - for read-only
-// callers (events-list.js) that don't need commitManualEvents' GET+PUT
+// callers (events-list.ts) that don't need commitManualEvents' GET+PUT
 // cycle.
 export async function retryable<T>(fn: () => Promise<T>): Promise<T> {
   let lastError: unknown;

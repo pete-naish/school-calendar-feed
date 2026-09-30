@@ -10,7 +10,7 @@ function find(root, selector) {
 let YEAR_GROUPS = [];
 let ALL_CALENDARS = [];
 const FOSPS = { code: "fosps", label: "FOSPS" };
-// Restricted entry - description/location editing only, see calendars.js's
+// Restricted entry - description/location editing only, see calendars.ts's
 // WHOLE_SCHOOL and isWholeSchoolCalendar() on the server side.
 const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School" };
 const RECURRENCE_OPTIONS = {
@@ -34,7 +34,7 @@ function recurrenceToSelectValue(recurrence) {
 }
 // A year group's classes alphabetised by label, for listing them to reps -
 // the same order as the public site's calendar list (displayOrder() in
-// docs/assets/calendar.js). YEAR_GROUPS itself stays in config order.
+// docs/assets/calendar.ts). YEAR_GROUPS itself stays in config order.
 function sortedClasses(group) {
     return [...group.classes].sort((a, b) => a.label.localeCompare(b.label));
 }
@@ -157,7 +157,7 @@ function init() {
 }
 // The year group the signed-in calendar belongs to ({label, classes}), or
 // undefined for FOSPS / Whole School. Events for "all of Year 1" are shared
-// by every class in the year (see functions/api/_shared/calendars.js's
+// by every class in the year (see functions/api/_shared/calendars.ts's
 // yearGroupFor()).
 function currentYearGroup() {
     return YEAR_GROUPS.find((g) => g.classes.some((c) => c.code === state.calendar));
@@ -237,7 +237,7 @@ async function handleLogin() {
             el.loginError.textContent = "Wrong passcode for this calendar.";
         }
         else {
-            // e.g. 429 rate_limited (see _shared/auth.js) - data.message is written
+            // e.g. 429 rate_limited (see _shared/auth.ts) - data.message is written
             // for a rep to read; data.error is just a machine-readable code.
             el.loginError.textContent = (data && data.message) || "Something went wrong - try again.";
         }
@@ -727,7 +727,7 @@ function createSchoolEventCard(event) {
 // family subscribed to it, and for a closure day which days recurring class
 // events skip, so it's kept out of the way (a closed <details>), explains what
 // it does, needs a reason, and takes two clicks: the first spells out the
-// change, the second makes it. See functions/api/_shared/schoolEventCorrections.js.
+// change, the second makes it. See functions/api/_shared/schoolEventCorrections.ts.
 // Same keywords as _CLOSURE_KEYWORDS in scripts/build_ics.py.
 const CLOSURE_KEYWORDS = /\bINSET\b|\bHALF TERM\b|\bHOLIDAY\b/i;
 function formatDayDate(iso) {

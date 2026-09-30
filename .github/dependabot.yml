@@ -1,6 +1,7 @@
-# Keeps the pinned GitHub Actions (see .github/workflows) and the Python
-# requirements up to date by opening a pull request for each new version.
-# The tool has no npm dependencies, so there's nothing to watch there.
+# Keeps the pinned GitHub Actions (see .github/workflows), the Python
+# requirements and the TypeScript toolchain (package.json - dev dependencies
+# only, nothing ships) up to date by opening a pull request for each new
+# version.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -18,3 +19,15 @@ updates:
     groups:
       python:
         patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns: ["*"]
+    # ical.js is only here for its types, which must match the vendored
+    # docs/assets/vendor/ical.min.js - upgrade both together, by hand.
+    ignore:
+      - dependency-name: ical.js

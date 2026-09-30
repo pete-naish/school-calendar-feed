@@ -50,7 +50,7 @@ since a parent only ever gets them from the one whole-school calendar.
 
 **All 16 calendars are always generated and published**, regardless of
 what's launched on the landing page. `docs/index.html` has no per-calendar
-markup: `docs/assets/calendar.js` renders one rail row per code in
+markup: `docs/assets/calendar.ts` renders one rail row per code in
 `LAUNCHED_CALENDARS` (a preview checkbox), three platform buttons (Apple
 Calendar / Google Calendar / Outlook) that add whichever calendars are
 ticked - one feed per click, so several ticked fan out to a list - plus
@@ -274,8 +274,10 @@ its entry. A correction whose id is no longer in the feed only logs a warning.
 
 ## Calendar preview (`docs/index.html`)
 
-The landing page embeds an interactive calendar (`docs/assets/calendar.js`,
-`docs/assets/calendar.css`) that fetches and parses all 16 `.ics` files
+The landing page embeds an interactive calendar (`docs/assets/calendar.ts`,
+compiled to the `calendar.js` beside it - GitHub Pages serves `docs/` as is,
+so after editing the `.ts` run `npm run build` and commit both, see
+`tool/README.md` - and `docs/assets/calendar.css`) that fetches and parses all 16 `.ics` files
 client-side with [ical.js](https://github.com/kewisch/ical.js) - including
 expanding `RRULE`/`EXDATE` - so parents can see what they'd actually get
 before subscribing anywhere, or just use the page itself as their calendar.
@@ -289,7 +291,7 @@ visitor sees what they'd get before they pick a class. The class tiles in
 the calendar header are both the preview toggles and the subscribe
 actions, so there is no separate subscribe section; the hero's "Add a
 class to your calendar" button scrolls to them. Only launched calendars
-get a tile (`LAUNCHED_CALENDARS` in `calendar.js`); a not-yet-launched
+get a tile (`LAUNCHED_CALENDARS` in `calendar.ts`); a not-yet-launched
 calendar's `.ics` is still fetched and ready the moment it's launched,
 nothing else needs to change. Month/Week/Day views (button group in the nav bar) share one `viewedDate`
 anchor whose meaning depends on the active view (1st-of-month / that week's
@@ -313,7 +315,7 @@ click counts".
 
 Because `ical.js`'s own offset math for an `add_missing_timezones()`-style
 (RDATE-list) `VTIMEZONE` doesn't reliably resolve the correct side of a DST
-change, `calendar.js` registers the embedded `VTIMEZONE` (for EXDATE/RRULE
+change, `calendar.ts` registers the embedded `VTIMEZONE` (for EXDATE/RRULE
 matching) but independently recomputes each occurrence's actual displayed
 time using the browser's own `Intl` timezone data (`timeZoneOffsetMs()` /
 `londonWallClockToUtc()`) - verified correct regardless of the viewer's own

@@ -26,5 +26,25 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v
 
+      # Node 24 runs the tool's .ts files directly (type stripping), for the
+      # tests; tsc checks them and builds the pages' committed .js.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      # Neither host runs a build, so the served .js is committed next to its
+      # .ts - and has to be what the .ts builds to.
+      - name: Check the committed JS is built from the current TS
+        run: |
+          npm run build
+          git diff --exit-code -- docs/assets/calendar.js tool/app.js tool/appHelpers.js \
+            || { echo "::error::Run npm run build and commit the .js files it changes."; exit 1; }
+
       - name: Run tool tests
-        run: node --test "tool/tests/*.test.mjs"
+        run: npm run test:tool

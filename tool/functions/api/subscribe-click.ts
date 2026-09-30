@@ -1,6 +1,6 @@
 // POST /api/subscribe-click - {calendar, platform}, sent by the public landing
 // page as a navigator.sendBeacon() when a parent clicks a subscribe link. Bumps
-// that month's counter for the pair in env.STATS (see _shared/clickStats.js
+// that month's counter for the pair in env.STATS (see _shared/clickStats.ts
 // for what is and isn't stored). No passcode: it reveals nothing and changes
 // nothing but a tally.
 //
@@ -9,7 +9,7 @@
 // are needed. A string beacon body is sent as text/plain, which is why this
 // parses the body itself rather than expecting application/json.
 //
-// Like rateLimit.js, it's best-effort - KV has no atomic increment, so two
+// Like rateLimit.ts, it's best-effort - KV has no atomic increment, so two
 // clicks landing at once can count as one - and a no-op with no binding.
 import { STATS_ORIGIN, clickKey, isValidClick } from "./_shared/clickStats.ts";
 import type { RequestBody } from "./_shared/types.d.ts";

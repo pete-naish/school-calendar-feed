@@ -12,13 +12,24 @@ A separate **Whole School** calendar entry (its own passcode) offers a much
 more restricted mode: editing an already-published whole-school event's
 *description* and *location* only - see "Whole School events" below.
 
-No framework, no build step: plain HTML/CSS/JS frontend + plain JS
-Cloudflare Pages Functions. Deploys via Cloudflare's zero-build-command git
-integration.
+No framework: plain HTML/CSS and TypeScript for the frontend and for the
+Cloudflare Pages Functions. Still no build step at deploy time - it deploys
+via Cloudflare's zero-build-command git integration:
+
+- The Functions (`functions/**/*.ts`) are compiled by Cloudflare itself.
+- The page's `app.ts` and `appHelpers.ts` compile to the `app.js` and
+  `appHelpers.js` beside them, which are what's served - so they're
+  committed. After editing a page `.ts`, run `npm run build` (from the repo
+  root) and commit both; CI fails if the committed `.js` is out of date.
+  Never edit the `.js` by hand.
+
+`npm run typecheck` checks both under `strict` (`tsconfig.json` for the
+Functions, `tsconfig.browser.json` for the pages - the parent page's
+`docs/assets/calendar.ts` too). One-off setup: `npm install` at the repo root.
 
 ## How it works
 
-- `index.html` / `app.js` / `style.css` - the frontend. Calendar picker →
+- `index.html` / `app.ts` (+ `appHelpers.ts`) / `style.css` - the frontend. Calendar picker →
   passcode → paste text → review/edit extracted events → save. A "+ Add an
   event manually" button is always available too - pasting text through
   Claude is optional, not required. A second section lists and lets you
@@ -28,8 +39,8 @@ integration.
   weekly / every 2 weeks / monthly, each requiring a "repeat until" date -
   the tool won't save an open-ended recurring event). Pasting text like "PE
   every Thursday" auto-detects the repeat pattern and pre-fills the card's
-  Repeats dropdown (with a suggested "repeat until" - see `parse.js` /
-  `termEnd.js` below) - still fully editable before saving, same as a
+  Repeats dropdown (with a suggested "repeat until" - see `parse.ts` /
+  `termEnd.ts` below) - still fully editable before saving, same as a
   manually-set repeat. These become a standard iCalendar `RRULE` in the
   published `.ics`. `scripts/build_ics.py` automatically excludes
   occurrences that fall on inset days, half term, or holidays (and
@@ -45,37 +56,37 @@ integration.
   one-off event with its own stable UID. Only available on an
   already-saved event (not a draft/extraction-review card) - there's no
   series yet to override. On an event shared by the whole year (see
-  `save.js` below) an exception can be limited to one class with an
+  `save.ts` below) an exception can be limited to one class with an
   **Applies to** choice (e.g. only RR's class trip clashes with the shared
   PE): saved as `classes: ["rec-a"]` on the exception, absent meaning every
   class. Where the same date has both a year-wide and a class-specific
   exception, the class-specific one wins for that class; two that would clash
   (both year-wide, or sharing a class) are refused.
 - `functions/api/*.js` - Cloudflare Pages Functions (file-based routing:
-  `functions/api/parse.js` becomes `POST /api/parse`, etc). Each endpoint
+  `functions/api/parse.ts` becomes `POST /api/parse`, etc). Each endpoint
   re-validates the calendar code and passcode independently.
-  - `calendars.js` - `GET /api/calendars`, the one endpoint without a
+  - `calendars.ts` - `GET /api/calendars`, the one endpoint without a
     passcode: the year groups and class labels for the page's calendar
     picker, from `docs/classes.js` (class labels are public anyway).
-  - `parse.js` - calls Claude to extract events from pasted text. Detects
+  - `parse.ts` - calls Claude to extract events from pasted text. Detects
     an explicitly-stated repeat pattern ("every Thursday", "weekly") and
     sets `recurrence.freq`/`interval` - it's never allowed to guess how
     long a series runs for (`recurrence.until`), so that gets filled in
-    separately (see `termEnd.js` below) as a suggestion the rep still
+    separately (see `termEnd.ts` below) as a suggestion the rep still
     reviews before saving. Extracted titles come back in Title Case: the model
-    is asked for it, and `_shared/titleCase.js` then fixes any lowercase words
+    is asked for it, and `_shared/titleCase.ts` then fixes any lowercase words
     (keeping acronyms, class codes and anything already capitalised as they
     are - it never lowercases an ALL-CAPS title, since it can't tell a shouted
     heading from an acronym). Titles a rep types or edits are left as written.
     Nothing is persisted at this step.
-  - `save.js` - bulk-creates the reviewed events (from `parse.js`, or typed
+  - `save.ts` - bulk-creates the reviewed events (from `parse.ts`, or typed
     in manually). On a class calendar a draft can be ticked **"Add to all of
     Year 1 (1S and 1T)"**: those events are stored once, in the year's shared
     `data/manual_events/<year key>.json` (e.g. `year1.json`), rather than
     copied into each class's file, and `build_ics.py` builds them into every
-    class of the year. `events-list.js` shows a class both its own events and
+    class of the year. `events-list.ts` shows a class both its own events and
     its year's shared ones (the latter flagged and marked "Shared with ..."
-    in the UI), and `events-update.js` / `events-delete.js` look for an
+    in the UI), and `events-update.ts` / `events-delete.ts` look for an
     event's id in the class's own file, then its year's - so any class in the
     year can edit or delete a shared event, for all of them (bar a class-scoped
     exception, which only affects the classes it names), but a class from
@@ -84,41 +95,44 @@ integration.
     Duplicates of an already-saved event are skipped
     (same calendar + title + date). Rejected outright for the Whole School
     entry (see below).
-  - `events-list.js` / `events-update.js` / `events-delete.js` - list,
+  - `events-list.ts` / `events-update.ts` / `events-delete.ts` - list,
     amend, or remove an already-saved event by its stable `id`. For the
-    Whole School entry, `events-list.js` and `events-update.js` instead
+    Whole School entry, `events-list.ts` and `events-update.ts` instead
     read/write a description/location override or a date correction (see
-    below); `events-delete.js`
-    rejects it outright, same as `save.js`.
-- `functions/api/_shared/` - `calendars.js` (the 16 valid calendar codes -
+    below); `events-delete.ts`
+    rejects it outright, same as `save.ts`.
+- `functions/api/_shared/` - `calendars.ts` (the 16 valid calendar codes -
   the 14 classes come from `docs/classes.js`, the single source of truth
   shared with `scripts/build_ics.py` and the parent page, bundled in at deploy
   time; FOSPS is fixed; the 16th, `whole-school`, is the restricted entry
   below and isn't mirrored from anywhere, since it has no
-  `data/manual_events/` file at all), `auth.js` (passcode check, in constant
+  `data/manual_events/` file at all), `auth.ts` (passcode check, in constant
   time, and the per-calendar rate limit - see "Rate limiting" below),
-  `rateLimit.js` (that limit's policy and its KV key/IP helpers),
-  `clickStats.js` (the subscribe-click counter's allowed values and KV key -
-  see "Subscribe click counts" below), `github.js`
+  `rateLimit.ts` (that limit's policy and its KV key/IP helpers),
+  `clickStats.ts` (the subscribe-click counter's allowed values and KV key -
+  see "Subscribe click counts" below), `github.ts`
   (GitHub Contents API get/commit for any JSON file in the repo, retrying a
-  concurrent-edit conflict, a GitHub 5xx, or a network failure), `validate.js`
+  concurrent-edit conflict, a GitHub 5xx, or a network failure), `validate.ts`
   (sanitizes/validates event data from both the LLM and the frontend form -
   including rejecting any `url` that isn't http(s), since it's later
-  rendered as a link on the public preview page), `errors.js` (turns a
+  rendered as a link on the public preview page), `errors.ts` (turns a
   caught failure into a message a non-technical rep can act on, while the
-  detail still goes to `console.error`), `termEnd.js` (finds the next "Last
+  detail still goes to `console.error`), `termEnd.ts` (finds the next "Last
   Day of ... Term" date from the site's own public `whole-school.ics`, by
   splitting it into VEVENT blocks and regex-matching `SUMMARY`/`DTSTART` per
   block - no ICS parser dependency needed. Used only to default a
   newly-detected recurring event's "repeat until"; falls back to a fixed
-  ~12-week horizon if the fetch fails or nothing matches), `wholeSchool.js`
+  ~12-week horizon if the fetch fails or nothing matches), `wholeSchool.ts`
   (lists current whole-school events the same way - by reading the
   published `.ics` - rather than re-implementing `build_ics.py`'s
-  classification logic in JS), `wholeSchoolOverrides.js` (commits a
+  classification logic in JS), `wholeSchoolOverrides.ts` (commits a
   description/location override to `data/whole_school_overrides.json`),
-  `schoolEventCorrections.js` (validates and commits a school event's
+  `schoolEventCorrections.ts` (validates and commits a school event's
   date/time correction to `data/school_event_corrections.json` - see
-  "Correcting a school event's date or time" below).
+  "Correcting a school event's date or time" below), `types.d.ts` (the
+  shapes shared by the API and the page: events, request and response
+  bodies, error codes) and `env.ts` (the secrets and KV bindings, kept apart
+  so the page can use `types.d.ts` without the Workers runtime's types).
 
 ## Whole School events
 
@@ -131,8 +145,8 @@ rather than replaces), plus correct its date or time behind a warning (see
 editing anything else about an event (title, recurrence, ...) is disabled
 both in the UI (a simpler read-mostly card with just description and
 location boxes - no other fields, no "Add events" section at all) and
-re-checked server-side in every endpoint (`save.js`/`events-delete.js`/`parse.js`
-reject this calendar outright; `events-update.js` accepts only a
+re-checked server-side in every endpoint (`save.ts`/`events-delete.ts`/`parse.ts`
+reject this calendar outright; `events-update.ts` accepts only a
 `description` and/or `location`, or a `date_correction`). It also only accepts an id that's in the published `whole-school.ics` (as a
 class's school-event edit only accepts one in its own feed), and
 `commitWholeSchoolOverride()` refuses anything but a numeric school event id,
@@ -142,15 +156,15 @@ This is a structurally different data source from every other calendar:
 whole-school events aren't hand-entered at all (there's no
 `data/manual_events/whole-school.json`) - they come straight from the
 school's own API on every 6-hourly `scripts/build_ics.py` run.
-`events-list.js` lists them by reading the site's own already-published
-`whole-school.ics` (`_shared/wholeSchool.js`), recovering each event's
+`events-list.ts` lists them by reading the site's own already-published
+`whole-school.ics` (`_shared/wholeSchool.ts`), recovering each event's
 stable id from its `UID` (`stpauls-<id>@school-calendar-feed`) and merging
 in any not-yet-published override so a rep sees their own recent edit
 immediately rather than the stale pre-edit text. Saved edits are written to
 `data/whole_school_overrides.json`
 (`{"<school event id>": {"description": "...", "location": "..."}}`, either
 key optional; an older bare-string entry is still read as a description) via
-`_shared/wholeSchoolOverrides.js`. The tool sends only the fields a rep
+`_shared/wholeSchoolOverrides.ts`. The tool sends only the fields a rep
 actually changed, so adding a location doesn't also pin the description to
 the school's current text. Clearing a box back to empty removes that field's
 override entirely (a description reverts to whatever the school's own feed
@@ -166,13 +180,13 @@ override whose school event has since disappeared from the school's feed
 `scripts/build_ics.py` routes some events from the school's Upcoming Events
 feed to a class (or both classes of a year group) instead of Whole School,
 based on the class/year named in the title. A class's entry lists those too,
-alongside its manual events: `events-list.js` reads the class's own
-published `.ics` (`fetchClassSchoolEvents` in `_shared/wholeSchool.js`,
+alongside its manual events: `events-list.ts` reads the class's own
+published `.ics` (`fetchClassSchoolEvents` in `_shared/wholeSchool.ts`,
 keeping only `stpauls-<id>` UIDs and dropping the `"<CODE>: "` title prefix)
 and flags each as `school_event`, plus `year_group` when the sibling class's
 feed has it too. They render with the same description/location-only card as
 Whole School events, with a "From school calendar" badge (and a "shared with
-the year" note where relevant), and save through `events-update.js` with
+the year" note where relevant), and save through `events-update.ts` with
 `school_event: true` into the same `data/whole_school_overrides.json` (keyed by
 school event id, so a year-wide event's edit reaches both classes). The id
 must be in that class's published feed, so a class passcode can't edit some
@@ -211,7 +225,7 @@ deliberately careful:
 The request is `date_correction: {start, end, note}` in the file's own
 format (all-day dates with an inclusive last day, or same-day London
 `YYYY-MM-DDTHH:MM`), or `date_correction: null` to undo. The server
-(`_shared/schoolEventCorrections.js`) refuses past events, a start in the
+(`_shared/schoolEventCorrections.ts`) refuses past events, a start in the
 past or more than ~a year ahead, a timed end that isn't after the start on
 the same day, a timed event that runs over several days, and a reason
 shorter than 5 or longer than 300 characters. It records the school's own
@@ -221,7 +235,7 @@ corrected), plus `by` (the calendar code). A correction back to exactly the
 school's values just removes the entry. With the school's values recorded,
 the build prunes a correction once the school agrees with it, and drops it
 with a build-problems report if the school changes the event some other way.
-`events-list.js` merges the file in (`applyCorrections`), so a pending
+`events-list.ts` merges the file in (`applyCorrections`), so a pending
 correction shows straight away with a `correction: {note, school}` field
 for the badge.
 
@@ -236,12 +250,12 @@ lands in an editable box with a **Copy for WhatsApp** button, and the ‹ ›
 arrows step to other weeks. The default week is this one - or, on a Sunday
 (London time), the coming one.
 
-`/api/week` (`functions/api/week.js`, logic in `_shared/weekList.js`) reads
+`/api/week` (`functions/api/week.ts`, logic in `_shared/weekList.ts`) reads
 the *published* `<calendar>.ics`, `whole-school.ics` and `fosps.ics` rather than the source
 JSON, so it shows what parents' calendar apps show - closure days, cancelled
 and moved occurrences, and description/location edits are already applied -
 but an edit saved just now only appears once the triggered rebuild has
-published (a few minutes). `_shared/ics.js` reads only what `build_ics.py`
+published (a few minutes). `_shared/ics.ts` reads only what `build_ics.py`
 writes: recurrences are `DAILY`/`WEEKLY`/`MONTHLY` with `INTERVAL` and
 `UNTIL`, skipped days are `EXDATE`s, and a moved occurrence is a separate
 one-off event, so a week's occurrences are worked out with plain
@@ -250,11 +264,12 @@ descriptions contain raw HTML, which is stripped. Whole-school events are
 prefixed "Whole School:" in a class's list, matching the "FOSPS:" prefix
 FOSPS events already carry.
 
-Tests: `node --test "tool/tests/*.test.mjs"` (no dependencies; also run in CI).
+Tests: `npm run test:tool` (from the repo root; also run in CI). Needs Node 22.18
+or later, which runs the `.ts` files the tests import directly.
 
 ## Limits
 
-`_shared/validate.js` (`LIMITS`) caps what one event can hold, so a single save
+`_shared/validate.ts` (`LIMITS`) caps what one event can hold, so a single save
 can't bloat a data file or produce a feed the public page and calendar apps
 struggle with. A rep who goes over gets a message saying which limit, and the
 form's text boxes stop at the same lengths (`maxlength` in `index.html` - keep
@@ -276,7 +291,7 @@ for the rep to check) rather than refused; an over-long repeat or span from
 Claude is dropped, also with a warning. Anything a rep types is refused.
 
 Separately, `commitJsonFile()` won't grow a data file past 900 KB
-(`MAX_FILE_BYTES` in `_shared/github.js`), and answers 413 "This calendar has
+(`MAX_FILE_BYTES` in `_shared/github.ts`), and answers 413 "This calendar has
 run out of room for events" instead: GitHub's Contents API stops returning a
 file's content inline at 1 MB, after which the tool couldn't read that calendar
 again. Deleting or shrinking is always allowed, so a full file can be cleaned
@@ -288,7 +303,7 @@ already in the JSON.
 Everything a rep saves goes on a public calendar and into a public repository,
 where it stays in the git history even after the event is deleted. So a mobile
 number pasted in from a WhatsApp message deserves a second look. Before saving,
-`_shared/personalDetails.js` checks an event's title, description and location
+`_shared/personalDetails.ts` checks an event's title, description and location
 (and a school event's description and location edit) for:
 
 - **UK mobile numbers** (`07...`, `+44 7...`, `(07700) 900123`...). Landlines
@@ -310,7 +325,7 @@ It's a warning, not a rule, so it's deliberately quiet:
   description holds a number the rep already confirmed doesn't ask again (it's
   compared with the saved event; for a school event, with what the school
   publishes), and neither does moving or reformatting that number.
-- `PUBLIC_CONTACTS` at the top of `personalDetails.js` lists contacts that are
+- `PUBLIC_CONTACTS` at the top of `personalDetails.ts` lists contacts that are
   meant to be public and are never flagged - add the FOSPS mailbox there if it
   is on gmail, say.
 
@@ -322,7 +337,7 @@ advisory, anyone calling the API can set `confirm_public`.
 
 Every add, edit or delete (in any calendar, including a Whole School
 description) commits to the repo and then dispatches the `Update calendar
-feed` GitHub Actions workflow (`triggerRebuild()` in `_shared/github.js`), so
+feed` GitHub Actions workflow (`triggerRebuild()` in `_shared/github.ts`), so
 the change is in the published `.ics` within a few minutes rather than
 waiting for the 6-hourly scheduled run. The dispatch is best-effort: if it
 fails (typically the token lacking **Actions: Read and write**), the save
@@ -334,7 +349,7 @@ as before. A save where every event was a duplicate doesn't trigger one.
 
 1. In the Cloudflare dashboard, create a new **Pages** project connected to
    this GitHub repo. Set **root directory** to `tool/`, and leave the build
-   command empty (no build step needed).
+   command empty (no build step needed - see the top of this file).
 2. Under the project's **Settings → Functions → KV namespace bindings**, add a
    binding named `RATE_LIMITS` (for both Production and Preview), pointing at
    a KV namespace you create or reuse there - see "Rate limiting" below for
@@ -377,7 +392,7 @@ never to Functions responses, so there are two places:
   referrer, and a Content-Security-Policy that allows only the tool's own
   script, stylesheet and API (`default-src 'none'`, nothing inline, no `eval`,
   no other origin).
-- `functions/api/_middleware.js` - every `/api/*` response: `Cache-Control:
+- `functions/api/_middleware.ts` - every `/api/*` response: `Cache-Control:
   no-store`, `nosniff`, `noindex`. It also turns anything an endpoint throws
   (say, an unparseable `CLASS_PASSWORDS`) into a plain JSON 500, logging the
   detail rather than showing it.
@@ -391,10 +406,10 @@ HSTS there (Cloudflare dashboard, SSL/TLS, Edge Certificates).
 
 ## Rate limiting
 
-Every endpoint that checks a passcode (`checkPasscode()` in `_shared/auth.js`)
+Every endpoint that checks a passcode (`checkPasscode()` in `_shared/auth.ts`)
 enforces a limit on wrong guesses via `env.RATE_LIMITS`, a Workers KV binding:
 10 wrong guesses for one calendar from one source within 15 minutes
-(`RATE_LIMIT` in `_shared/rateLimit.js`) gets a `429 rate_limited` instead of
+(`RATE_LIMIT` in `_shared/rateLimit.ts`) gets a `429 rate_limited` instead of
 being checked at all - even the *right* passcode is refused until the lockout
 clears, rather than letting a lucky late guess through. A correct guess before
 the limit clears the count, so an occasional typo costs a rep nothing. The
@@ -406,7 +421,7 @@ guessing the same calendar.
 spoof - Cloudflare overwrites it at its own edge before the request reaches
 this Worker. Outside Cloudflare's network (`wrangler pages dev` locally, or
 `env.RATE_LIMITS` not bound) it's "unknown" for everyone, which only makes the
-throttle broader, never a way past it - see `rateLimit.js`'s comments.
+throttle broader, never a way past it - see `rateLimit.ts`'s comments.
 
 This is a soft, best-effort throttle, not an exact one: Workers KV has no
 atomic increment, so a genuine burst of concurrent requests from the same
@@ -445,17 +460,17 @@ doesn't give you.
 
 ## Subscribe click counts
 
-`POST /api/subscribe-click` (`functions/api/subscribe-click.js`) is the one
+`POST /api/subscribe-click` (`functions/api/subscribe-click.ts`) is the one
 endpoint the *public* landing page calls, and has no passcode. When a parent
 clicks a subscribe link there (a platform button, a per-calendar link under
-one, or a plain feed address under "Other apps"), `docs/assets/calendar.js`
+one, or a plain feed address under "Other apps"), `docs/assets/calendar.ts`
 sends a `navigator.sendBeacon()` holding `{calendar, platform}`, and this adds
 one to a monthly counter in `env.STATS`:
 
     clicks:2026-09:rec-a:apple = 7
 
 That's all that's stored - no IP, user agent, cookie or identifier. Both
-values are checked against fixed lists (`_shared/clickStats.js`), and beacons
+values are checked against fixed lists (`_shared/clickStats.ts`), and beacons
 without `Origin: https://calendar.nai.sh` are ignored; it always answers 204.
 The page only sends beacons when served from calendar.nai.sh, so local
 testing never counts.

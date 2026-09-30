@@ -1,7 +1,7 @@
 // The year groups and their classes come from docs/classes.js - the single
 // source of truth shared with scripts/build_ics.py and the parent page
-// (docs/assets/calendar.js). Relabel classes there, not here. The rep tool's
-// page gets the same list from GET /api/calendars (see ../calendars.js).
+// (docs/assets/calendar.ts). Relabel classes there, not here. The rep tool's
+// page gets the same list from GET /api/calendars (see ../calendars.ts).
 //
 // `code` is the permanent identifier - it matches docs/calendars/<code>.ics
 // and data/manual_events/<code>.json, and must never change. `label` is
@@ -23,7 +23,7 @@ export const FOSPS = { code: "fosps", label: "FOSPS" };
 // already-published whole-school event (e.g. adding parking/kit notes to an
 // inset day, or where a service is held), and nothing else - no
 // adding/deleting events, no editing title/date/etc. See
-// tool/README.md and _shared/wholeSchool.js / _shared/wholeSchoolOverrides.js.
+// tool/README.md and _shared/wholeSchool.ts / _shared/wholeSchoolOverrides.ts.
 export const WHOLE_SCHOOL = { code: "whole-school", label: "Whole School" };
 
 // Flat list of every valid calendar, each with its year-group label attached

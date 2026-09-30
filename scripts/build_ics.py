@@ -97,9 +97,9 @@ REQUEST_HEADERS = {
 
 # --------------------------------------------------------------------------
 # Class / year-group configuration: docs/classes.js is the single source of
-# truth, read here, by the parent page (docs/assets/calendar.js) and by the
-# class rep tool (tool/functions/api/_shared/calendars.js, which also serves
-# it to tool/app.js). Relabelling classes means editing that one file.
+# truth, read here, by the parent page (docs/assets/calendar.ts) and by the
+# class rep tool (tool/functions/api/_shared/calendars.ts, which also serves
+# it to tool/app.ts). Relabelling classes means editing that one file.
 #
 # `code` is a PERMANENT, GENERIC identifier for a class *slot*: "y5-a" is the
 # first class of Year 5, "y5-b" the second, "rec-a"/"rec-b" Reception's. It is
@@ -347,11 +347,11 @@ def _clean_description(text: str | None) -> str:
 
 def _safe_url(url: str | None) -> str | None:
     """Reject anything but http(s). This value ends up as an <a href> on the
-    public preview page (docs/assets/calendar.js), so a javascript: (or
+    public preview page (docs/assets/calendar.ts), so a javascript: (or
     other) URL here would be a stored-XSS vector for every site visitor.
     Applies to both the school API's own `url` field and manual events -
     the latter can also arrive via hand-edited JSON, bypassing the class
-    rep tool's own validation (tool/functions/api/_shared/validate.js)."""
+    rep tool's own validation (tool/functions/api/_shared/validate.ts)."""
     if not url:
         return None
     # A CR/LF (or any control character) is never part of a real link, and
@@ -513,7 +513,7 @@ def _build_moved_exception_event(raw: dict, exception: dict, code: str) -> Event
 def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[Event]:
     event = Event()
     # Manual events carry a stable `id` assigned at creation time by the
-    # class-rep tool (see tool/functions/api/_shared/github.js), so editing
+    # class-rep tool (see tool/functions/api/_shared/github.ts), so editing
     # an event's title/date later updates the same iCalendar UID instead of
     # producing an apparent new event. Hand-edited entries that predate the
     # tool (or were added directly to the JSON without an id) fall back to a

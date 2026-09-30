@@ -1,5 +1,5 @@
 // Persists description/location overrides for school-sourced events - whole-
-// school ones (see calendars.js's WHOLE_SCHOOL entry) and the ones listed in a
+// school ones (see calendars.ts's WHOLE_SCHOOL entry) and the ones listed in a
 // class's own calendar - to data/whole_school_overrides.json -
 // {"<school event id>": {"description": "...", "location": "..."}}, either
 // key optional - which scripts/build_ics.py applies in place of the
@@ -16,7 +16,7 @@ export type OverridesFile = Record<string, unknown>;
 const OVERRIDES_PATH = "data/whole_school_overrides.json";
 
 // A school event's id is the school API's own numeric one (see the UID in
-// wholeSchool.js). Nothing else may become a key in the overrides file.
+// wholeSchool.ts). Nothing else may become a key in the overrides file.
 const SCHOOL_EVENT_ID = /^\d{1,12}$/;
 
 export function isSchoolEventId(id: unknown): id is string {

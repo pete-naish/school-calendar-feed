@@ -7,7 +7,7 @@ different script than the one reviewed here.
 ## ical.js 2.2.1
 
 Parses the `.ics` feeds in the browser for the preview calendar
-(`../calendar.js`).
+(`../calendar.ts`).
 
 - File: `ical.min.js`, **unmodified** from the npm package `ical.js@2.2.1`
   (`dist/ical.min.js`) - the same bytes jsDelivr served for it.
@@ -30,5 +30,8 @@ Dependabot can't see this file, so check for a new release occasionally
    `sha512` (base64) matches `dist.integrity`.
 2. Copy `package/dist/ical.min.js` and `package/LICENSE` over the files here.
 3. Update the version, integrity and SHA-256 above.
-4. Load the preview calendar and check that events, recurring events and
+4. Bump `ical.js` in the root `package.json` to the same version (its types
+   are what `calendar.ts` is checked against), `npm install`, and run
+   `npm run typecheck`.
+5. Load the preview calendar and check that events, recurring events and
    moved occurrences still show.

@@ -1,6 +1,6 @@
 # Applied by Cloudflare Pages to the tool's static files (index.html, app.js,
 # style.css). It does NOT apply to /api/* responses - those get their headers
-# from functions/api/_middleware.js.
+# from functions/api/_middleware.ts.
 #
 # The tool is for class reps, not the public: keep it out of search results
 # (via this header rather than robots.txt - a crawler blocked by robots.txt

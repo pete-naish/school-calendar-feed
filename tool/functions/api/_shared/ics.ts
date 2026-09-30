@@ -1,13 +1,13 @@
 // Reading the site's own already-published .ics files (the same public-URL
-// approach termEnd.js and wholeSchool.js use), for callers that need more of
-// an event than wholeSchool.js's id/title/date/description/location - the
+// approach termEnd.ts and wholeSchool.ts use), for callers that need more of
+// an event than wholeSchool.ts's id/title/date/description/location - the
 // weekly list needs times, end dates and recurrence.
 //
 // Deliberately not a general iCalendar parser: it reads only what
 // scripts/build_ics.py writes. In particular a recurrence is always
 // FREQ=DAILY|WEEKLY|MONTHLY with INTERVAL and UNTIL (no BYDAY/COUNT), with
 // every skipped occurrence listed in an EXDATE, and a moved occurrence is a
-// separate one-off event - so weekList.js can expand a week of occurrences
+// separate one-off event - so weekList.ts can expand a week of occurrences
 // with plain date arithmetic.
 //
 // Dates are handled as integer day numbers (whole days since 1970-01-01, UTC
@@ -49,7 +49,7 @@ export function unescapeIcsText(text: string) {
   return text.replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
 }
 
-// No cf.cacheTtl (unlike termEnd.js's 1hr cache) - a rep loading a page here
+// No cf.cacheTtl (unlike termEnd.ts's 1hr cache) - a rep loading a page here
 // wants genuinely current events, not a stale edge-cached copy.
 export async function fetchIcsText(icsFile: string): Promise<string> {
   const resp = await fetch(`${CALENDARS_URL}/${icsFile}`);

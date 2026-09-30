@@ -1,5 +1,5 @@
 // Policy and helpers for the per-(calendar, source) passcode attempt limit in
-// auth.js. There's no rate limiting available at Cloudflare's edge for this
+// auth.ts. There's no rate limiting available at Cloudflare's edge for this
 // project (see tool/README.md's "Rate limiting" section for why), so this is
 // built in instead: env.RATE_LIMITS (a Workers KV binding) slows guessing a
 // calendar's passcode to well below network speed.

@@ -72,7 +72,7 @@ test("ordinary http(s) urls survive, non-http ones don't", () => {
   assert.equal(validateEventInput(event({ url: "javascript:alert(1)" })).event.url, null);
 });
 
-// --- limits (see LIMITS in validate.js) ---
+// --- limits (see LIMITS in validate.ts) ---
 
 const isoDaysAfter = (iso, days) => new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
 const weekly = (until) => ({ freq: "WEEKLY", interval: 1, until });

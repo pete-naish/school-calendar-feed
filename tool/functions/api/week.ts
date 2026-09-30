@@ -17,7 +17,7 @@ function isValidIsoDate(value: unknown): value is string {
 
 // The "What's on this week" WhatsApp list for the signed-in calendar: its own
 // events plus whole-school ones (and FOSPS ones, for a class), Monday-Sunday,
-// read from the published .ics files (see _shared/weekList.js). `week_start`
+// read from the published .ics files (see _shared/weekList.ts). `week_start`
 // (any date in the wanted week) is optional; the default is this week, or next
 // week on a Sunday.
 export async function onRequestPost({ request, env }: ApiContext) {

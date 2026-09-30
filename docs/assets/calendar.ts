@@ -169,7 +169,7 @@ function toReliableJsDate(icalTime: IcalTime) {
 }
 
 // Defense in depth: scripts/build_ics.py and the class rep tool's
-// validate.js both already reject non-http(s) URLs before they reach a
+// validate.ts both already reject non-http(s) URLs before they reach a
 // published .ics file, but this is the actual XSS sink (an <a href> on a
 // page every visitor loads) - never trust an upstream check alone here.
 function isSafeUrl(url: string) {
@@ -448,7 +448,7 @@ function feedUrls(cal: Calendar) {
 // Anonymous subscribe-click counts: one beacon per subscribe link clicked,
 // holding only which calendar and which app - no cookies, no identifiers, and
 // nothing sent on page load. The endpoint is the class rep tool's own
-// (tool/functions/api/subscribe-click.js), which keeps a monthly tally per
+// (tool/functions/api/subscribe-click.ts), which keeps a monthly tally per
 // pair and nothing else. Only the live site counts, so local testing doesn't.
 const STATS_URL = "https://calendar-admin.nai.sh/api/subscribe-click";
 const STATS_HOST = "calendar.nai.sh";

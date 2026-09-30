@@ -7,7 +7,7 @@ reason; this keeps it that way.
 The one exception is STATS_HOST: the class rep tool's own Cloudflare Pages
 project, which gets a beacon only when a parent clicks a subscribe link (never
 on page load) and keeps nothing from it but an anonymous monthly tally per
-calendar and app (tool/functions/api/subscribe-click.js)."""
+calendar and app (tool/functions/api/subscribe-click.ts)."""
 
 from __future__ import annotations
 

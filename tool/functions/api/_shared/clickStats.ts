@@ -1,6 +1,6 @@
 // Policy and helpers for the anonymous subscribe-click counters behind
-// POST /api/subscribe-click (see ../subscribe-click.js). The public landing
-// page (docs/assets/calendar.js) sends one beacon per subscribe link clicked;
+// POST /api/subscribe-click (see ../subscribe-click.ts). The public landing
+// page (docs/assets/calendar.ts) sends one beacon per subscribe link clicked;
 // each bumps a monthly counter in env.STATS, a Workers KV binding.
 //
 // What's stored is only {month, calendar, platform} -> count: no IP, no user

@@ -1,5 +1,5 @@
-// Title Case for event titles extracted from pasted text (see validate.js's
-// validateExtractedEvents). The model is asked for Title Case too (parse.js),
+// Title Case for event titles extracted from pasted text (see validate.ts's
+// validateExtractedEvents). The model is asked for Title Case too (parse.ts),
 // but a prompt can't guarantee it, so every extracted title also goes through
 // this. Deliberately conservative - it fixes lowercase words and leaves
 // anything that might be intentional alone:

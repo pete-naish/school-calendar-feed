@@ -1,6 +1,6 @@
 // Builds the "What's on this week" list class reps paste into their class
 // WhatsApp group each Sunday, from the site's published .ics files (see
-// ics.js): the calendar's own events plus whole-school ones (and, for a
+// ics.ts): the calendar's own events plus whole-school ones (and, for a
 // class, FOSPS ones), for one Monday-Sunday week, then a "Future dates"
 // heads-up for the week after. Reading the published feeds means closure
 // days, cancelled/moved occurrences and description/location edits are

@@ -71,7 +71,7 @@ test("applyCorrections ignores a correction of the wrong shape", () => {
   assert.equal(ht, halfTerm);
 });
 
-// --- events-update.js ---------------------------------------------------------
+// --- events-update.ts ---------------------------------------------------------
 
 // Dates a couple of months from the real today, since the endpoint checks
 // against it: day(n) is n days after the published event's first day.

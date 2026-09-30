@@ -30,7 +30,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
     return jsonResponse(body, status);
   }
   // Whole School events come entirely from the school's own feed - this
-  // tool can only edit an existing one's description (see events-update.js),
+  // tool can only edit an existing one's description (see events-update.ts),
   // never add new ones.
   if (isWholeSchoolCalendar(calendar)) {
     return jsonResponse(

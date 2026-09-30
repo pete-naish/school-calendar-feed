@@ -81,7 +81,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
 
   const { calendar, passcode, id, event } = body;
   // The rep has been told the text looks personal and chose to save anyway
-  // (see _shared/personalDetails.js).
+  // (see _shared/personalDetails.ts).
   const confirmPublic = body && body.confirm_public === true;
 
   if (!isValidCalendar(calendar)) {
@@ -142,7 +142,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
   }
 
   // A school-sourced event listed in a class's own calendar (see
-  // events-list.js) gets the same description/location-only edit. Only ids in
+  // events-list.ts) gets the same description/location-only edit. Only ids in
   // this class's published feed are accepted, so a class passcode can't be
   // used to rewrite some other class's - or a whole-school - event.
   if (body.school_event === true) {

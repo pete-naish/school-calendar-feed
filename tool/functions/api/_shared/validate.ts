@@ -16,7 +16,7 @@ const RECUR_FREQ = new Set<unknown>(["DAILY", "WEEKLY", "MONTHLY"]);
 // Caps on what one event can hold. The field lengths stop a single save
 // bloating a data file (GitHub's Contents API only returns a file inline up to
 // 1 MB, past which the tool couldn't read that calendar again - see also
-// MAX_FILE_BYTES in github.js). The date limits keep an event to what the
+// MAX_FILE_BYTES in github.ts). The date limits keep an event to what the
 // public page can cope with: it steps through every day of a multi-day event
 // and every occurrence of a repeat in the visitor's browser, and a repeat that
 // runs for centuries makes a huge .ics that every subscriber downloads. The
@@ -41,7 +41,7 @@ function cleanOptionalString(value: unknown): string | null {
 
 // A location is a single line of plain text: whitespace runs (including any
 // pasted newlines) collapse to one space. Also used for the Whole School
-// location override (events-update.js).
+// location override (events-update.ts).
 export function cleanOptionalLocation(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const collapsed = value.replace(/\s+/g, " ").trim();
@@ -73,7 +73,7 @@ function cleanOptionalDate(value: unknown): string | null {
 }
 
 // Rejects anything but http(s) - this value is later set as an <a href> on
-// the public preview page (docs/assets/calendar.js), so a javascript: (or
+// the public preview page (docs/assets/calendar.ts), so a javascript: (or
 // other) URL here would be a stored-XSS vector for every site visitor.
 function cleanOptionalUrl(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -126,7 +126,7 @@ const EXCEPTION_ACTIONS = new Set<unknown>(["cancelled", "moved"]);
 //
 // An exception on a year group's shared event can be scoped to some of its
 // classes with `classes` (class codes, e.g. ["rr"]); absent means every
-// class. Unknown codes are dropped here - events-update.js narrows it to
+// class. Unknown codes are dropped here - events-update.ts narrows it to
 // the caller's own year group, since this doesn't know which one that is.
 const CLASS_CODES = new Set(YEAR_GROUPS.flatMap((group) => group.classes.map((cls) => cls.code)));
 
@@ -202,7 +202,7 @@ function lengthError(fields: LengthChecked): string | null {
   return null;
 }
 
-// Description/location edits on a school-sourced event (events-update.js) hold
+// Description/location edits on a school-sourced event (events-update.ts) hold
 // to the same limits. Returns a message, or null when both are fine.
 export function overrideLengthError(changes: { description?: string; location?: string }) {
   return lengthError({ description: changes.description, location: changes.location });
@@ -239,7 +239,7 @@ export function validateExtractedEvents(input: unknown): { events: EventFields[]
     const { recurrence, error: recurrenceError } = cleanRecurrence(item.recurrence, item.date);
     if (recurrenceError) warnings.push(`"${item.title}" - repeat ignored: ${recurrenceError}`);
 
-    // Extracted titles are Title Case (see titleCase.js); a title a rep
+    // Extracted titles are Title Case (see titleCase.ts); a title a rep
     // types or edits themselves (validateEventInput below) is left as is.
     const event: EventFields = {
       title: toTitleCase(item.title.trim()),

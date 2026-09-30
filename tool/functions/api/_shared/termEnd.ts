@@ -3,7 +3,7 @@
 // site's own already-published whole-school calendar - the same feed
 // anyone can already subscribe to, fetched here as a plain public URL (no
 // auth needed). This is only ever a *suggestion* the rep reviews/edits
-// before saving; it's never invented by the LLM itself (see parse.js).
+// before saving; it's never invented by the LLM itself (see parse.ts).
 
 const WHOLE_SCHOOL_ICS_URL = "https://pete-naish.github.io/school-calendar-feed/calendars/whole-school.ics";
 const FALLBACK_HORIZON_DAYS = 84; // ~12 weeks - used if no term-end event is found (or the fetch fails)

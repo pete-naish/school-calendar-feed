@@ -1,19 +1,19 @@
 // Lists school-sourced events - those from the school's own Upcoming Events
 // feed, as opposed to manual ones - by reading the site's own
-// already-published .ics files, the same public-URL approach termEnd.js
+// already-published .ics files, the same public-URL approach termEnd.ts
 // already uses. That avoids re-implementing scripts/build_ics.py's
 // classify_event() a second time in JS just to ask "which events are
 // whole-school / which are this class's".
 //
 // Two callers: the restricted "Whole School" calendar entry (whole-school.ics,
-// description/location editing only - see calendars.js) and each class's own
+// description/location editing only - see calendars.ts) and each class's own
 // entry, which lists the school events classify_event() routed to that class
 // alongside its manual ones (class .ics files mix the two, told apart by UID).
 //
 // Each event's `id` is the school API's own event id, recovered from the
 // UID scripts/build_ics.py assigns it (`stpauls-<id>@school-calendar-feed`)
 // - stable across rebuilds, and what description/location overrides are
-// keyed by (see wholeSchoolOverrides.js).
+// keyed by (see wholeSchoolOverrides.ts).
 
 import { fetchIcsText, unescapeIcsText, parseDateTime, dayToIso } from "./ics.ts";
 import { titlePrefixFor } from "./calendars.ts";
@@ -23,7 +23,7 @@ const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 
 // Splits on VEVENT boundaries and reads each property independently per
 // block (not assuming a fixed property order), same approach as
-// termEnd.js. DESCRIPTION is the one property here long enough to need
+// termEnd.ts. DESCRIPTION is the one property here long enough to need
 // RFC 5545 line-unfolding (a folded continuation line starts with exactly
 // one space, which must be stripped when rejoining) - as is LOCATION, once
 // an override has given the event one.

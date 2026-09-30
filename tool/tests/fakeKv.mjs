@@ -1,5 +1,5 @@
 // A minimal stand-in for a Cloudflare Workers KV namespace, matching the
-// get/put/delete surface auth.js uses. In-memory only; expirationTtl is
+// get/put/delete surface auth.ts uses. In-memory only; expirationTtl is
 // recorded but not enforced (nothing here needs time to actually pass) -
 // FakeKV.expireAll() simulates every entry's TTL having elapsed. Not
 // exported as a *.test.mjs file, so `node --test tool/tests/*.test.mjs`

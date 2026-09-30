@@ -42,7 +42,7 @@ function passcodeMatches(env: Env, calendar: string, passcode: unknown) {
 }
 
 // Checks a passcode for `calendar`, also enforcing RATE_LIMIT (see
-// rateLimit.js) on wrong guesses via env.RATE_LIMITS - so a weak or guessed
+// rateLimit.ts) on wrong guesses via env.RATE_LIMITS - so a weak or guessed
 // passcode isn't brute-forceable at network speed. Returns "ok",
 // "wrong_passcode", or "rate_limited" (this source has made too many wrong
 // guesses against this calendar recently - the passcode itself isn't even

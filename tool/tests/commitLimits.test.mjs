@@ -77,7 +77,7 @@ test("growing an already over-full file is refused even if the addition is small
   assert.equal(puts.length, 0);
 });
 
-test("save.js answers 413 with a readable message when the calendar has no room left", async () => {
+test("save.ts answers 413 with a readable message when the calendar has no room left", async () => {
   fakeGithub([bulky(MAX_FILE_BYTES - 500)]);
   const resp = await post(save, {
     calendar: "y5-b",
@@ -88,7 +88,7 @@ test("save.js answers 413 with a readable message when the calendar has no room 
   assert.match((await resp.json()).message, /run out of room/);
 });
 
-test("save.js refuses more events than the per-save limit before touching GitHub", async () => {
+test("save.ts refuses more events than the per-save limit before touching GitHub", async () => {
   const puts = fakeGithub([]);
   const events = Array.from({ length: 51 }, (_, i) => ({ title: `E${i}`, date: "2026-10-01" }));
   const resp = await post(save, { calendar: "y5-b", passcode: "pw", events });
@@ -97,7 +97,7 @@ test("save.js refuses more events than the per-save limit before touching GitHub
   assert.equal(puts.length, 0);
 });
 
-test("save.js accepts exactly the per-save limit", async () => {
+test("save.ts accepts exactly the per-save limit", async () => {
   fakeGithub([]);
   const events = Array.from({ length: 50 }, (_, i) => ({ title: `E${i}`, date: "2026-10-01" }));
   const resp = await post(save, { calendar: "y5-b", passcode: "pw", events });
@@ -105,7 +105,7 @@ test("save.js accepts exactly the per-save limit", async () => {
   assert.equal((await resp.json()).saved, 50);
 });
 
-test("save.js puts a validation problem in `message`, which is what the tool shows", async () => {
+test("save.ts puts a validation problem in `message`, which is what the tool shows", async () => {
   fakeGithub([]);
   const one = await post(save, { calendar: "y5-b", passcode: "pw", events: [{ title: "x".repeat(300), date: "2026-10-01" }] });
   assert.equal(one.status, 400);
