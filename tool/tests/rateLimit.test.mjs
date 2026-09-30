@@ -6,9 +6,9 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { onRequestPost as eventsList } from "../functions/api/events-list.js";
-import { onRequestPost as save } from "../functions/api/save.js";
-import { RATE_LIMIT } from "../functions/api/_shared/rateLimit.js";
+import { onRequestPost as eventsList } from "../functions/api/events-list.ts";
+import { onRequestPost as save } from "../functions/api/save.ts";
+import { RATE_LIMIT } from "../functions/api/_shared/rateLimit.ts";
 import { FakeKV } from "./fakeKv.mjs";
 
 const realFetch = globalThis.fetch;

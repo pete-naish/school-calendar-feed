@@ -1,21 +1,22 @@
-import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
-import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
-import { commitEventById, triggerRebuild } from "./_shared/github.js";
-import { commitErrorResponse, resultStatus } from "./_shared/errors.js";
+import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.ts";
+import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
+import { commitEventById, triggerRebuild } from "./_shared/github.ts";
+import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
+import type { ApiContext, RequestBody } from "./_shared/types.ts";
 
-function jsonResponse(obj, status = 200) {
+function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
-export async function onRequestPost({ request, env }) {
-  let body;
+export async function onRequestPost({ request, env }: ApiContext) {
+  let body: RequestBody;
   try {
-    body = await request.json();
+    body = (await request.json<RequestBody | null>()) || {};
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
   }
 
-  const { calendar, passcode, id } = body || {};
+  const { calendar, passcode, id } = body;
 
   if (!isValidCalendar(calendar)) {
     return jsonResponse({ error: "invalid_calendar" }, 400);
@@ -40,7 +41,7 @@ export async function onRequestPost({ request, env }) {
   try {
     // The event is in this class's own file or its year group's shared one;
     // deleting a shared event removes it from every class in the year.
-    const result = await commitEventById(
+    const result = await commitEventById<{}>(
       env,
       calendar,
       async (current) => {

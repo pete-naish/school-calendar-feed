@@ -5,8 +5,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { onRequestPost as subscribeClick } from "../functions/api/subscribe-click.js";
-import { STATS_ORIGIN, clickKey } from "../functions/api/_shared/clickStats.js";
+import { onRequestPost as subscribeClick } from "../functions/api/subscribe-click.ts";
+import { STATS_ORIGIN, clickKey } from "../functions/api/_shared/clickStats.ts";
 import { FakeKV } from "./fakeKv.mjs";
 
 // As navigator.sendBeacon() sends a string body: text/plain.

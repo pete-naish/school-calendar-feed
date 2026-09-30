@@ -2,8 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { checkPasscode, passcodeErrorResponse, timingSafeEqual } from "../functions/api/_shared/auth.js";
-import { RATE_LIMIT } from "../functions/api/_shared/rateLimit.js";
+import { checkPasscode, passcodeErrorResponse, timingSafeEqual } from "../functions/api/_shared/auth.ts";
+import { RATE_LIMIT } from "../functions/api/_shared/rateLimit.ts";
 import { FakeKV } from "./fakeKv.mjs";
 
 const env = { CLASS_PASSWORDS: JSON.stringify({ "y5-b": "correct horse", "rec-a": "pässwörd-🐴", empty: "", num: 12345 }) };

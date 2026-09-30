@@ -6,9 +6,9 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { ALL_CALENDARS, FOSPS, WHOLE_SCHOOL, YEAR_GROUPS, isValidCalendar, titlePrefixFor, yearGroupFor } from "../functions/api/_shared/calendars.js";
-import { fetchClassSchoolEvents } from "../functions/api/_shared/wholeSchool.js";
-import { buildWeekText } from "../functions/api/_shared/weekList.js";
+import { ALL_CALENDARS, FOSPS, WHOLE_SCHOOL, YEAR_GROUPS, isValidCalendar, titlePrefixFor, yearGroupFor } from "../functions/api/_shared/calendars.ts";
+import { fetchClassSchoolEvents } from "../functions/api/_shared/wholeSchool.ts";
+import { buildWeekText } from "../functions/api/_shared/weekList.ts";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -84,7 +84,7 @@ test("the weekly list strips the label prefix, so a code-shaped prefix would be 
 });
 
 test("GET /api/calendars hands the page the same year groups the API uses", async () => {
-  const { onRequestGet } = await import("../functions/api/calendars.js");
+  const { onRequestGet } = await import("../functions/api/calendars.ts");
   const resp = onRequestGet();
   assert.equal(resp.headers.get("content-type"), "application/json");
   assert.deepEqual((await resp.json()).yearGroups, YEAR_GROUPS);

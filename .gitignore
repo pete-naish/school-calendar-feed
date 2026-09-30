@@ -5,3 +5,5 @@ __pycache__/
 tool/.dev.vars
 tool/node_modules/
 tool/.wrangler/
+
+node_modules/

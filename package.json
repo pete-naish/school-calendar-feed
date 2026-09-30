@@ -1,0 +1,15 @@
+{
+  "name": "school-calendar-feed",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.browser.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.browser.json --noEmit",
+    "test:tool": "node --test \"tool/tests/*.test.mjs\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260930.2",
+    "ical.js": "2.2.1",
+    "typescript": "^7.0.2"
+  }
+}

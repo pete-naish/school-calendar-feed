@@ -2,18 +2,19 @@
 // can actually act on, instead of a raw "GitHub PUT failed: 503 ..." - the
 // detailed error still goes to the Cloudflare Functions log via
 // console.error for anyone actually debugging it.
+import type { ApiError } from "./types.ts";
 
 // The HTTP status for a `{ error }` a commit helper returned without writing
 // anything: an event that isn't there is a 404, a file with no room left a
 // 413, anything else a plain 400.
-export function resultStatus(result) {
+export function resultStatus(result: { error?: string }) {
   if (result.error === "not_found") return 404;
   if (result.error === "file_full") return 413;
   if (result.error === "confirm_public") return 409;
   return 400;
 }
 
-export function commitErrorResponse(err) {
+export function commitErrorResponse(err: unknown): ApiError {
   console.error("Manual event write failed:", err);
   return {
     error: "commit_failed",
@@ -25,7 +26,7 @@ export function commitErrorResponse(err) {
 // ids, the model in use) and a fetch failure's text are for the log, never for
 // the rep - or for anyone who has guessed a passcode. `detail` is whatever
 // went wrong: an Error, or the upstream status and body.
-export function extractionErrorResponse(detail) {
+export function extractionErrorResponse(detail: unknown): ApiError {
   console.error("Event extraction failed:", detail);
   return {
     error: "extraction_failed",
@@ -33,7 +34,7 @@ export function extractionErrorResponse(detail) {
   };
 }
 
-export function readErrorResponse(err) {
+export function readErrorResponse(err: unknown): ApiError {
   console.error("Manual event read failed:", err);
   return {
     error: "list_failed",

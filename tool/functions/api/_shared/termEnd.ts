@@ -12,7 +12,7 @@ const TERM_END_PATTERN = /last day of.*term/i;
 // Splits on VEVENT boundaries and reads SUMMARY/DTSTART independently per
 // block, rather than assuming a fixed property order - more robust than a
 // single regex over the whole file, and needs no real ICS parser.
-function extractTitledDates(icsText) {
+function extractTitledDates(icsText: string) {
   const blocks = icsText.split("BEGIN:VEVENT").slice(1);
   const events = [];
   for (const block of blocks) {
@@ -29,7 +29,7 @@ function extractTitledDates(icsText) {
   return events;
 }
 
-function fallbackDate(afterDateIso) {
+function fallbackDate(afterDateIso: string) {
   const d = new Date(`${afterDateIso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + FALLBACK_HORIZON_DAYS);
   return d.toISOString().slice(0, 10);
@@ -38,7 +38,7 @@ function fallbackDate(afterDateIso) {
 // Returns an ISO date - the earliest "Last Day of ... Term" event on or
 // after afterDateIso, or a fixed fallback horizon if none is found/the
 // fetch fails. Never throws.
-export async function getNextTermEndDate(afterDateIso) {
+export async function getNextTermEndDate(afterDateIso: string): Promise<string> {
   try {
     const resp = await fetch(WHOLE_SCHOOL_ICS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
     if (!resp.ok) return fallbackDate(afterDateIso);

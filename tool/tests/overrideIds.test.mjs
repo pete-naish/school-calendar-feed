@@ -2,8 +2,8 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { commitWholeSchoolOverride, isSchoolEventId } from "../functions/api/_shared/wholeSchoolOverrides.js";
-import { onRequestPost as update } from "../functions/api/events-update.js";
+import { commitWholeSchoolOverride, isSchoolEventId } from "../functions/api/_shared/wholeSchoolOverrides.ts";
+import { onRequestPost as update } from "../functions/api/events-update.ts";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {

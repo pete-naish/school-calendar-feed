@@ -1,23 +1,24 @@
-import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
-import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
-import { validateEventInput, LIMITS } from "./_shared/validate.js";
-import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.js";
-import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.js";
-import { commitErrorResponse, resultStatus } from "./_shared/errors.js";
+import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.ts";
+import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
+import { validateEventInput, LIMITS } from "./_shared/validate.ts";
+import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.ts";
+import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.ts";
+import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
+import type { ApiContext, Env, EventFields, ManualEvent, PersonalDetail, RequestBody } from "./_shared/types.ts";
 
-function jsonResponse(obj, status = 200) {
+function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
-export async function onRequestPost({ request, env }) {
-  let body;
+export async function onRequestPost({ request, env }: ApiContext) {
+  let body: RequestBody;
   try {
-    body = await request.json();
+    body = (await request.json<RequestBody | null>()) || {};
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
   }
 
-  const { calendar, passcode, events } = body || {};
+  const { calendar, passcode, events } = body;
 
   if (!isValidCalendar(calendar)) {
     return jsonResponse({ error: "invalid_calendar" }, 400);
@@ -51,10 +52,10 @@ export async function onRequestPost({ request, env }) {
   // than copied into each class's own. The flag is a request field only -
   // validateEventInput() drops it, so it's never written into the event.
   const group = yearGroupFor(calendar);
-  const own = [];
-  const shared = [];
-  const errors = [];
-  const checked = [];
+  const own: EventFields[] = [];
+  const shared: EventFields[] = [];
+  const errors: { index: number; error: string }[] = [];
+  const checked: { index: number; event: EventFields }[] = [];
   events.forEach((event, index) => {
     const result = validateEventInput(event);
     if (result.valid) checked.push({ index, event: result.event });
@@ -84,7 +85,7 @@ export async function onRequestPost({ request, env }) {
   if (body.confirm_public !== true) {
     const findings = checked.flatMap(({ index, event }) => newPersonalDetails(event).map((f) => ({ ...f, index })));
     if (findings.length > 0) {
-      const prefix = (f) => (events.length > 1 ? `Event ${f.index + 1}: ` : "");
+      const prefix = (f: PersonalDetail) => (events.length > 1 ? `Event ${(f.index ?? 0) + 1}: ` : "");
       return jsonResponse(confirmPublicResponse(findings, prefix), 409);
     }
   }
@@ -126,14 +127,14 @@ export async function onRequestPost({ request, env }) {
 
 // Appends `validated` events to one data/manual_events/<file>.json, skipping
 // any that duplicate an event already in it (same file + title + date).
-async function appendEvents(env, file, validated) {
+async function appendEvents(env: Env, file: string, validated: EventFields[]) {
   const newKeys = await Promise.all(validated.map((e) => dedupeKey(file, e.title, e.date)));
-  return commitManualEvents(
+  return commitManualEvents<{ saved: number; skippedDuplicates: number }>(
     env,
     file,
     async (current) => {
       const currentKeys = new Set(await Promise.all(current.map((e) => dedupeKey(file, e.title, e.date))));
-      const toAppend = [];
+      const toAppend: ManualEvent[] = [];
       let skippedDuplicates = 0;
       validated.forEach((event, index) => {
         const key = newKeys[index];

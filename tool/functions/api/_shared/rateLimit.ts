@@ -21,10 +21,10 @@ export const RATE_LIMIT = {
 // outside Cloudflare's network, as `wrangler pages dev` does locally) - every
 // such caller then shares one bucket per calendar, which only ever makes the
 // throttle broader, never a way to bypass it.
-export function clientIp(request) {
+export function clientIp(request: Request | null) {
   return (request && request.headers && request.headers.get("CF-Connecting-IP")) || "unknown";
 }
 
-export function rateLimitKey(calendar, ip) {
+export function rateLimitKey(calendar: string, ip: string) {
   return `attempts:${calendar}:${ip}`;
 }

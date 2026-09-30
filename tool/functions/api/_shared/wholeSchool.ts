@@ -15,8 +15,9 @@
 // - stable across rebuilds, and what description/location overrides are
 // keyed by (see wholeSchoolOverrides.js).
 
-import { fetchIcsText, unescapeIcsText, parseDateTime, dayToIso } from "./ics.js";
-import { titlePrefixFor } from "./calendars.js";
+import { fetchIcsText, unescapeIcsText, parseDateTime, dayToIso } from "./ics.ts";
+import { titlePrefixFor } from "./calendars.ts";
+import type { SchoolEvent } from "./types.ts";
 
 const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 
@@ -32,9 +33,9 @@ const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
 // An end on a later day than the start is left null rather than shown as if
 // it were the same day. `end_date` is the last day the event touches
 // (inclusive - an all-day DTEND is the day after).
-export function extractEvents(icsText) {
+export function extractEvents(icsText: string): SchoolEvent[] {
   const blocks = icsText.split("BEGIN:VEVENT").slice(1);
-  const events = [];
+  const events: SchoolEvent[] = [];
   for (const block of blocks) {
     const body = block.split("END:VEVENT")[0];
     const uidMatch = body.match(/\nUID:([^\r\n]*)/);
@@ -68,7 +69,7 @@ export function extractEvents(icsText) {
   return events;
 }
 
-async function fetchSchoolEvents(icsFile, { titlePrefix = "" } = {}) {
+async function fetchSchoolEvents(icsFile: string, { titlePrefix = "" } = {}): Promise<SchoolEvent[]> {
   const text = await fetchIcsText(icsFile);
   return extractEvents(text)
     .map((e) => (titlePrefix && e.title.startsWith(titlePrefix) ? { ...e, title: e.title.slice(titlePrefix.length) } : e))
@@ -82,6 +83,6 @@ export function fetchWholeSchoolEvents() {
 // A class's own school-sourced events, with the "<CODE>: " prefix
 // build_event() adds to every class-calendar title taken back off (the tool
 // already says which calendar you're in).
-export function fetchClassSchoolEvents(classCode) {
+export function fetchClassSchoolEvents(classCode: string) {
   return fetchSchoolEvents(`${classCode}.ics`, { titlePrefix: titlePrefixFor(classCode) });
 }

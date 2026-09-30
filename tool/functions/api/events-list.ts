@@ -1,24 +1,25 @@
-import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
-import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
-import { getManualEventsFile, getJsonFile, retryable } from "./_shared/github.js";
-import { fetchWholeSchoolEvents, fetchClassSchoolEvents } from "./_shared/wholeSchool.js";
-import { applyOverrides } from "./_shared/wholeSchoolOverrides.js";
-import { applyCorrections, CORRECTIONS_PATH } from "./_shared/schoolEventCorrections.js";
-import { readErrorResponse } from "./_shared/errors.js";
+import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.ts";
+import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
+import { getManualEventsFile, getJsonFile, retryable } from "./_shared/github.ts";
+import { fetchWholeSchoolEvents, fetchClassSchoolEvents } from "./_shared/wholeSchool.ts";
+import { applyOverrides } from "./_shared/wholeSchoolOverrides.ts";
+import { applyCorrections, CORRECTIONS_PATH } from "./_shared/schoolEventCorrections.ts";
+import { readErrorResponse } from "./_shared/errors.ts";
+import type { ApiContext, RequestBody } from "./_shared/types.ts";
 
-function jsonResponse(obj, status = 200) {
+function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
-export async function onRequestPost({ request, env }) {
-  let body;
+export async function onRequestPost({ request, env }: ApiContext) {
+  let body: RequestBody;
   try {
-    body = await request.json();
+    body = (await request.json<RequestBody | null>()) || {};
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
   }
 
-  const { calendar, passcode } = body || {};
+  const { calendar, passcode } = body;
 
   if (!isValidCalendar(calendar)) {
     return jsonResponse({ error: "invalid_calendar" }, 400);

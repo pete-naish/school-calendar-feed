@@ -1,9 +1,17 @@
-import { toTitleCase } from "./titleCase.js";
-import { YEAR_GROUPS } from "./calendars.js";
+import { toTitleCase } from "./titleCase.ts";
+import { YEAR_GROUPS } from "./calendars.ts";
+import type { EventException, EventFields, Recurrence, RecurrenceFreq } from "./types.ts";
+
+// Input straight from a request or the model, before anything has checked it.
+type Loose = Record<string, unknown>;
+
+function asRecord(value: unknown): Loose | null {
+  return value && typeof value === "object" ? (value as Loose) : null;
+}
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-const RECUR_FREQ = new Set(["DAILY", "WEEKLY", "MONTHLY"]);
+const RECUR_FREQ = new Set<unknown>(["DAILY", "WEEKLY", "MONTHLY"]);
 
 // Caps on what one event can hold. The field lengths stop a single save
 // bloating a data file (GitHub's Contents API only returns a file inline up to
@@ -27,27 +35,27 @@ export const LIMITS = {
   maxYear: 2100,
 };
 
-function cleanOptionalString(value) {
+function cleanOptionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 // A location is a single line of plain text: whitespace runs (including any
 // pasted newlines) collapse to one space. Also used for the Whole School
 // location override (events-update.js).
-export function cleanOptionalLocation(value) {
+export function cleanOptionalLocation(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const collapsed = value.replace(/\s+/g, " ").trim();
   return collapsed || null;
 }
 
-function cleanOptionalTime(value) {
+function cleanOptionalTime(value: unknown): string | null {
   return typeof value === "string" && TIME_RE.test(value) ? value : null;
 }
 
 // A YYYY-MM-DD that is also a real calendar day, in a sane range:
 // "2026-02-30" has the right shape but isn't one (scripts/build_ics.py can't
 // build an event on it), and "9999-12-31" is one no school calendar needs.
-function isRealDate(value) {
+function isRealDate(value: unknown): value is string {
   if (typeof value !== "string" || !DATE_RE.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
   if (year < LIMITS.minYear || year > LIMITS.maxYear) return false;
@@ -56,18 +64,18 @@ function isRealDate(value) {
 }
 
 // Whole days from one ISO date to a later one (both already known to be real).
-function daysBetween(fromIso, toIso) {
+function daysBetween(fromIso: string, toIso: string) {
   return Math.round((Date.parse(`${toIso}T00:00:00Z`) - Date.parse(`${fromIso}T00:00:00Z`)) / 86400000);
 }
 
-function cleanOptionalDate(value) {
+function cleanOptionalDate(value: unknown): string | null {
   return isRealDate(value) ? value : null;
 }
 
 // Rejects anything but http(s) - this value is later set as an <a href> on
 // the public preview page (docs/assets/calendar.js), so a javascript: (or
 // other) URL here would be a stored-XSS vector for every site visitor.
-function cleanOptionalUrl(value) {
+function cleanOptionalUrl(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim()) return null;
   const trimmed = value.trim();
   // Control characters (a pasted line break, say) are never part of a real
@@ -89,8 +97,9 @@ function cleanOptionalUrl(value) {
 // { recurrence, error }: `recurrence` is null when there's none or it's
 // unusable, and `error` says why when the rep asked for a repeat (freq set)
 // that can't be kept.
-function cleanRecurrence(value, startDate) {
-  if (!value || typeof value !== "object" || !value.freq) return { recurrence: null, error: null };
+function cleanRecurrence(input: unknown, startDate: string): { recurrence: Recurrence | null; error: string | null } {
+  const value = asRecord(input);
+  if (!value || !value.freq) return { recurrence: null, error: null };
   if (!RECUR_FREQ.has(value.freq)) return { recurrence: null, error: "A repeat must be daily, weekly or monthly" };
   const until = cleanOptionalDate(value.until);
   if (!until) return { recurrence: null, error: 'A repeating event needs an end date ("repeat until")' };
@@ -102,11 +111,11 @@ function cleanRecurrence(value, startDate) {
     };
   }
   const interval =
-    Number.isInteger(value.interval) && value.interval > 0 && value.interval <= LIMITS.interval ? value.interval : 1;
-  return { recurrence: { freq: value.freq, interval, until }, error: null };
+    typeof value.interval === "number" && Number.isInteger(value.interval) && value.interval > 0 && value.interval <= LIMITS.interval ? value.interval : 1;
+  return { recurrence: { freq: value.freq as RecurrenceFreq, interval, until }, error: null };
 }
 
-const EXCEPTION_ACTIONS = new Set(["cancelled", "moved"]);
+const EXCEPTION_ACTIONS = new Set<unknown>(["cancelled", "moved"]);
 
 // Single-occurrence overrides on a recurring event (e.g. one week's PE
 // clashes with something else and moves to Friday). Drops individual
@@ -121,16 +130,17 @@ const EXCEPTION_ACTIONS = new Set(["cancelled", "moved"]);
 // the caller's own year group, since this doesn't know which one that is.
 const CLASS_CODES = new Set(YEAR_GROUPS.flatMap((group) => group.classes.map((cls) => cls.code)));
 
-function cleanExceptionClasses(value) {
+function cleanExceptionClasses(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter((code) => typeof code === "string" && CLASS_CODES.has(code)))];
 }
 
-function cleanExceptions(value) {
+function cleanExceptions(value: unknown): EventException[] {
   if (!Array.isArray(value)) return [];
-  const cleaned = [];
-  for (const item of value.slice(0, LIMITS.exceptions)) {
-    if (!item || typeof item !== "object") continue;
+  const cleaned: EventException[] = [];
+  for (const raw of value.slice(0, LIMITS.exceptions)) {
+    const item = asRecord(raw);
+    if (!item) continue;
     const date = cleanOptionalDate(item.date);
     if (!date || !EXCEPTION_ACTIONS.has(item.action)) continue;
     const classes = cleanExceptionClasses(item.classes);
@@ -156,7 +166,7 @@ function cleanExceptions(value) {
   return cleaned;
 }
 
-function commonFields(item, recurrence) {
+function commonFields(item: Loose, recurrence: Recurrence | null) {
   return {
     time: cleanOptionalTime(item.time),
     end_time: cleanOptionalTime(item.end_time),
@@ -171,14 +181,16 @@ function commonFields(item, recurrence) {
 // Shortens a too-long extracted value to `max` characters, ending in an
 // ellipsis. Only for what the model extracted, which a rep then reviews - a
 // value a rep typed themselves is rejected instead (lengthError below).
-function clip(value, max) {
+function clip(value: string, max: number) {
   return value.length > max ? `${value.slice(0, max - 1).trimEnd()}…` : value;
 }
 
 // The first field of an event that's over its length limit, as a message a
 // rep can act on, or null.
-function lengthError(fields) {
-  const checks = [
+type LengthChecked = { title?: string | null; description?: string | null; location?: string | null; url?: string | null };
+
+function lengthError(fields: LengthChecked): string | null {
+  const checks: [string, string | null | undefined, number][] = [
     ["Title", fields.title, LIMITS.title],
     ["Description", fields.description, LIMITS.description],
     ["Location", fields.location, LIMITS.location],
@@ -192,20 +204,22 @@ function lengthError(fields) {
 
 // Description/location edits on a school-sourced event (events-update.js) hold
 // to the same limits. Returns a message, or null when both are fine.
-export function overrideLengthError(changes) {
+export function overrideLengthError(changes: { description?: string; location?: string }) {
   return lengthError({ description: changes.description, location: changes.location });
 }
 
 // Validates/repairs the array of events Claude returned from record_events.
 // Drops (rather than fails on) individual bad entries, so a single malformed
 // event doesn't blank out an otherwise-good extraction.
-export function validateExtractedEvents(input) {
-  if (!input || !Array.isArray(input.events)) {
+export function validateExtractedEvents(input: unknown): { events: EventFields[]; warnings: string[] } {
+  const list = asRecord(input)?.events;
+  if (!Array.isArray(list)) {
     return { events: [], warnings: ["The model didn't return an events list"] };
   }
-  const warnings = [];
-  const events = [];
-  for (const item of input.events) {
+  const warnings: string[] = [];
+  const events: EventFields[] = [];
+  for (const raw of list) {
+    const item = asRecord(raw);
     if (!item || typeof item.title !== "string" || !item.title.trim()) {
       warnings.push("Dropped an event with no title");
       continue;
@@ -227,7 +241,7 @@ export function validateExtractedEvents(input) {
 
     // Extracted titles are Title Case (see titleCase.js); a title a rep
     // types or edits themselves (validateEventInput below) is left as is.
-    const event = {
+    const event: EventFields = {
       title: toTitleCase(item.title.trim()),
       date: item.date,
       end_date,
@@ -237,7 +251,7 @@ export function validateExtractedEvents(input) {
       ["title", LIMITS.title],
       ["description", LIMITS.description],
       ["location", LIMITS.location],
-    ]) {
+    ] as const) {
       if (event[field] && event[field].length > max) {
         warnings.push(`"${event.title}" - its ${field} was shortened to ${max} characters`);
         event[field] = clip(event[field], max);
@@ -252,7 +266,10 @@ export function validateExtractedEvents(input) {
 // Validates a single event object submitted by the frontend (from the
 // review form, either post-extraction, a manually-added card, or editing an
 // already-saved event).
-export function validateEventInput(event) {
+export function validateEventInput(
+  input: unknown
+): { valid: true; event: EventFields } | { valid: false; error: string } {
+  const event = asRecord(input);
   if (!event || typeof event.title !== "string" || !event.title.trim()) {
     return { valid: false, error: "Title is required" };
   }

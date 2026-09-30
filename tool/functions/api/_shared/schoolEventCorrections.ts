@@ -13,9 +13,16 @@
 // drops the correction - see prune_school_event_corrections()). `note` is the
 // rep's reason, `by` the calendar whose passcode made it. Entries written by
 // hand may have only some of these.
-import { commitJsonFile } from "./github.js";
-import { isSchoolEventId } from "./wholeSchoolOverrides.js";
-import { isoToDay, dayToIso, londonDayAndTime } from "./ics.js";
+import { commitJsonFile } from "./github.ts";
+import { isSchoolEventId } from "./wholeSchoolOverrides.ts";
+import { isoToDay, dayToIso, londonDayAndTime } from "./ics.ts";
+import type { Env, SchoolEvent, SpanFields } from "./types.ts";
+
+export type Correction = { start: string; end: string; note: string };
+// A published event's own start and end, in the file's format.
+export type Span = { start: string; end: string };
+// The file as read: entries are checked where they're used.
+type CorrectionsFile = Record<string, unknown>;
 
 export const CORRECTIONS_PATH = "data/school_event_corrections.json";
 
@@ -27,7 +34,7 @@ export const NOTE_MAX_LENGTH = 300;
 // year ahead anyway, so anything much further is a typo.
 const MAX_DAYS_AHEAD = 400;
 
-function isRealDate(iso) {
+function isRealDate(iso: string) {
   return DATE.test(iso) && dayToIso(isoToDay(iso)) === iso;
 }
 
@@ -38,7 +45,7 @@ export function todayLondon() {
 // A published school event's own dates/times in the file's format, or null
 // for a timed event that runs over more than one day (which the tool doesn't
 // correct - its end time isn't a same-day one).
-export function schoolSpan(event) {
+export function schoolSpan(event: SchoolEvent): Span | null {
   if (!event.time) return { start: event.date, end: event.end_date || event.date };
   if (!event.end_time) return null;
   return { start: `${event.date}T${event.time}`, end: `${event.date}T${event.end_time}` };
@@ -46,8 +53,13 @@ export function schoolSpan(event) {
 
 // Checks a rep's {start, end, note} against the event it's for. Returns
 // { correction } or { error } with a message a rep can act on.
-export function validateCorrection(event, input, today = todayLondon()) {
-  if (!input || typeof input !== "object") return { error: "Missing the corrected date." };
+export function validateCorrection(
+  event: SchoolEvent,
+  body: unknown,
+  today = todayLondon()
+): { correction: Correction; error?: undefined } | { error: string; correction?: undefined } {
+  if (!body || typeof body !== "object") return { error: "Missing the corrected date." };
+  const input = body as Record<string, unknown>;
   if (!schoolSpan(event)) {
     return { error: "This event runs over more than one day, so its times can't be corrected here - ask Pete." };
   }
@@ -61,7 +73,7 @@ export function validateCorrection(event, input, today = todayLondon()) {
   if (note.length > NOTE_MAX_LENGTH) return { error: `Keep the reason under ${NOTE_MAX_LENGTH} characters.` };
   if (typeof start !== "string" || typeof end !== "string") return { error: "Missing the corrected date." };
 
-  let firstDay;
+  let firstDay: string;
   if (!event.time) {
     if (!isRealDate(start) || !isRealDate(end)) return { error: "That isn't a valid date." };
     if (end < start) return { error: "The last day can't be before the first day." };
@@ -82,9 +94,9 @@ export function validateCorrection(event, input, today = todayLondon()) {
 }
 
 // Dates/times in the file's format, as the tool's event fields.
-function spanFields(start, end, allDay) {
-  if (allDay) return { date: start, end_date: end || start, time: null, end_time: null };
-  const fields = {};
+function spanFields(start: unknown, end: unknown, allDay: boolean): SpanFields {
+  if (allDay) return { date: start as string, end_date: (end as string) || (start as string), time: null, end_time: null };
+  const fields: SpanFields = {};
   const s = typeof start === "string" && start.match(DATE_TIME);
   const e = typeof end === "string" && end.match(DATE_TIME);
   if (s) Object.assign(fields, { date: s[1], time: s[2] });
@@ -98,15 +110,16 @@ function spanFields(start, end, allDay) {
 // the school's calendar says (null for a hand-written entry that didn't
 // record it). A correction whose shape doesn't match the event is ignored,
 // as the build ignores it.
-export function applyCorrections(events, corrections) {
+export function applyCorrections(events: SchoolEvent[], corrections: CorrectionsFile): SchoolEvent[] {
   return events.map((e) => {
-    const entry = corrections[e.id];
-    if (!entry || typeof entry !== "object") return e;
+    const raw = corrections[e.id];
+    if (!raw || typeof raw !== "object") return e;
+    const entry = raw as Record<string, unknown>;
     const allDay = !e.time;
     const values = [entry.start, entry.end].filter((v) => typeof v === "string");
     if (values.some((v) => (allDay ? !DATE.test(v) : !DATE_TIME.test(v)))) return e;
 
-    const corrected = { ...e, ...spanFields(entry.start, entry.end, allDay) };
+    const corrected: SchoolEvent = { ...e, ...spanFields(entry.start, entry.end, allDay) } as SchoolEvent;
     if (allDay && typeof entry.end !== "string") corrected.end_date = corrected.date;
     if (corrected.time && corrected.end_date !== corrected.date) corrected.end_time = null;
     const school =
@@ -125,12 +138,17 @@ export function applyCorrections(events, corrections) {
 // value, so an existing entry's recorded school values are kept instead (and
 // a hand-written entry without them stays without). A correction back to
 // exactly what the school says is the same as removing it.
-export async function commitSchoolEventCorrection(env, id, correction, { school, by, label }) {
-  if (!isSchoolEventId(id)) return { error: "invalid_id", message: "That isn't a school event id." };
+export async function commitSchoolEventCorrection(
+  env: Env,
+  id: string,
+  correction: Correction | null,
+  { school, by, label }: { school: Span | null; by: string; label: string }
+) {
+  if (!isSchoolEventId(id)) return { error: "invalid_id" as const, message: "That isn't a school event id." };
   const message = correction
     ? `Correct date of ${label} (${id}): ${correction.note}`
     : `Undo date correction of ${label} (${id})`;
-  return commitJsonFile(
+  return commitJsonFile<Record<string, Record<string, unknown>>>(
     env,
     CORRECTIONS_PATH,
     {},
@@ -138,7 +156,7 @@ export async function commitSchoolEventCorrection(env, id, correction, { school,
       const updated = { ...corrections };
       const existing = updated[id];
       if (!correction) {
-        if (!existing) return { error: "not_found", message: "That event has no date correction to undo." };
+        if (!existing) return { error: "not_found" as const, message: "That event has no date correction to undo." };
         delete updated[id];
         return { data: updated };
       }
@@ -146,7 +164,7 @@ export async function commitSchoolEventCorrection(env, id, correction, { school,
         ? typeof existing.school_start === "string"
           ? { school_start: existing.school_start, school_end: existing.school_end }
           : {}
-        : { school_start: school.start, school_end: school.end };
+        : { school_start: school!.start, school_end: school!.end };
       if (recorded.school_start === correction.start && recorded.school_end === correction.end) {
         delete updated[id];
       } else {

@@ -1,14 +1,17 @@
-import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.js";
-import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
-import { validateEventInput, cleanOptionalLocation, overrideLengthError } from "./_shared/validate.js";
-import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.js";
-import { commitEventById, triggerRebuild, retryable } from "./_shared/github.js";
-import { commitWholeSchoolOverride } from "./_shared/wholeSchoolOverrides.js";
-import { commitSchoolEventCorrection, schoolSpan, validateCorrection } from "./_shared/schoolEventCorrections.js";
-import { fetchClassSchoolEvents, fetchWholeSchoolEvents } from "./_shared/wholeSchool.js";
-import { commitErrorResponse, resultStatus } from "./_shared/errors.js";
+import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.ts";
+import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
+import { validateEventInput, cleanOptionalLocation, overrideLengthError } from "./_shared/validate.ts";
+import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.ts";
+import { commitEventById, triggerRebuild, retryable } from "./_shared/github.ts";
+import { commitWholeSchoolOverride } from "./_shared/wholeSchoolOverrides.ts";
+import { commitSchoolEventCorrection, schoolSpan, validateCorrection } from "./_shared/schoolEventCorrections.ts";
+import { fetchClassSchoolEvents, fetchWholeSchoolEvents } from "./_shared/wholeSchool.ts";
+import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
+import type { ApiContext, Env, EventFields, RequestBody, SchoolEvent } from "./_shared/types.ts";
+import type { Override } from "./_shared/wholeSchoolOverrides.ts";
+import type { Correction } from "./_shared/schoolEventCorrections.ts";
 
-function jsonResponse(obj, status = 200) {
+function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
@@ -18,7 +21,7 @@ function jsonResponse(obj, status = 200) {
 // removed. On a shared one, codes outside the caller's year are dropped, and
 // an exception left naming none of them is dropped too rather than silently
 // widening into a year-wide one the rep never asked for.
-function scopeExceptions(event, calendar, file) {
+function scopeExceptions(event: EventFields, calendar: string, file: string): EventFields {
   const group = file === calendar ? null : yearGroupFor(calendar);
   const allowed = new Set(group ? group.classes.map((cls) => cls.code) : []);
   const exceptions = (event.exceptions || []).flatMap((exc) => {
@@ -36,8 +39,8 @@ function scopeExceptions(event, calendar, file) {
 // The description/location fields present in the request, cleaned - only the
 // ones a rep edited, so leaving the description alone while adding a location
 // doesn't pin it to the school's current text.
-function overrideChanges(body) {
-  const changes = {};
+function overrideChanges(body: RequestBody): Override {
+  const changes: Override = {};
   if (typeof body.description === "string") changes.description = body.description.trim();
   if (typeof body.location === "string") changes.location = cleanOptionalLocation(body.location) ?? "";
   return changes;
@@ -49,12 +52,12 @@ function overrideChanges(body) {
 // a description save can never carry a date change with it. `published` is
 // the event as the caller's own feed has it, which is what proves the
 // passcode may touch it.
-async function correctSchoolEvent(env, calendar, id, published, input) {
-  let correction = null;
+async function correctSchoolEvent(env: Env, calendar: string, id: string, published: SchoolEvent, input: unknown) {
+  let correction: Correction | null = null;
   if (input !== null) {
     const checked = validateCorrection(published, input);
     if (checked.error) return jsonResponse({ error: "validation_failed", message: checked.error }, 400);
-    correction = checked.correction;
+    correction = checked.correction!;
   }
   const result = await commitSchoolEventCorrection(env, id, correction, {
     school: schoolSpan(published),
@@ -65,17 +68,17 @@ async function correctSchoolEvent(env, calendar, id, published, input) {
   return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
 }
 
-const wantsDateCorrection = (body) => Object.prototype.hasOwnProperty.call(body, "date_correction");
+const wantsDateCorrection = (body: RequestBody) => Object.prototype.hasOwnProperty.call(body, "date_correction");
 
-export async function onRequestPost({ request, env }) {
-  let body;
+export async function onRequestPost({ request, env }: ApiContext) {
+  let body: RequestBody;
   try {
-    body = await request.json();
+    body = (await request.json<RequestBody | null>()) || {};
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
   }
 
-  const { calendar, passcode, id, event } = body || {};
+  const { calendar, passcode, id, event } = body;
   // The rep has been told the text looks personal and chose to save anyway
   // (see _shared/personalDetails.js).
   const confirmPublic = body && body.confirm_public === true;
@@ -184,7 +187,7 @@ export async function onRequestPost({ request, env }) {
 
   try {
     // The event is in this class's own file or its year group's shared one.
-    const result = await commitEventById(
+    const result = await commitEventById<{}>(
       env,
       calendar,
       async (current, file) => {

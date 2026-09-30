@@ -1,15 +1,16 @@
-import { FOSPS, isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
-import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
-import { retryable } from "./_shared/github.js";
-import { fetchIcsText, isoToDay, dayToIso } from "./_shared/ics.js";
-import { buildWeekText, defaultWeekStart, snapToMonday, weekEnd } from "./_shared/weekList.js";
-import { readErrorResponse } from "./_shared/errors.js";
+import { FOSPS, isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.ts";
+import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
+import { retryable } from "./_shared/github.ts";
+import { fetchIcsText, isoToDay, dayToIso } from "./_shared/ics.ts";
+import { buildWeekText, defaultWeekStart, snapToMonday, weekEnd } from "./_shared/weekList.ts";
+import { readErrorResponse } from "./_shared/errors.ts";
+import type { ApiContext, RequestBody } from "./_shared/types.ts";
 
-function jsonResponse(obj, status = 200) {
+function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
-function isValidIsoDate(value) {
+function isValidIsoDate(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && dayToIso(isoToDay(value)) === value;
 }
 
@@ -18,15 +19,15 @@ function isValidIsoDate(value) {
 // read from the published .ics files (see _shared/weekList.js). `week_start`
 // (any date in the wanted week) is optional; the default is this week, or next
 // week on a Sunday.
-export async function onRequestPost({ request, env }) {
-  let body;
+export async function onRequestPost({ request, env }: ApiContext) {
+  let body: RequestBody;
   try {
-    body = await request.json();
+    body = (await request.json<RequestBody | null>()) || {};
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
   }
 
-  const { calendar, passcode, week_start: requestedWeek } = body || {};
+  const { calendar, passcode, week_start: requestedWeek } = body;
 
   if (!isValidCalendar(calendar)) {
     return jsonResponse({ error: "invalid_calendar" }, 400);
@@ -40,7 +41,7 @@ export async function onRequestPost({ request, env }) {
     return jsonResponse({ error: "invalid_week", message: "week_start must be a YYYY-MM-DD date." }, 400);
   }
 
-  const weekStart = requestedWeek ? snapToMonday(requestedWeek) : defaultWeekStart();
+  const weekStart = typeof requestedWeek === "string" ? snapToMonday(requestedWeek) : defaultWeekStart();
 
   const isClass = !isWholeSchoolCalendar(calendar) && calendar !== FOSPS.code;
 

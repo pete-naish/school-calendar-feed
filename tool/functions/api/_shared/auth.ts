@@ -3,12 +3,15 @@
 // This is a shared secret (not per-person auth), but it's checked in constant
 // time anyway, so how long a guess takes to be refused never says how much of
 // it was right.
-import { RATE_LIMIT, clientIp, rateLimitKey } from "./rateLimit.js";
+import { RATE_LIMIT, clientIp, rateLimitKey } from "./rateLimit.ts";
+import type { ApiError, Env } from "./types.ts";
+
+export type AuthResult = "ok" | "wrong_passcode" | "rate_limited";
 
 // True when the two strings hold the same UTF-8 bytes. Always walks the length
 // of the longer one and folds every byte and the length difference into one
 // value, rather than stopping at the first mismatch.
-export function timingSafeEqual(a, b) {
+export function timingSafeEqual(a: string, b: string) {
   const encoder = new TextEncoder();
   const x = encoder.encode(a);
   const y = encoder.encode(b);
@@ -22,9 +25,9 @@ export function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
-function passcodeMatches(env, calendar, passcode) {
+function passcodeMatches(env: Env, calendar: string, passcode: unknown) {
   if (typeof passcode !== "string" || !passcode) return false;
-  let passwords;
+  let passwords: Record<string, unknown>;
   try {
     passwords = JSON.parse(env.CLASS_PASSWORDS);
   } catch {
@@ -48,7 +51,12 @@ function passcodeMatches(env, calendar, passcode) {
 // test of the passcode check itself doesn't need one (every caller sharing
 // "unknown" as their IP only makes the throttle broader, never a way around
 // it). Every real endpoint passes its own `request`.
-export async function checkPasscode(env, calendar, passcode, request = null) {
+export async function checkPasscode(
+  env: Env,
+  calendar: string,
+  passcode: unknown,
+  request: Request | null = null
+): Promise<AuthResult> {
   const kv = env.RATE_LIMITS;
   let count = 0;
   if (kv) {
@@ -75,7 +83,7 @@ export async function checkPasscode(env, calendar, passcode, request = null) {
 
 // The response for a checkPasscode() result that wasn't "ok" - shared so
 // every endpoint gives the same status and message for the same outcome.
-export function passcodeErrorResponse(authResult) {
+export function passcodeErrorResponse(authResult: AuthResult): { status: number; body: ApiError } {
   if (authResult === "rate_limited") {
     return {
       status: 429,

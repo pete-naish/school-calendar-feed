@@ -3,7 +3,7 @@ import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { onRequest } from "../functions/api/_middleware.js";
+import { onRequest } from "../functions/api/_middleware.ts";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 

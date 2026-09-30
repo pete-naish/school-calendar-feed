@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { extractEvents } from "../functions/api/_shared/wholeSchool.js";
+import { extractEvents } from "../functions/api/_shared/wholeSchool.ts";
 
 const calendar = (...events) =>
   ["BEGIN:VCALENDAR", "VERSION:2.0", ...events.map((e) => ["BEGIN:VEVENT", ...e, "END:VEVENT"].flat()).flat(), "END:VCALENDAR"].join("\r\n");

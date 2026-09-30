@@ -2,9 +2,9 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { commitJsonFile, MAX_FILE_BYTES } from "../functions/api/_shared/github.js";
-import { onRequestPost as save } from "../functions/api/save.js";
-import { onRequestPost as update } from "../functions/api/events-update.js";
+import { commitJsonFile, MAX_FILE_BYTES } from "../functions/api/_shared/github.ts";
+import { onRequestPost as save } from "../functions/api/save.ts";
+import { onRequestPost as update } from "../functions/api/events-update.ts";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {

@@ -2,7 +2,7 @@
 import { test, afterEach, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { onRequestPost as parse } from "../functions/api/parse.js";
+import { onRequestPost as parse } from "../functions/api/parse.ts";
 
 const realFetch = globalThis.fetch;
 const realConsoleError = console.error;

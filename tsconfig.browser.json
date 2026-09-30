@@ -1,0 +1,19 @@
+// The parent page and the class rep tool's page. Each .ts compiles to the .js
+// beside it, which is what's served and committed (neither host runs a build) -
+// run `npm run build` after editing, and commit both. CI checks they match.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    "strict": true,
+    "removeComments": false,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "newLine": "lf"
+  },
+  "files": []
+}

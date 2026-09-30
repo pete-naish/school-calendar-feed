@@ -7,7 +7,7 @@ import {
   describeFindings,
   findPersonalDetails,
   newPersonalDetails,
-} from "../functions/api/_shared/personalDetails.js";
+} from "../functions/api/_shared/personalDetails.ts";
 
 const kinds = (text) => findPersonalDetails(text).map((f) => f.kind);
 

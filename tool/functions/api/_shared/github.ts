@@ -1,24 +1,31 @@
-import { yearGroupFor } from "./calendars.js";
+import { yearGroupFor } from "./calendars.ts";
+import type { ApiError, Env, ManualEvent } from "./types.ts";
+
+// What a commit mutator returns to write something: the new data plus anything
+// the caller wants back (e.g. a `saved` count). An ApiError instead aborts
+// without writing.
+type Written<X> = X & { error?: undefined };
+export type CommitResult<X> = Written<X & { commitSha?: string }> | ApiError;
 
 const REPO = "pete-naish/school-calendar-feed";
 const BRANCH = "main";
 const API_BASE = "https://api.github.com";
 
 // Workers runtime has no Node Buffer - base64 encode/decode by hand, UTF-8 safe.
-function base64EncodeUtf8(str) {
+function base64EncodeUtf8(str: string) {
   const bytes = new TextEncoder().encode(str);
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
   return btoa(binary);
 }
 
-function base64DecodeUtf8(b64) {
+function base64DecodeUtf8(b64: string) {
   const binary = atob(b64.replace(/\n/g, ""));
   const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
   return new TextDecoder().decode(bytes);
 }
 
-async function githubRequest(env, method, path, body) {
+async function githubRequest(env: Env, method: string, path: string, body?: unknown) {
   return fetch(`${API_BASE}${path}`, {
     method,
     headers: {
@@ -35,7 +42,7 @@ async function githubRequest(env, method, path, body) {
 // Reads and JSON-decodes an arbitrary repo file via the Contents API. A
 // missing file is treated as `defaultValue` (e.g. a calendar's first-ever
 // submission), same as the Python side's own missing-file handling.
-export async function getJsonFile(env, path, defaultValue) {
+export async function getJsonFile<T>(env: Env, path: string, defaultValue: T): Promise<{ data: T; sha: string | null; path: string }> {
   const resp = await githubRequest(env, "GET", `/repos/${REPO}/contents/${path}?ref=${BRANCH}`);
   if (resp.status === 404) {
     return { data: defaultValue, sha: null, path };
@@ -43,11 +50,11 @@ export async function getJsonFile(env, path, defaultValue) {
   if (!resp.ok) {
     throw new Error(`GitHub GET failed: ${resp.status} ${await resp.text()}`);
   }
-  const body = await resp.json();
+  const body = (await resp.json()) as { content: string; sha: string };
   return { data: JSON.parse(base64DecodeUtf8(body.content)), sha: body.sha, path };
 }
 
-async function putJsonFile(env, path, data, sha, message) {
+async function putJsonFile(env: Env, path: string, data: unknown, sha: string | null, message: string) {
   const content = base64EncodeUtf8(`${JSON.stringify(data, null, 2)}\n`);
   return githubRequest(env, "PUT", `/repos/${REPO}/contents/${path}`, {
     message: `${message} via class rep tool`,
@@ -61,8 +68,8 @@ async function putJsonFile(env, path, data, sha, message) {
 // Reads data/manual_events/<calendar>.json. A missing file (first submission
 // for that calendar) is treated as an empty array, same as
 // load_manual_events() in scripts/build_ics.py.
-export async function getManualEventsFile(env, calendar) {
-  const { data, sha, path } = await getJsonFile(env, `data/manual_events/${calendar}.json`, []);
+export async function getManualEventsFile(env: Env, calendar: string) {
+  const { data, sha, path } = await getJsonFile<ManualEvent[]>(env, `data/manual_events/${calendar}.json`, []);
   return { events: data, sha, path };
 }
 
@@ -70,7 +77,7 @@ export function generateEventId() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 }
 
-export async function dedupeKey(calendar, title, date) {
+export async function dedupeKey(calendar: string, title: string, date: string) {
   const input = `${calendar}|${title.trim().toLowerCase()}|${date}`;
   const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(input));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -85,20 +92,20 @@ const MAX_ATTEMPTS = 3;
 // over-full one can still be cleaned up.
 export const MAX_FILE_BYTES = 900_000;
 
-const serializedBytes = (data) => new TextEncoder().encode(`${JSON.stringify(data, null, 2)}\n`).length;
+const serializedBytes = (data: unknown) => new TextEncoder().encode(`${JSON.stringify(data, null, 2)}\n`).length;
 
-const FILE_FULL_ERROR = {
+const FILE_FULL_ERROR: ApiError = {
   error: "file_full",
   message: "This calendar has run out of room for events - delete some old ones and try again.",
 };
 
-function isRetryableStatus(status) {
+function isRetryableStatus(status: number) {
   // 409: another save landed between our GET and PUT - re-fetch and retry.
   // 5xx: GitHub's problem, not the data's - a plain retry is likely to work.
   return status === 409 || status >= 500;
 }
 
-function backoff(attempt) {
+function backoff(attempt: number) {
   return new Promise((resolve) => setTimeout(resolve, 300 * 3 ** attempt));
 }
 
@@ -106,8 +113,8 @@ function backoff(attempt) {
 // getManualEventsFile's own throw) up to MAX_ATTEMPTS - for read-only
 // callers (events-list.js) that don't need commitManualEvents' GET+PUT
 // cycle.
-export async function retryable(fn) {
-  let lastError;
+export async function retryable<T>(fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
       return await fn();
@@ -130,20 +137,27 @@ export async function retryable(fn) {
 // `mutatorFn` is async and returns either `{ data, ...extra }` (the new
 // value to write, plus anything the caller wants back, e.g. `saved` count)
 // or `{ error: "not_found" }` to abort without writing.
-export async function commitJsonFile(env, path, defaultValue, mutatorFn, commitMessage) {
-  let lastError;
+export async function commitJsonFile<T, X extends object = {}>(
+  env: Env,
+  path: string,
+  defaultValue: T,
+  mutatorFn: (data: T) => Promise<Written<X & { data: T }> | ApiError>,
+  commitMessage: string
+): Promise<CommitResult<X>> {
+  let lastError: unknown;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
       const { data, sha } = await getJsonFile(env, path, defaultValue);
       const result = await mutatorFn(data);
       if (result.error) return result;
 
-      const { data: newData, ...extra } = result;
+      const { data: newData, ...rest } = result;
+      const extra = rest as unknown as X;
       const newBytes = serializedBytes(newData);
       if (newBytes > MAX_FILE_BYTES && newBytes > serializedBytes(data)) return { ...FILE_FULL_ERROR };
       const resp = await putJsonFile(env, path, newData, sha, commitMessage);
       if (resp.ok) {
-        const body = await resp.json();
+        const body = (await resp.json()) as { commit?: { sha: string } };
         return { ...extra, commitSha: body.commit && body.commit.sha };
       }
       const message = `GitHub PUT failed: ${resp.status} ${await resp.text()}`;
@@ -178,7 +192,7 @@ const REBUILD_WORKFLOW = "update-calendar.yml";
 // Read and write" permission on the token, a GitHub blip) must never turn a
 // successful save into an error for the rep - the scheduled run still
 // picks it up. Returns whether the dispatch was accepted.
-export async function triggerRebuild(env) {
+export async function triggerRebuild(env: Env): Promise<boolean> {
   try {
     const resp = await githubRequest(
       env,
@@ -199,13 +213,18 @@ export async function triggerRebuild(env) {
 // holds an already-saved event: the class's own, else its year group's shared
 // file (data/manual_events/<year key>.json). Used by update and delete, which
 // only know an event's id.
-export async function commitEventById(env, calendar, mutatorFn, commitMessage) {
+export async function commitEventById<X extends object = {}>(
+  env: Env,
+  calendar: string,
+  mutatorFn: (events: ManualEvent[], file: string) => Promise<Written<X & { events: ManualEvent[] }> | ApiError>,
+  commitMessage: string
+): Promise<CommitResult<X>> {
   const group = yearGroupFor(calendar);
   const files = group ? [calendar, group.key] : [calendar];
   for (const file of files) {
     // The mutator is also told which file it's editing, so a caller can tell
     // a class's own event from its year group's shared one.
-    const result = await commitManualEvents(env, file, (events) => mutatorFn(events, file), commitMessage);
+    const result = await commitManualEvents<X>(env, file, (events) => mutatorFn(events, file), commitMessage);
     // Anything but "not in this file" (success, or a real failure such as
     // file_full) is the answer - only a miss moves on to the year's file.
     if (result.error !== "not_found") return result;
@@ -216,8 +235,13 @@ export async function commitEventById(env, calendar, mutatorFn, commitMessage) {
 // calendar-events-specific wrapper around commitJsonFile - keeps the
 // `{ events, ...extra }` shape every existing caller (save/update/delete)
 // already uses.
-export async function commitManualEvents(env, calendar, mutatorFn, commitMessage) {
-  return commitJsonFile(
+export async function commitManualEvents<X extends object = {}>(
+  env: Env,
+  calendar: string,
+  mutatorFn: (events: ManualEvent[]) => Promise<Written<X & { events: ManualEvent[] }> | ApiError>,
+  commitMessage: string
+): Promise<CommitResult<X>> {
+  return commitJsonFile<ManualEvent[], X>(
     env,
     `data/manual_events/${calendar}.json`,
     [],
@@ -225,7 +249,7 @@ export async function commitManualEvents(env, calendar, mutatorFn, commitMessage
       const result = await mutatorFn(events);
       if (result.error) return result;
       const { events: newEvents, ...extra } = result;
-      return { data: newEvents, ...extra };
+      return { ...(extra as unknown as X), data: newEvents } as Written<X & { data: ManualEvent[] }>;
     },
     commitMessage
   );

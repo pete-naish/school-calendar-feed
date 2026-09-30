@@ -2,8 +2,8 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { onRequestPost as save } from "../functions/api/save.js";
-import { onRequestPost as update } from "../functions/api/events-update.js";
+import { onRequestPost as save } from "../functions/api/save.ts";
+import { onRequestPost as update } from "../functions/api/events-update.ts";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {

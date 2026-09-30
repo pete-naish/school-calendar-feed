@@ -1,0 +1,19 @@
+// The class rep tool's Cloudflare Pages Functions. Type-checked only: Cloudflare
+// compiles the .ts itself at deploy, and Node's type stripping runs it in tests.
+// The browser code is tsconfig.browser.json.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+  "include": ["tool/functions/**/*.ts"]
+}

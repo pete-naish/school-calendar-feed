@@ -14,8 +14,8 @@ const HEADERS = {
   "X-Robots-Tag": "noindex, nofollow",
 };
 
-export async function onRequest({ next }) {
-  let response;
+export async function onRequest({ next }: { next: () => Promise<Response> }) {
+  let response: Response;
   try {
     response = await next();
   } catch (err) {

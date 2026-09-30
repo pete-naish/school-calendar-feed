@@ -11,7 +11,7 @@
 //   - short articles, conjunctions and prepositions stay lowercase unless
 //     they open or close the title, follow a colon or dash, or start a
 //     bracketed/quoted phrase.
-import { ALL_CALENDARS } from "./calendars.js";
+import { ALL_CALENDARS } from "./calendars.ts";
 
 const SMALL_WORDS = new Set(["a", "an", "and", "as", "at", "but", "by", "for", "in", "nor", "of", "on", "or", "the", "to", "via", "vs"]);
 
@@ -23,13 +23,13 @@ const ALWAYS_UPPER = new Set([
 const OPENING_PUNCTUATION = /^["'“‘(\[]/;
 const BREAK_TOKEN = /^[-–—]$/;
 
-function capitaliseFirstLetter(word) {
+function capitaliseFirstLetter(word: string) {
   return word.replace(/\p{L}/u, (c) => c.toLocaleUpperCase("en-GB"));
 }
 
 // One hyphen-separated piece of a token. `allowSmall` is whether a small word
 // may stay lowercase here (not the first/last word, not after a break).
-function fixPart(part, allowSmall) {
+function fixPart(part: string, allowSmall: boolean) {
   const core = part.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
   if (ALWAYS_UPPER.has(core.toLowerCase())) return part.replace(core, core.toUpperCase());
 
@@ -40,7 +40,7 @@ function fixPart(part, allowSmall) {
   return capitaliseFirstLetter(part);
 }
 
-export function toTitleCase(title) {
+export function toTitleCase(title: string) {
   const tokens = title.split(/(\s+)/); // keeps the whitespace so spacing is untouched
   const wordIndexes = tokens.flatMap((t, i) => (t && !/^\s+$/.test(t) ? [i] : []));
   const first = wordIndexes[0];

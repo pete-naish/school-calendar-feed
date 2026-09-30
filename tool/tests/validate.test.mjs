@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { LIMITS, overrideLengthError, validateEventInput, validateExtractedEvents } from "../functions/api/_shared/validate.js";
+import { LIMITS, overrideLengthError, validateEventInput, validateExtractedEvents } from "../functions/api/_shared/validate.ts";
 
 const event = (overrides) => ({ title: "PE", date: "2026-10-01", ...overrides });
 

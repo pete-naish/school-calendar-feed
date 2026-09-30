@@ -1,25 +1,35 @@
-import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.js";
-import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.js";
-import { validateExtractedEvents } from "./_shared/validate.js";
-import { getNextTermEndDate } from "./_shared/termEnd.js";
-import { extractionErrorResponse } from "./_shared/errors.js";
+import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.ts";
+import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
+import { validateExtractedEvents } from "./_shared/validate.ts";
+import { getNextTermEndDate } from "./_shared/termEnd.ts";
+import { extractionErrorResponse } from "./_shared/errors.ts";
+import type { ApiContext, RequestBody } from "./_shared/types.ts";
+
+// The parts of the Messages API response this reads.
+type MessagesResponse = {
+  stop_reason?: string;
+  content?: { type: string; name?: string; input?: { events?: unknown } }[];
+};
+
+// An extracted event before validate.ts has checked it - only what's read here.
+type RawEvent = { date?: unknown; recurrence?: { freq?: unknown; until?: unknown } | null };
 
 const MODEL = "claude-haiku-4-5";
 const MAX_TEXT_LENGTH = 8000;
 
-function jsonResponse(obj, status = 200) {
+function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
-export async function onRequestPost({ request, env }) {
-  let body;
+export async function onRequestPost({ request, env }: ApiContext) {
+  let body: RequestBody;
   try {
-    body = await request.json();
+    body = (await request.json<RequestBody | null>()) || {};
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
   }
 
-  const { calendar, passcode, text } = body || {};
+  const { calendar, passcode, text } = body;
 
   if (!isValidCalendar(calendar)) {
     return jsonResponse({ error: "invalid_calendar" }, 400);
@@ -139,7 +149,7 @@ export async function onRequestPost({ request, env }) {
     return jsonResponse(extractionErrorResponse(`${anthropicResp.status} ${await anthropicResp.text()}`), 502);
   }
 
-  const data = await anthropicResp.json();
+  const data = await anthropicResp.json<MessagesResponse>();
   if (data.stop_reason !== "tool_use") {
     return jsonResponse(
       {
@@ -155,7 +165,8 @@ export async function onRequestPost({ request, env }) {
     return jsonResponse(extractionErrorResponse("no record_events tool_use block in the response"), 502);
   }
 
-  const rawEvents = Array.isArray(toolUse.input && toolUse.input.events) ? toolUse.input.events : [];
+  const extracted = toolUse.input && toolUse.input.events;
+  const rawEvents: RawEvent[] = Array.isArray(extracted) ? extracted : [];
 
   // The model only ever detects the repeat *pattern* (freq/interval) - it
   // never invents an end date (see the system prompt above). Fill "until"
@@ -167,10 +178,10 @@ export async function onRequestPost({ request, env }) {
     (e) => e && e.recurrence && e.recurrence.freq && !e.recurrence.until && typeof e.date === "string"
   );
   if (needsUntil.length > 0) {
-    const earliestDate = needsUntil.map((e) => e.date).sort()[0];
+    const earliestDate = needsUntil.map((e) => e.date as string).sort()[0];
     const termEnd = await getNextTermEndDate(earliestDate);
     for (const item of needsUntil) {
-      item.recurrence.until = termEnd;
+      item.recurrence!.until = termEnd;
     }
   }
 

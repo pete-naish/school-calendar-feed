@@ -2,8 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildWeekText, defaultWeekStart, descriptionLines, snapToMonday } from "../functions/api/_shared/weekList.js";
-import { titlePrefixFor } from "../functions/api/_shared/calendars.js";
+import { buildWeekText, defaultWeekStart, descriptionLines, snapToMonday } from "../functions/api/_shared/weekList.ts";
+import { titlePrefixFor } from "../functions/api/_shared/calendars.ts";
 
 // rec-a's title prefix ("RR: " today), looked up from docs/classes.js so a
 // relabel doesn't break these.

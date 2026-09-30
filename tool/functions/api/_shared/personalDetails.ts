@@ -15,10 +15,14 @@
 // It does not try to spot names, children, or addresses - that would flag every
 // pub and school hall - so it's a safety net, not a guarantee.
 
+import type { ApiError, PersonalDetail, PersonalDetailKind } from "./types.ts";
+
+type Finding = { kind: PersonalDetailKind; text: string };
+
 // Contacts that are meant to be public and are never flagged: put an address
 // (lower case) or a number in here, e.g. the FOSPS mailbox. Numbers are compared
 // as digits only, so "07700 900123" and "07700900123" are the same.
-export const PUBLIC_CONTACTS = [];
+export const PUBLIC_CONTACTS: string[] = [];
 
 const PERSONAL_EMAIL_DOMAINS = new Set([
   "gmail.com", "googlemail.com",
@@ -38,52 +42,58 @@ const MOBILE = /(?<![\d+])(?:(?:\+|00)?44[\s.-]?\(?0?\)?[\s.-]?|\(?0\)?[\s.-]?)7
 const EMAIL = /[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})/g;
 const WHATSAPP = /\b(?:chat\.whatsapp\.com\/[A-Za-z0-9_-]+|wa\.me\/\+?\d+)/gi;
 
-const digitsOf = (text) => text.replace(/\D/g, "");
+const digitsOf = (text: string) => text.replace(/\D/g, "");
 
 // What makes two findings "the same detail", however it's written.
-function keyOf({ kind, text }) {
+function keyOf({ kind, text }: Finding) {
   if (kind === "mobile") return `mobile:${digitsOf(text).replace(/^(?:00)?440?/, "0")}`;
   return `${kind}:${text.toLowerCase()}`;
 }
 
-const isPublicContact = ({ kind, text }) =>
+const isPublicContact = ({ kind, text }: Finding) =>
   PUBLIC_CONTACTS.some((contact) =>
     kind === "mobile" ? digitsOf(contact) !== "" && keyOf({ kind, text: contact }) === keyOf({ kind, text }) : contact.toLowerCase() === text.toLowerCase()
   );
 
 // Every distinct personal detail in one piece of text, in the order it appears:
 // [{ kind, text }].
-export function findPersonalDetails(text) {
+export function findPersonalDetails(text: unknown): Finding[] {
   if (typeof text !== "string" || !text) return [];
-  const found = new Map();
-  const add = (kind, match) => {
-    const finding = { kind, text: match[0].trim() };
+  const found = new Map<string, { finding: Finding; at: number }>();
+  const add = (kind: PersonalDetailKind, match: RegExpMatchArray) => {
+    const finding: Finding = { kind, text: match[0].trim() };
     const key = keyOf(finding);
     if (isPublicContact(finding)) return;
-    if (!found.has(key) || match.index < found.get(key).at) found.set(key, { finding, at: match.index });
+    const at = match.index ?? 0;
+    const existing = found.get(key);
+    if (!existing || at < existing.at) found.set(key, { finding, at });
   };
   const whatsapp = [...text.matchAll(WHATSAPP)];
   for (const m of whatsapp) add("whatsapp", m);
   // A wa.me link holds a phone number: that's the one finding, not two.
-  const insideWhatsappLink = (m) => whatsapp.some((w) => m.index >= w.index && m.index < w.index + w[0].length);
+  const insideWhatsappLink = (m: RegExpMatchArray) =>
+    whatsapp.some((w) => m.index! >= w.index! && m.index! < w.index! + w[0].length);
   for (const m of text.matchAll(MOBILE)) if (!insideWhatsappLink(m)) add("mobile", m);
   for (const m of text.matchAll(EMAIL)) if (PERSONAL_EMAIL_DOMAINS.has(m[1].toLowerCase())) add("email", m);
   return [...found.values()].sort((a, b) => a.at - b.at).map(({ finding }) => finding);
 }
 
-const FIELDS = ["title", "description", "location"];
+const FIELDS = ["title", "description", "location"] as const;
+
+// Anything with some of those fields: a validated event, an edit, a published school event.
+type Checked = { title?: string | null; description?: string | null; location?: string | null };
 
 // The personal details in an event's (or an edit's) title, description and
 // location that weren't already in `before` - what it looked like before this
 // save, or null for a brand-new event. Only new ones count, so changing the time
 // of an event whose description holds a number the rep already confirmed doesn't
 // ask again. Returns [{ field, kind, text }].
-export function newPersonalDetails(after, before = null) {
-  const already = new Set();
+export function newPersonalDetails(after: Checked, before: Checked | null = null): PersonalDetail[] {
+  const already = new Set<string>();
   for (const field of FIELDS) {
     for (const finding of findPersonalDetails(before && before[field])) already.add(keyOf(finding));
   }
-  const out = [];
+  const out: PersonalDetail[] = [];
   for (const field of FIELDS) {
     for (const finding of findPersonalDetails(after && after[field])) {
       // The same number in the title and the description is one thing to confirm.
@@ -99,7 +109,7 @@ const KIND_LABEL = { mobile: "a mobile number", email: "a personal email address
 
 // The sentence shown to the rep. `prefix` says which event when there are
 // several ("Event 2: ").
-export function describeFindings(findings, prefix = () => "") {
+export function describeFindings(findings: PersonalDetail[], prefix: (finding: PersonalDetail) => string = () => "") {
   const lines = findings.map((f) => `${prefix(f)}the ${f.field} has ${KIND_LABEL[f.kind]} (${f.text})`);
   return (
     `This looks like personal contact information: ${lines.join("; ")}. ` +
@@ -109,6 +119,6 @@ export function describeFindings(findings, prefix = () => "") {
 }
 
 // The response body for a save that needs the rep's OK first.
-export function confirmPublicResponse(findings, prefix) {
+export function confirmPublicResponse(findings: PersonalDetail[], prefix?: (finding: PersonalDetail) => string): ApiError {
   return { error: "confirm_public", message: describeFindings(findings, prefix), findings };
 }
