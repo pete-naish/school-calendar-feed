@@ -80,7 +80,9 @@ function occurrencesInWeek(event, weekStartDay) {
 }
 
 // School descriptions come through with raw HTML (<p>, <br />) that would
-// show up literally in WhatsApp. One entry per non-blank line.
+// show up literally in WhatsApp. One entry per line, keeping a single blank
+// line ("") wherever the description had one or more between paragraphs,
+// but none at the start or end.
 export function descriptionLines(text) {
   return text
     .replace(/<\s*br\s*\/?>/gi, "\n")
@@ -89,7 +91,7 @@ export function descriptionLines(text) {
     .replace(/ /g, " ")
     .split(/\r?\n/)
     .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
+    .filter((line, i, lines) => line || (lines[i - 1] && lines.slice(i + 1).some(Boolean)));
 }
 
 function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = false } = {}) {

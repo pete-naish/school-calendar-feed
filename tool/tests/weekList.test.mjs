@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildWeekText, defaultWeekStart, snapToMonday } from "../functions/api/_shared/weekList.js";
+import { buildWeekText, defaultWeekStart, descriptionLines, snapToMonday } from "../functions/api/_shared/weekList.js";
 import { titlePrefixFor } from "../functions/api/_shared/calendars.js";
 
 // rec-a's title prefix ("RR: " today), looked up from docs/classes.js so a
@@ -159,6 +159,7 @@ test("HTML in a description is cleaned; location is unescaped; whole-school is m
       "Location: School hall, main entrance",
       "R/KS1 AM",
       "KS2 PM",
+      "",
       "Forms due Monday",
     ].join("\n")
   );
@@ -194,6 +195,10 @@ test("a divider follows an event's details only when another event follows that 
       "Walking to church",
     ].join("\n")
   );
+});
+
+test("blank lines between description paragraphs are kept, collapsed to one", () => {
+  assert.deepEqual(descriptionLines("\n\nFirst.\n\n\n  \nSecond.\nThird.\n\n"), ["First.", "", "Second.", "Third."]);
 });
 
 test("folded lines are rejoined", () => {
