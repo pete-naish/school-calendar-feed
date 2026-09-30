@@ -31,6 +31,16 @@ function formatTime(time) {
   return `${hour}${m ? `:${String(m).padStart(2, "0")}` : ""}${h < 12 ? "am" : "pm"}`;
 }
 
+// "14:30", "15:05" -> "2:30–3:05pm"; "11:00", "13:00" -> "11am–1pm". No
+// end (or one equal to the start) gives just the start time.
+function formatTimeRange(start, end) {
+  if (!end || end === start) return formatTime(start);
+  const from = formatTime(start);
+  const to = formatTime(end);
+  const sameHalf = from.slice(-2) === to.slice(-2);
+  return `${sameHalf ? from.slice(0, -2) : from}–${to}`;
+}
+
 export function snapToMonday(iso) {
   const day = isoToDay(iso);
   return dayToIso(day - weekdayIndex(day));
@@ -104,6 +114,8 @@ function collectItems(icsText, weekStartDay, { titlePrefix = "", wholeSchool = f
         startDay,
         endDay,
         startTime: event.startTime,
+        // A timed event running past midnight shows its day range instead.
+        endTime: endDay === startDay ? event.endTime : null,
         description: descriptionLines(event.description),
         location: event.location,
         wholeSchool,
@@ -143,7 +155,7 @@ export function buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs = null, ca
       (a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? "") || a.title.localeCompare(b.title)
     );
     dayItems.forEach((item, i) => {
-      const time = item.startTime ? `${formatTime(item.startTime)} ` : "";
+      const time = item.startTime ? `${formatTimeRange(item.startTime, item.endTime)} ` : "";
       const range = item.endDay > item.startDay ? ` (${shortDate(item.startDay)} – ${shortDate(item.endDay)})` : "";
       const source = item.wholeSchool && calendar !== "whole-school" ? "Whole School: " : "";
       lines.push(`• ${time}${source}${item.title}${range}`);

@@ -93,8 +93,8 @@ function parseRrule(value) {
 }
 
 // Every VEVENT as { uid, title, description, location, startDay, startTime,
-// endDay (inclusive), rrule, exdays }. `startTime` is "HH:MM" or null for an
-// all-day event; `rrule` is { freq, interval, untilDay } or null; `exdays`
+// endDay (inclusive), endTime, rrule, exdays }. `startTime`/`endTime` are
+// "HH:MM", or null for an all-day event (`endTime` also when there's no DTEND); `rrule` is { freq, interval, untilDay } or null; `exdays`
 // is a Set of the start days a recurring event skips. VTIMEZONE blocks are
 // ignored (they sit outside any VEVENT).
 export function parseIcsEvents(icsText) {
@@ -126,6 +126,7 @@ export function parseIcsEvents(icsText) {
       startDay: start.day,
       startTime: start.time,
       endDay: Math.max(endDay, start.day),
+      endTime: end && start.time !== null ? end.time : null,
       rrule: props.RRULE ? parseRrule(props.RRULE) : null,
       exdays: new Set(props.EXDATE.map((v) => parseDateTime(v.trim())).filter(Boolean).map((v) => v.day)),
     });

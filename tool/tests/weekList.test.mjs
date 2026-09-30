@@ -65,7 +65,7 @@ test("timed recurring event keeps its wall-clock time across the BST to GMT chan
     "DTEND;TZID=Europe/London:20261015T203000",
     "RRULE:FREQ=WEEKLY;UNTIL=20261231T235959Z;INTERVAL=1",
   ]);
-  assert.match(week("2026-10-26", { own }).text, /\*Thu 29 Oct\*\n• 7:30pm Choir/);
+  assert.match(week("2026-10-26", { own }).text, /\*Thu 29 Oct\*\n• 7:30–8:30pm Choir/);
 });
 
 test("a UTC instant just after midnight London time lands on the London day", () => {
@@ -75,7 +75,7 @@ test("a UTC instant just after midnight London time lands on the London day", ()
     "DTSTART:20260703T233000Z",
     "DTEND:20260704T003000Z",
   ]);
-  assert.match(week("2026-06-29", { wholeSchool, cal: "whole-school" }).text, /\*Sat 4 Jul\*\n• 12:30am Late one/);
+  assert.match(week("2026-06-29", { wholeSchool, cal: "whole-school" }).text, /\*Sat 4 Jul\*\n• 12:30–1:30am Late one/);
 });
 
 test("all-day multi-day event shows its range under its first day", () => {
@@ -105,7 +105,7 @@ test("FOSPS events are listed with their FOSPS prefix", () => {
   ]);
   const { text, count } = week("2026-11-30", { own, fosps });
   assert.equal(count, 2);
-  assert.match(text, /\*Fri 4 Dec\*\n• 9am Class assembly\n\n\*Sat 5 Dec\*\n• 12pm FOSPS: Winter Fair$/);
+  assert.match(text, /\*Fri 4 Dec\*\n• 9–9:30am Class assembly\n\n\*Sat 5 Dec\*\n• 12–3pm FOSPS: Winter Fair$/);
 });
 
 test("a multi-day event that began before the week is listed under Monday", () => {
@@ -137,7 +137,7 @@ test("a moved occurrence is its own one-off event", () => {
   );
   const { text, count } = week("2026-10-12", { own });
   assert.equal(count, 1);
-  assert.match(text, /\*Fri 16 Oct\*\n• 2pm Assembly/);
+  assert.match(text, /\*Fri 16 Oct\*\n• 2–3pm Assembly/);
 });
 
 test("HTML in a description is cleaned; location is unescaped; whole-school is marked", () => {
@@ -191,7 +191,7 @@ test("a divider follows an event's details only when another event follows that 
       "• Harvest Donations",
       "Bring vegetables",
       "──────────",
-      "• 2:30pm Welcome Service",
+      "• 2:30–3:05pm Welcome Service",
       "Walking to church",
     ].join("\n")
   );
@@ -219,7 +219,7 @@ test("within a day: all-day first, then by time", () => {
     ["UID:c@x", `SUMMARY:${PREFIX}All day`, "DTSTART;VALUE=DATE:20260922", "DTEND;VALUE=DATE:20260923"]
   );
   const titles = week("2026-09-21", { own }).text.split("\n").filter((l) => l.startsWith("•"));
-  assert.deepEqual(titles, ["• All day", "• 8:30am Morning", "• 6:30pm Evening"]);
+  assert.deepEqual(titles, ["• All day", "• 8:30–9:30am Morning", "• 6:30–7:30pm Evening"]);
 });
 
 test("the heading spans months when the week does", () => {
@@ -241,4 +241,14 @@ test("defaultWeekStart uses the London date, not UTC", () => {
 test("snapToMonday", () => {
   assert.equal(snapToMonday("2026-09-27"), "2026-09-21");
   assert.equal(snapToMonday("2026-09-21"), "2026-09-21");
+});
+
+test("an event crossing noon shows am and pm; one with no end shows just its start", () => {
+  const own = calendar(
+    ["UID:manual-a@school-calendar-feed", `SUMMARY:${PREFIX}Trip`, "DTSTART;TZID=Europe/London:20261015T110000", "DTEND;TZID=Europe/London:20261015T130000"],
+    ["UID:manual-b@school-calendar-feed", `SUMMARY:${PREFIX}Pickup`, "DTSTART;TZID=Europe/London:20261015T151500"]
+  );
+  const { text } = week("2026-10-12", { own });
+  assert.match(text, /• 11am–1pm Trip/);
+  assert.match(text, /• 3:15pm Pickup/);
 });
