@@ -9,6 +9,7 @@
 //   schoolCard.ts  an event from the school's calendar, and correcting its date
 //   cardState.ts   per-card state and the parts every card shares
 //   weekList.ts    "What's on this week"
+//   tabs.ts        the Events / Add events / What's on this week tabs
 //   state.ts, dom.ts, dates.ts   shared state, elements and date helpers
 //
 // Loading a page/ module only defines things (and looks up the page's
@@ -17,9 +18,10 @@
 import { el } from "./page/dom.js";
 import { addDraftCard, handleExtract, handleSaveAll, updateExtractButtonState } from "./page/drafts.js";
 import { blankEvent, handleUndoDelete } from "./page/eventCard.js";
-import { applyEventFilters } from "./page/eventList.js";
+import { wireEventFilters } from "./page/eventList.js";
 import { handleLogin, handleSwitchCalendar, hasUnsavedWork, loadCalendars, restoreSession, updateLoginButtonState } from "./page/login.js";
 import { state } from "./page/state.js";
+import { wireTabs } from "./page/tabs.js";
 import { handleCopyWeekList, handleWeekList } from "./page/weekList.js";
 function init() {
     loadCalendars().then(restoreSession);
@@ -38,12 +40,11 @@ function init() {
     updateExtractButtonState();
     el.addManualCardButton.addEventListener("click", () => addDraftCard(blankEvent()));
     el.saveAllButton.addEventListener("click", handleSaveAll);
-    el.weekListButton.addEventListener("click", () => handleWeekList());
+    wireTabs();
     el.weekPrevButton.addEventListener("click", () => handleWeekList(-7));
     el.weekNextButton.addEventListener("click", () => handleWeekList(7));
     el.weekCopyButton.addEventListener("click", handleCopyWeekList);
-    el.eventSearch.addEventListener("input", applyEventFilters);
-    el.eventKind.addEventListener("change", applyEventFilters);
+    wireEventFilters();
     el.undoDeleteButton.addEventListener("click", handleUndoDelete);
     window.addEventListener("beforeunload", (e) => {
         if (state.calendar && hasUnsavedWork())

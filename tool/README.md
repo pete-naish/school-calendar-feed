@@ -37,11 +37,17 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
   list - `app.ts`'s opening comment lists them), loaded by the browser as
   modules with no bundler. Each card's state (saved value, unsaved edits,
   exceptions) lives in `page/cardState.ts`, not in the DOM. `appHelpers.ts`
-  holds the helpers the tests import. Calendar picker →
-  passcode → paste text → review/edit extracted events → save. A "+ Add an
-  event manually" button is always available too - pasting text through
-  Claude is optional, not required. A second section lists and lets you
-  edit/delete events already saved to that calendar.
+  holds the helpers the tests import. Calendar picker → passcode → three
+  tabs: **Events** (the calendar's saved events, grouped by month, each
+  folded to a summary until opened to edit or delete), **Add events** (paste
+  text → "Find events" → check the new events → save; "+ Add one by hand"
+  is always there too - pasting text through Claude is optional) and
+  **What's on this week** (below). The look follows the public page's:
+  Geist (self-hosted in `fonts/`), and the year group's colour from its
+  palette as the accent (`data-hue` on the page, set by `login.ts`). A
+  sun/moon button switches light and dark mode like the public page's
+  (`page/theme.ts`, a classic script loaded in `<head>` so a saved choice
+  applies before the first paint).
 - Every event card supports an optional **end date** (for multi-day events -
   DTEND is set to the end of that day) and an optional **repeat** (daily /
   weekly / every 2 weeks / monthly, each requiring a "repeat until" date -
@@ -256,7 +262,7 @@ for the badge.
 ## Weekly list ("What's on this week")
 
 Every calendar entry (Whole School included) has a **What's on this week**
-button that builds the Sunday WhatsApp message: the calendar's own events
+tab that builds the Sunday WhatsApp message: the calendar's own events
 plus the whole-school ones (and, for a class, the FOSPS ones, shown with their
 `FOSPS:` prefix) for one Monday-Sunday week, grouped by day
 (`*bold*` day headings, `•` bullets, then location and description). The text
@@ -404,16 +410,16 @@ never to Functions responses, so there are two places:
   noindex, nofollow` (a header rather than `robots.txt`, because a crawler that
   `robots.txt` blocks never sees a noindex), `nosniff`, no framing, no
   referrer, and a Content-Security-Policy that allows only the tool's own
-  script, stylesheet and API (`default-src 'none'`, nothing inline, no `eval`,
-  no other origin).
+  script, stylesheet, fonts and API (`default-src 'none'`, nothing inline, no
+  `eval`, no other origin).
 - `functions/api/_middleware.ts` - every `/api/*` response: `Cache-Control:
   no-store`, `nosniff`, `noindex`. It also turns anything an endpoint throws
   (say, an unparseable `CLASS_PASSWORDS`) into a plain JSON 500, logging the
   detail rather than showing it.
 
-The CSP is strict enough that some ordinary changes break the page: a web
-font, an inline `<style>` or `style="..."`, a third-party script, an
-`onclick=`. `tests/headers.test.mjs` fails if `index.html`, the page's scripts or
+The CSP is strict enough that some ordinary changes break the page: a font
+from anywhere but `fonts/`, an inline `<style>` or `style="..."`, a
+third-party script, an `onclick=`. `tests/headers.test.mjs` fails if `index.html`, the page's scripts or
 `style.css` stop fitting it - loosen the policy in `_headers` deliberately, not
 to make an error go away. If the tool moves to a custom domain, also turn on
 HSTS there (Cloudflare dashboard, SSL/TLS, Edge Certificates).

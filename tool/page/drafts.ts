@@ -4,17 +4,19 @@ import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPub
 import { addWeekdayHints } from "./cardState.js";
 import { confirmSecondClick, el, find, plural } from "./dom.js";
 import { fillCardFields, localValidationError, readCardFields, setupYearGroupControls, wireCardDefaultEndTime, wireRecurrenceToggle } from "./eventCard.js";
-import { rebuildWait, renderExistingEvents } from "./eventList.js";
+import { rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
+import { selectTab } from "./tabs.js";
 import { apiCall, state } from "./state.js";
 import type { DraftEvent } from "./state.js";
 import type { ClassListedEvent, ListResponse, ParseResponse, SaveResponse } from "../functions/api/_shared/types.d.ts";
 
-// "Extract events" stays disabled until there's text it hasn't already been
+// "Find events" stays disabled until there's text it hasn't already been
 // through (state.lastExtractedText), so a second press can't add every event
-// twice.
+// twice. Changing the text clears what the last look found.
 export function updateExtractButtonState() {
   const text = el.pasteTextarea.value.trim();
   el.extractButton.disabled = state.extracting || !text || text === state.lastExtractedText;
+  if (!state.extracting && text !== state.lastExtractedText) el.extractStatus.textContent = "";
 }
 
 export async function handleExtract() {
@@ -22,14 +24,14 @@ export async function handleExtract() {
   if (!text.trim()) return;
 
   el.extractError.hidden = true;
-  el.extractLoading.hidden = false;
   state.extracting = true;
   updateExtractButtonState();
+  el.extractStatus.textContent = "Reading that text…";
 
   const { ok, data } = await apiCall<ParseResponse>("/api/parse", { calendar: state.calendar, passcode: state.passcode, text });
 
-  el.extractLoading.hidden = true;
   state.extracting = false;
+  el.extractStatus.textContent = "";
   if (ok && data.events?.length) state.lastExtractedText = text.trim();
   updateExtractButtonState();
 
@@ -45,7 +47,10 @@ export async function handleExtract() {
   }
 
   for (const event of data.events || []) {
-    addDraftCard(event);
+    addDraftCard(event, { fromText: true });
+  }
+  if (data.events?.length) {
+    el.extractStatus.textContent = `Found ${plural(data.events.length, "event")} in this text. Change the text to look again.`;
   }
 }
 
@@ -54,22 +59,34 @@ function saveAllLabel() {
   return `Save ${plural(el.draftCards.children.length, "event")}`;
 }
 
+// The "Check before saving" heading and the save bar show while there are
+// new events to save.
 export function updateDraftControlsVisibility() {
-  el.saveAllButton.hidden = el.draftCards.children.length === 0;
+  const count = el.draftCards.children.length;
+  el.draftsHeading.hidden = count === 0;
+  el.saveBar.hidden = count === 0;
+  el.draftsCount.textContent = `${plural(count, "new event")} · nothing is published until you save`;
+  el.saveBarText.textContent = `${plural(count, "new event")} ready to save`;
   if (!el.saveAllButton.disabled && !confirmPublicField(el.saveAllButton).confirm_public) el.saveAllButton.textContent = saveAllLabel();
 }
 
-export function addDraftCard(event: DraftEvent) {
+// `fromText`: read from pasted text, so labelled that way - worth a closer look.
+export function addDraftCard(event: DraftEvent, { fromText = false } = {}) {
   const node = el.cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
   fillCardFields(node, event);
   wireCardDefaultEndTime(node);
   wireRecurrenceToggle(node);
   setupYearGroupControls(node);
   addWeekdayHints(node);
-  find<HTMLButtonElement>(node, ".card-save-button").hidden = true; // drafts save via "Save all", not individually
+  // Drafts save together from the save bar, so they have no buttons of their
+  // own beyond removing one.
+  find(node, ".card-draft-header").hidden = false;
+  find(node, ".card-origin").textContent = fromText ? "New · read from your text" : "New";
+  find<HTMLButtonElement>(node, ".card-save-button").hidden = true;
+  find<HTMLButtonElement>(node, ".card-remove-button").hidden = true;
   // A blank card goes straight away; one with something in it (typed, or
   // read from pasted text) asks first.
-  const removeButton = find<HTMLButtonElement>(node, ".card-remove-button");
+  const removeButton = find<HTMLButtonElement>(node, ".card-draft-remove");
   removeButton.addEventListener("click", () => {
     const { title, date } = readCardFields(node);
     if ((title || date) && !confirmSecondClick(removeButton, "Really remove?")) return;
@@ -126,13 +143,15 @@ export async function handleSaveAll() {
     return;
   }
 
+  // Back to the list, where the new events will be, saying what happened.
   const skipped = data.skipped_duplicates ? ` (${plural(data.skipped_duplicates, "duplicate")} skipped)` : "";
-  el.saveSuccess.textContent = `${plural(data.saved, "event")} saved${skipped}. ${data.saved === 1 ? "It'll" : "They'll"} appear in the calendar ${rebuildWait(data.rebuild_triggered)}.`;
-  el.saveSuccess.hidden = false;
   el.draftCards.innerHTML = "";
   el.pasteTextarea.value = "";
   updateExtractButtonState();
   updateDraftControlsVisibility();
+  selectTab("events");
+  showListStatus(`${plural(data.saved, "event")} saved${skipped}. ${data.saved === 1 ? "It'll" : "They'll"} appear in the calendar ${rebuildWait(data.rebuild_triggered)}.`);
+  el.existingStatus.scrollIntoView({ block: "nearest" });
 
   const listResult = await apiCall<ListResponse>("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
   if (listResult.ok) renderExistingEvents(listResult.data.events as ClassListedEvent[]);

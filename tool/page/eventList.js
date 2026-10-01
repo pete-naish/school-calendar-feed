@@ -2,8 +2,8 @@
 // events", with search and filter, kept in date order as events change.
 import { isPastEvent } from "../appHelpers.js";
 import { cardState, isCardOpen, setCardOpen } from "./cardState.js";
-import { todayIso } from "./dates.js";
-import { el, find } from "./dom.js";
+import { formatMonthYear, todayIso } from "./dates.js";
+import { el, find, plural } from "./dom.js";
 import { createExistingEventCard } from "./eventCard.js";
 import { createSchoolEventCard } from "./schoolCard.js";
 import { apiCall, state, WHOLE_SCHOOL } from "./state.js";
@@ -68,7 +68,7 @@ export function placeCard(card, event) {
     cardState(card).date = event.date;
     const past = isPastEvent(event, todayIso());
     const list = past ? el.pastCards : el.existingCards;
-    const before = [...list.children].find((c) => {
+    const before = cardsIn(list).find((c) => {
         const date = cardState(c).date ?? "";
         return c !== card && (past ? date < event.date : date > event.date);
     });
@@ -82,19 +82,59 @@ export function placeCard(card, event) {
     card.scrollIntoView({ block: "nearest" });
     applyEventFilters();
 }
+// The event cards in a list - which also holds its month headings.
+function cardsIn(list) {
+    return [...list.querySelectorAll(":scope > .event-card")];
+}
+export function allEventCards() {
+    return [...cardsIn(el.existingCards), ...cardsIn(el.pastCards)];
+}
+// A heading above the first card shown in each month ("October 2026"),
+// redone whenever the list or the filters change.
+function renderMonthHeadings(list) {
+    for (const heading of list.querySelectorAll(":scope > .month-heading"))
+        heading.remove();
+    let month = "";
+    for (const card of cardsIn(list)) {
+        const date = cardState(card).date;
+        if (card.hidden || !date || date.slice(0, 7) === month)
+            continue;
+        month = date.slice(0, 7);
+        const heading = document.createElement("h2");
+        heading.className = "month-heading";
+        heading.textContent = formatMonthYear(date);
+        card.before(heading);
+    }
+}
 // --- Search and filter ----------------------------------------------------------
 //
 // A search box over the list (title, location, description - including
-// unsaved edits) once there are enough events to need one, and an "Added here"
-// / "From school calendar" choice when a class's list has both.
+// unsaved edits) once there are enough events to need one, and an "Added
+// here" / "From school" choice when a class's list has both.
 const FILTER_FROM = 6;
-export function allEventCards() {
-    return [...el.existingCards.children, ...el.pastCards.children];
+// The "Show" choice: "" for everything, else a card kind ("rep", "school").
+let kindFilter = "";
+export function wireEventFilters() {
+    el.eventSearch.addEventListener("input", applyEventFilters);
+    for (const button of el.eventKind.querySelectorAll("button")) {
+        button.addEventListener("click", () => setKindFilter(button.value));
+    }
+}
+function setKindFilter(kind) {
+    kindFilter = kind;
+    for (const button of el.eventKind.querySelectorAll("button")) {
+        button.setAttribute("aria-pressed", String(button.value === kind));
+    }
+    applyEventFilters();
+}
+// Back to everything, for the next calendar signed in to.
+export function resetEventFilters() {
+    el.eventSearch.value = "";
+    setKindFilter("");
 }
 function cardMatchesFilters(card) {
     const query = el.eventSearch.value.trim().toLowerCase();
-    const kind = el.eventKind.value;
-    if (kind && cardState(card).kind !== kind)
+    if (kindFilter && cardState(card).kind !== kindFilter)
         return false;
     if (!query)
         return true;
@@ -111,17 +151,22 @@ export function applyEventFilters() {
     updateEventListState();
 }
 export function updateEventListState() {
-    const shown = (list) => [...list.children].filter((c) => !c.hidden).length;
-    const filtering = Boolean(el.eventSearch.value.trim() || el.eventKind.value);
+    const shown = (list) => cardsIn(list).filter((c) => !c.hidden).length;
+    const filtering = Boolean(el.eventSearch.value.trim() || kindFilter);
     const pastShown = shown(el.pastCards);
     el.existingEmpty.textContent = filtering ? "No upcoming events match." : "No upcoming events.";
     el.existingEmpty.hidden = shown(el.existingCards) > 0;
     el.pastCount.textContent = String(pastShown);
     el.pastEvents.hidden = pastShown === 0;
+    renderMonthHeadings(el.existingCards);
+    renderMonthHeadings(el.pastCards);
+    const upcoming = cardsIn(el.existingCards).length;
+    const past = cardsIn(el.pastCards).length;
+    el.calendarCounts.textContent = `${plural(upcoming, "upcoming event")}${past ? ` · ${past} past` : ""}`;
     const cards = allEventCards();
     el.eventFilters.hidden = cards.length < FILTER_FROM && !filtering;
     const kinds = new Set(cards.map((c) => cardState(c).kind));
-    el.eventKindLabel.hidden = !(kinds.has("school") && kinds.has("rep")) && !el.eventKind.value;
+    el.eventKind.hidden = !(kinds.has("school") && kinds.has("rep")) && !kindFilter;
 }
 // The line above the list for what happened to an event no longer on it.
 export function showListStatus(text, offerUndo = false) {

@@ -91,6 +91,7 @@ test("the CSP starts from nothing and allows only the tool's own script, style a
   assert.deepEqual(csp["default-src"], ["'none'"]);
   assert.deepEqual(csp["script-src"], ["'self'"]);
   assert.deepEqual(csp["style-src"], ["'self'"]);
+  assert.deepEqual(csp["font-src"], ["'self'"]);
   assert.deepEqual(csp["connect-src"], ["'self'"]);
   assert.deepEqual(csp["frame-ancestors"], ["'none'"]);
   assert.deepEqual(csp["base-uri"], ["'none'"]);
@@ -112,7 +113,9 @@ const html = read("index.html");
 test("index.html loads only its own script and stylesheet, with no inline script, style or handlers", () => {
   const scripts = [...html.matchAll(/<script\b([^>]*)>/gi)].map((m) => m[1]);
   assert.ok(scripts.length > 0);
-  for (const attrs of scripts) assert.match(attrs, /\bsrc="[^":/]+"/, `inline or remote script: <script ${attrs}>`);
+  // A src on this site (a relative path, folders allowed) - not inline, and
+  // not another origin (no scheme, no leading //).
+  for (const attrs of scripts) assert.match(attrs, /\bsrc="(?!\/\/)[^":]+"/, `inline or remote script: <script ${attrs}>`);
   assert.doesNotMatch(html, /<style\b/i);
   assert.doesNotMatch(html, /\sstyle\s*=/i);
   assert.doesNotMatch(html, /\son[a-z]+\s*=/i);

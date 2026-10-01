@@ -5,9 +5,10 @@
 # The tool is for class reps, not the public: keep it out of search results
 # (via this header rather than robots.txt - a crawler blocked by robots.txt
 # never sees a noindex), stop it being framed, and lock the page down to its own
-# script, stylesheet and API. It has no inline scripts or styles, no eval, and
-# talks only to its own origin, so none of that needs loosening. If you add
-# any of those (a web font, an inline <style>, a third-party script), this
+# script, stylesheet, fonts (Geist, served from tool/fonts/) and API. It has no
+# inline scripts or styles, no eval, and talks only to its own origin, so none
+# of that needs loosening. If you add any of those (a font from elsewhere, an
+# inline <style>, a third-party script), this
 # policy has to change with it - tests/headers.test.mjs checks the page still
 # fits it.
 /*
@@ -15,4 +16,4 @@
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'

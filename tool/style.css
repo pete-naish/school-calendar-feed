@@ -1,125 +1,228 @@
-:root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #1a1a1a;
-  --muted: #666666;
-  --border: #dddddd;
-  --accent: #1a1a1a;
-  --accent-fg: #ffffff;
-  --error: #b3261e;
-  --success: #1a7a3c;
-  --card-bg: #f7f7f7;
-  --warning: #9a5b00;
-  --warning-bg: #fff6e5;
+/* The class rep tool. Same family as the public calendar page
+   (docs/assets/calendar.css): Geist, near-black ink on light grey with white
+   panels, and the year groups' colours as the signed-in calendar's accent. */
+
+/* Geist (SIL Open Font License 1.1 - see fonts/OFL.txt), served from the tool
+   itself: the CSP allows fonts from 'self' only. Latin and latin-ext subsets;
+   other scripts fall back to the system font. */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("fonts/geist-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("fonts/geist-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --bg: #f2f2f2;
+  --surface: #ffffff;
+  --surface-muted: #fafafa;
+  --fg: #171717;
+  --fg-soft: #404040;
+  --muted: #595959;
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --control-border: #949494;
+  --chip-bg: #f0f0f0;
+  --ink: #171717;
+  --ink-fg: #ffffff;
+  --focus: #0070f3;
+  --link: #1a5fb4;
+  --error: #b3261e;
+  --error-bg: #fde8e7;
+  --error-fg: #8f1d17;
+  --success-bg: #e7f4ec;
+  --success-fg: #14532d;
+  --warning: #d98a00;
+  --warning-bg: #fff1d6;
+  --warning-fg: #7a4a00;
+  --info-bg: #f4f6fb;
+  --info-fg: #2b3445;
+  --moved-bg: #e3edfb;
+  --moved-fg: #183f73;
+  --shadow-open: 0 4px 16px -8px rgba(0, 0, 0, 0.18);
+  --accent: var(--ink);
+}
+
+/* Dark: the device's setting, unless someone chose light with the toggle
+   (page/theme.ts sets data-theme on <html>), or dark when chosen. The same
+   tokens twice, as on the public page - CSS can't share one block between a
+   media query and a selector. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #16161a;
+  :root:not([data-theme="light"]) {
+    --bg: #121214;
+    --surface: #1c1c1f;
+    --surface-muted: #19191c;
     --fg: #ededed;
-    --muted: #a0a0a0;
-    --border: #3a3a3a;
-    --accent: #ededed;
-    --accent-fg: #16161a;
-    --error: #ff6b60;
-    --success: #6bd48f;
-    --card-bg: #222226;
+    --fg-soft: #d0d0d0;
+    --muted: #a3a3a3;
+    --border: #2e2e33;
+    --border-strong: #3a3a40;
+    --control-border: #6b6b73;
+    --chip-bg: #2a2a2f;
+    --ink: #ededed;
+    --ink-fg: #121214;
+    --focus: #4c9bff;
+    --link: #8cb8ff;
+    --error: #ff7b72;
+    --error-bg: #3a1d1c;
+    --error-fg: #ffb4ad;
+    --success-bg: #15301f;
+    --success-fg: #9be0b2;
     --warning: #f0b35a;
-    --warning-bg: #2e2616;
+    --warning-bg: #33280f;
+    --warning-fg: #f6cd85;
+    --info-bg: #1e2433;
+    --info-fg: #c9d3ea;
+    --moved-bg: #1d2a40;
+    --moved-fg: #b5ccf2;
+    --shadow-open: 0 4px 16px -8px rgba(0, 0, 0, 0.6);
   }
 }
+
+:root[data-theme="dark"] {
+  --bg: #121214;
+  --surface: #1c1c1f;
+  --surface-muted: #19191c;
+  --fg: #ededed;
+  --fg-soft: #d0d0d0;
+  --muted: #a3a3a3;
+  --border: #2e2e33;
+  --border-strong: #3a3a40;
+  --control-border: #6b6b73;
+  --chip-bg: #2a2a2f;
+  --ink: #ededed;
+  --ink-fg: #121214;
+  --focus: #4c9bff;
+  --link: #8cb8ff;
+  --error: #ff7b72;
+  --error-bg: #3a1d1c;
+  --error-fg: #ffb4ad;
+  --success-bg: #15301f;
+  --success-fg: #9be0b2;
+  --warning: #f0b35a;
+  --warning-bg: #33280f;
+  --warning-fg: #f6cd85;
+  --info-bg: #1e2433;
+  --info-fg: #c9d3ea;
+  --moved-bg: #1d2a40;
+  --moved-fg: #b5ccf2;
+  --shadow-open: 0 4px 16px -8px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* The signed-in calendar's colour - the public page's palette, by year group
+   key (set on #app-section by login.ts). Whole School is the page ink. */
+.app[data-hue="reception"] { --accent: #2a78d6; }
+.app[data-hue="year1"] { --accent: #eb6834; }
+.app[data-hue="year2"] { --accent: #1baf7a; }
+.app[data-hue="year3"] { --accent: #eda100; }
+.app[data-hue="year4"] { --accent: #e87ba4; }
+.app[data-hue="year5"] { --accent: #008300; }
+.app[data-hue="year6"] { --accent: #4a3aa7; }
+.app[data-hue="fosps"] { --accent: #e34948; }
+.app[data-hue="whole-school"] { --accent: var(--ink); }
 
 * {
   box-sizing: border-box;
 }
 
+/* The tool toggles `hidden` on elements that also have their own `display`,
+   and an author `display` beats the UA's [hidden] rule - so without this a
+   "hidden" label (Repeat until, say) stayed visible. */
+[hidden] {
+  display: none !important;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  margin: 0;
   background: var(--bg);
   color: var(--fg);
-  line-height: 1.5;
+  font-family: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
 }
 
-header h1 {
-  font-size: 1.3rem;
-  margin-bottom: 0.2rem;
+a {
+  color: var(--link);
 }
 
-header p {
-  color: var(--muted);
-  margin-top: 0;
-}
-
-h2 {
-  font-size: 1.15rem;
-}
-
+h1,
+h2,
 h3 {
-  font-size: 1rem;
-  margin-bottom: 0.4rem;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.spacer {
+  flex-grow: 1;
 }
 
 .hint {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 14px;
 }
 
-.optional {
-  font-weight: normal;
-  text-transform: none;
-  color: var(--muted);
+.error {
+  color: var(--error);
+  font-size: 14px;
 }
 
-label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-top: 0.8rem;
-  margin-bottom: 0.25rem;
-}
-
-/* A tick box with its text beside it (the generic label/input rules would
-   stack them and stretch the box to full width). */
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--fg);
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.checkbox-label input {
-  width: auto;
-  margin: 0;
-  flex: none;
-}
-
-.year-group-note {
-  margin: 0.6rem 0 0;
-}
-
-/* The tool toggles `hidden` on elements that also have their own `display`
-   (labels are display: block, .checkbox-label is flex), and an author
-   `display` beats the UA's [hidden] rule - so without this a "hidden" label,
-   e.g. Repeat until while "Doesn't repeat" is picked, stayed visible. */
-[hidden] {
-  display: none !important;
-}
+/* --- Form controls ---------------------------------------------------------- */
 
 input,
 select,
 textarea {
   width: 100%;
-  font-size: 1rem;
-  padding: 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  font: inherit;
+  font-size: 15px;
   color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  padding: 0 12px;
+  min-height: 40px;
+}
+
+textarea {
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.45;
 }
 
 /* iOS Safari gives date/time inputs an intrinsic minimum width that ignores
@@ -129,345 +232,971 @@ input[type="time"] {
   -webkit-appearance: none;
   appearance: none;
   min-width: 0;
-  min-height: 2.4rem;
 }
 
 input::-webkit-date-and-time-value {
   text-align: left;
 }
 
-/* Date and time boxes side by side where there's room, stacked on a phone. */
-.field-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  column-gap: 0.75rem;
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: var(--ink);
 }
 
-/* The day of the week under a date box (see addWeekdayHints() in app.ts). */
+/* A label wrapping its control: the label text above, the control below. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-soft);
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* The day of the week under a date box (see addWeekdayHints() in cardState.ts). */
 .weekday {
   display: block;
   min-height: 1.3em;
-  margin-top: 0.15rem;
-  font-size: 0.8rem;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
 }
 
-textarea {
-  resize: vertical;
-  font-family: inherit;
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--fg);
+  cursor: pointer;
 }
+
+/* --- Buttons ---------------------------------------------------------------- */
 
 button {
-  font-size: 0.95rem;
-  padding: 0.6rem 1rem;
-  border-radius: 6px;
-  border: none;
-  background: var(--accent);
-  color: var(--accent-fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: var(--ink);
+  color: var(--ink-fg);
   cursor: pointer;
-  margin-top: 1rem;
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-button.secondary-button {
-  background: transparent;
-  border: 1px solid var(--border);
+.secondary-button {
+  background: var(--surface);
+  border-color: var(--control-border);
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.danger-button {
+  background: var(--surface);
+  border-color: var(--error);
+  color: var(--error);
+  font-weight: 500;
+}
+
+.danger-button.confirm,
+.secondary-button.confirm {
+  background: var(--error);
+  border-color: var(--error);
+  color: #ffffff;
+}
+
+.small-button {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  padding: 0;
+  background: var(--surface);
+  border-color: var(--control-border);
   color: var(--fg);
 }
 
-button.link-button {
-  background: none;
-  border: none;
-  color: var(--muted);
-  text-decoration: underline;
-  padding: 0;
-  margin: 0;
-  font-size: 0.85rem;
+/* --- Site header ------------------------------------------------------------ */
+
+.site-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 
-button.link-button.confirm {
-  color: var(--error);
-  font-weight: 600;
-}
-
-.error {
-  color: var(--error);
-  font-size: 0.9rem;
-}
-
-.success {
-  color: var(--success);
-  font-size: 0.9rem;
-}
-
-.app-header {
+.site-header-inner {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 12px 24px;
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-top: 1.5rem;
+  align-items: center;
+  gap: 16px;
 }
 
-#week-section,
-#add-section,
-#existing-section {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
-}
-
-.event-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-top: 1rem;
-}
-
-#past-events {
-  margin-top: 1.5rem;
-}
-
-#past-events summary {
-  cursor: pointer;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 600;
+  flex-grow: 1;
+}
+
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  text-decoration: none;
+  min-height: 44px;
+}
+
+.header-link:hover {
+  text-decoration: underline;
+}
+
+/* Light / dark switch (page/theme.ts): the icon for the mode it's in. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--muted);
+  flex: none;
+}
+
+.theme-toggle:hover {
+  background: var(--chip-bg);
+  color: var(--fg);
+}
+
+.theme-toggle .icon-moon,
+:root[data-theme="dark"] .theme-toggle .icon-sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-moon {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon {
+    display: block;
+  }
+
+  :root:not([data-theme="light"]) .theme-toggle .icon-sun {
+    display: none;
+  }
+}
+
+/* --- Sign in ---------------------------------------------------------------- */
+
+.login {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 48px 16px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.25);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-brand h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.login-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--ink-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.login-intro {
+  color: var(--fg-soft);
+}
+
+.login-card input,
+.login-card select {
+  min-height: 44px;
+}
+
+.login-button {
+  min-height: 46px;
+  font-size: 15px;
+}
+
+.login-footer {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* --- Signed in -------------------------------------------------------------- */
+
+.app {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 24px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.calendar-heading {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.calendar-heading-text {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.calendar-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.calendar-heading h1 {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.calendar-counts {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.tabs [role="tab"] {
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab-short {
+  display: none;
+}
+
+.tabs [role="tab"][aria-selected="true"] {
+  color: var(--fg);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.notice {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.banner-success {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+
+.banner-icon {
+  flex: none;
+}
+
+#existing-status-text {
+  flex-grow: 1;
+}
+
+.banner-action {
+  min-height: 32px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.info,
+.warning {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.info {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+
+.warning {
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.warning p + p {
+  margin-top: 6px;
+}
+
+/* --- Search and filter ------------------------------------------------------ */
+
+.event-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.search {
+  position: relative;
+  flex: 1 1 240px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search input {
+  padding-left: 38px;
+}
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--chip-bg);
+}
+
+.segmented button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--fg-soft);
+  font-weight: 500;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* --- Event list ------------------------------------------------------------- */
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.month-heading {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.month-heading:first-child {
+  margin-top: 0;
+}
+
+.empty {
+  padding: 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.past-events {
+  margin-top: 4px;
+}
+
+.past-events > summary {
+  display: list-item;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-soft);
+}
+
+.past-events[open] > summary {
+  margin-bottom: 8px;
 }
 
 #past-cards .event-card {
   opacity: 0.85;
 }
 
-/* A saved event's folded summary: a full-width button over the card, with a
-   triangle that turns when it opens. */
+/* --- Event cards ------------------------------------------------------------ */
+
+.event-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.event-card:has(.card-summary[aria-expanded="true"]),
+#draft-cards .event-card {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-open);
+}
+
+/* A saved event's folded summary: date tile, title and when, badges. */
 .card-summary {
-  display: grid;
-  grid-template-columns: 1rem 1fr;
-  column-gap: 0.3rem;
   width: 100%;
-  margin: 0;
-  padding: 0;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 20px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  min-height: 0;
+  border: none;
+  border-radius: 12px;
   background: none;
   color: var(--fg);
-  font: inherit;
+  font-weight: 400;
   text-align: left;
 }
 
-.card-summary::before {
-  content: "▸";
-  grid-row: 1;
+.card-summary .chevron {
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.card-summary[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+.date-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.date-tile-strip {
+  align-self: stretch;
+  height: 4px;
+  background: var(--accent);
+}
+
+/* The school's own events take the "everyone" ink, as on the public page. */
+.date-tile.is-school .date-tile-strip {
+  background: var(--ink);
+}
+
+.date-tile-weekday {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
-.card-summary[aria-expanded="true"]::before {
-  content: "▾";
+.date-tile-day {
+  margin-bottom: 6px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
 }
 
-.card-summary > span {
-  grid-column: 2;
+.card-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .card-summary-title {
+  font-size: 16px;
   font-weight: 600;
 }
 
 .card-summary-when {
+  font-size: 14px;
   color: var(--muted);
-  font-size: 0.9rem;
 }
 
-.card-summary-tags:empty {
+.card-summary-badges,
+.card-summary-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card-summary-badges:has(.card-summary-tags:empty):has(.card-summary-unsaved[hidden]) {
   display: none;
 }
 
-.card-summary-badges .badge {
-  margin-top: 0.3rem;
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--fg-soft);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
+.badge-outline {
+  padding: 1px 7px;
+  background: none;
+  border: 1px solid var(--border-strong);
+}
+
+.badge-warning {
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.badge-cancelled {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+.badge-moved {
+  background: var(--moved-bg);
+  color: var(--moved-fg);
+}
+
+.card-draft-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-summary:not([hidden]) + .card-draft-header + .card-body,
 .card-summary:not([hidden]) + .card-body {
-  margin-top: 0.4rem;
+  border-top: 1px solid var(--border);
 }
 
-.ws-shared-note,
-.ws-corrected {
-  margin: 0.4rem 0 0;
+.card-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+  padding: 20px;
+}
+
+.span-2 {
+  grid-column: 1 / -1;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.card-actions:not(:has(button:not([hidden]))) {
+  display: none;
 }
 
 .card-unsaved {
-  align-self: center;
-  color: var(--warning);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warning-fg);
+}
+
+.card-unsaved::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warning);
+}
+
+.card-status:empty {
+  display: none;
+}
+
+/* --- Exceptions ------------------------------------------------------------- */
+
+.exceptions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
+.exceptions-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.exceptions-heading h3 {
+  font-size: 14px;
   font-weight: 600;
 }
 
-.exceptions-unsaved {
-  margin: 0.4rem 0 0;
-  color: var(--warning);
+.exceptions-heading .hint {
+  font-size: 13px;
 }
 
-.badge.badge-warning {
-  border-color: var(--warning);
-  color: var(--warning);
+.exceptions-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
 }
 
-.date-correction {
-  margin-top: 1rem;
+.exceptions-list:empty {
+  display: none;
+}
+
+.exception-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.exception-row + .exception-row {
   border-top: 1px solid var(--border);
-  padding-top: 0.6rem;
 }
 
-.date-correction summary {
-  cursor: pointer;
-  font-size: 0.85rem;
+.exception-text {
+  flex-grow: 1;
+}
+
+.exception-row-scope {
   color: var(--muted);
+  font-size: 13px;
+}
+
+.exception-remove-button {
+  min-height: 32px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--error);
+  font-size: 13px;
+  font-weight: 500;
   text-decoration: underline;
 }
 
-.date-correction[open] summary {
-  margin-bottom: 0.6rem;
+.exceptions-unsaved {
+  font-size: 13px;
+  color: var(--warning-fg);
 }
 
-.correction-warning {
-  border: 1px solid var(--warning);
-  border-left-width: 4px;
-  border-radius: 6px;
-  background: var(--warning-bg);
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
+.exception-add-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.correction-warning p {
-  margin: 0.3rem 0;
+.exception-grid {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 12px;
+}
+
+/* --- Correcting a school event's date -------------------------------------- */
+
+.date-correction {
+  border-top: 1px solid var(--border);
+}
+
+.date-correction > summary {
+  display: list-item;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--fg-soft);
+}
+
+.date-correction-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 20px 20px;
 }
 
 .correction-confirm {
   font-weight: 600;
 }
 
-.badge {
-  display: inline-block;
-  padding: 0.05rem 0.5rem;
+.correction-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* --- Adding events ---------------------------------------------------------- */
+
+.paste-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--muted);
-  background: var(--bg);
+  border-radius: 12px;
 }
 
-.field-exceptions {
-  margin-top: 0.8rem;
-  padding: 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+.paste-panel .hint {
+  margin-top: 2px;
 }
 
-.exceptions-label {
-  margin: 0 0 0.4rem;
-  font-size: 0.82rem;
-  color: var(--muted);
+.paste-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
-.exception-row {
+.drafts-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 8px;
+}
+
+.save-bar {
+  position: sticky;
+  bottom: 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.35rem 0;
-  border-top: 1px solid var(--border);
-  font-size: 0.88rem;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--ink-fg);
+  box-shadow: 0 16px 32px -16px rgba(0, 0, 0, 0.45);
+  font-size: 14px;
 }
 
-.exception-row:first-child {
-  border-top: none;
+#save-bar-text {
+  flex-grow: 1;
 }
 
-.exception-remove-button {
-  background: none;
-  border: none;
-  color: var(--error);
-  text-decoration: underline;
-  padding: 0;
-  margin: 0;
-  font-size: 0.82rem;
-  cursor: pointer;
-  flex-shrink: 0;
+.save-bar button {
+  background: var(--ink-fg);
+  color: var(--ink);
 }
 
-.exception-add-form {
-  margin-top: 0.6rem;
-}
+/* --- What's on this week ---------------------------------------------------- */
 
-.exception-add-form .exception-add-button {
-  margin-top: 0.6rem;
-}
-
-.card-actions {
+.week-panel {
   display: flex;
-  gap: 0.6rem;
-  margin-top: 0.8rem;
-}
-
-.card-actions button {
-  margin-top: 0;
-}
-
-.card-remove-button {
-  background: transparent;
-  border: 1px solid var(--error);
-  color: var(--error);
-}
-
-.card-remove-button.confirm {
-  background: var(--error);
-  color: #fff;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .week-nav {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin: 1rem 0 0.6rem;
+  gap: 12px;
+}
+
+.week-label {
   font-weight: 600;
 }
 
-.week-nav button {
-  margin-top: 0;
-  padding: 0.3rem 0.8rem;
-}
-
 #week-list-output {
-  line-height: 1.4;
-}
-
-a {
-  color: var(--fg);
-}
-
-header p a {
-  white-space: nowrap;
-}
-
-/* Search box and kind filter above the list, side by side where there's room. */
-.event-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  column-gap: 0.75rem;
-}
-
-#existing-status button {
-  margin-left: 0.4rem;
-}
-
-.card-status {
-  align-self: center;
+  line-height: 1.5;
 }
 
 .week-copy-row {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 0 0.75rem;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* --- Phones ----------------------------------------------------------------- */
+
+@media (max-width: 560px) {
+  .site-header-inner,
+  .app {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .app {
+    padding-top: 20px;
+  }
+
+  .calendar-heading h1 {
+    font-size: 26px;
+  }
+
+  .tab-long {
+    display: none;
+  }
+
+  .tab-short {
+    display: inline;
+  }
+
+  .tabs [role="tab"] {
+    padding: 0 10px;
+  }
+
+  .card-summary {
+    grid-template-columns: 48px minmax(0, 1fr) 20px;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .date-tile-day {
+    font-size: 20px;
+  }
+
+  .card-fields {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .card-actions,
+  .card-draft-header {
+    padding: 12px 16px;
+  }
+
+  .date-correction > summary,
+  .date-correction-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
 }

@@ -8,7 +8,7 @@
 // separate endpoint.
 import { isOccurrence } from "../appHelpers.js";
 import { cardState, refreshWeekdayHints, setDirty, wireDefaultEndTime } from "./cardState.js";
-import { endsBeforeStart, eventMinutes, formatDayDate } from "./dates.js";
+import { endsBeforeStart, eventMinutes, formatDayDate, formatShortDate } from "./dates.js";
 import { find } from "./dom.js";
 import type { Field } from "./dom.js";
 import { readCardFields } from "./eventCard.js";
@@ -27,23 +27,24 @@ function setCardExceptions(card: HTMLElement, exceptions: EventException[]) {
   find(card, ".exceptions-unsaved").hidden = false;
 }
 
-// " (RR only)" for an exception scoped to some of the year's classes; nothing
-// for one that applies to every class (or on a class's own, unshared event).
-function exceptionScopeText(exc: EventException) {
+// Who an exception is for, on an event the whole year shares: "RR only" for
+// one scoped to some of the year's classes, "All of Reception" otherwise.
+// Nothing on a class's own, unshared event.
+function exceptionScopeText(card: HTMLElement, exc: EventException) {
   const group = currentYearGroup();
-  if (!group || !exc.classes || exc.classes.length === 0) return "";
+  if (!group) return "";
+  if (!exc.classes || exc.classes.length === 0) return cardState(card).shared ? `All of ${group.label}` : "";
   const labels = exc.classes
     .map((code) => group.classes.find((c) => c.code === code)?.label || code.toUpperCase())
     .sort((a, b) => a.localeCompare(b));
-  return ` (${labels.join(" and ")} only)`;
+  return `${labels.join(" and ")} only`;
 }
 
-function formatExceptionSummary(exc: EventException) {
-  const fmt = formatDayDate;
-  const scope = exceptionScopeText(exc);
-  if (exc.action === "cancelled") return `${fmt(exc.date)}: cancelled${scope}`;
-  const timeText = exc.new_time ? ` at ${exc.new_time}${exc.new_end_time ? `–${exc.new_end_time}` : ""}` : "";
-  return `${fmt(exc.date)}: moved to ${fmt(exc.new_date)}${timeText}${scope}`;
+// "Thu 22 Oct", "Thu 29 Oct → Fri 30 Oct, 09:00–10:00"
+function formatExceptionChange(exc: EventException) {
+  if (exc.action === "cancelled") return formatShortDate(exc.date);
+  const timeText = exc.new_time ? `, ${exc.new_time}${exc.new_end_time ? `–${exc.new_end_time}` : ""}` : "";
+  return `${formatShortDate(exc.date)} → ${formatShortDate(exc.new_date)}${timeText}`;
 }
 
 // Whether two same-date exceptions would clash: both unscoped (every class),
@@ -64,8 +65,15 @@ function renderExceptionsList(card: HTMLElement) {
   getCardExceptions(card).forEach((exc, index) => {
     const row = document.createElement("div");
     row.className = "exception-row";
+    const kind = document.createElement("span");
+    kind.className = exc.action === "cancelled" ? "badge badge-cancelled" : "badge badge-moved";
+    kind.textContent = exc.action === "cancelled" ? "Cancelled" : "Moved";
     const text = document.createElement("span");
-    text.textContent = formatExceptionSummary(exc);
+    text.className = "exception-text";
+    text.textContent = formatExceptionChange(exc);
+    const scope = document.createElement("span");
+    scope.className = "exception-row-scope";
+    scope.textContent = exceptionScopeText(card, exc);
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "exception-remove-button";
@@ -73,7 +81,8 @@ function renderExceptionsList(card: HTMLElement) {
     removeButton.addEventListener("click", () => {
       setCardExceptions(card, getCardExceptions(card).filter((_, i) => i !== index));
     });
-    row.append(text, removeButton);
+    removeButton.setAttribute("aria-label", `Remove the exception on ${formatDayDate(exc.date)}`);
+    row.append(kind, text, scope, removeButton);
     container.appendChild(row);
   });
 }
@@ -167,7 +176,8 @@ export function wireExceptionsSection(card: HTMLElement, initialExceptions: Even
       if (endsBeforeStart(start, end)) return refuse("The new end time must be after the start time.");
     }
     const clash = getCardExceptions(card).find((e) => e.date === exception.date && exceptionScopesClash(e, exception));
-    if (clash) return refuse(`There's already an exception on that date${exceptionScopeText(clash)} - remove it first to change it.`);
+    const clashScope = clash && exceptionScopeText(card, clash);
+    if (clash) return refuse(`There's already an exception on that day${clashScope ? ` (${clashScope})` : ""} - remove it first to change it.`);
     setCardExceptions(card, [...getCardExceptions(card), exception]);
     dateInput.value = "";
     newDateInput.value = "";

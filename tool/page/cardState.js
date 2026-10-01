@@ -2,7 +2,7 @@
 // the folded summary, the unsaved-changes marking, the status line, weekday
 // hints under date boxes and default end times.
 import { find } from "./dom.js";
-import { addMinutes, DEFAULT_MINUTES, formatWeekday } from "./dates.js";
+import { addMinutes, DEFAULT_MINUTES, formatShortWeekday, formatWeekday } from "./dates.js";
 const cards = new WeakMap();
 // The card's state, made empty on first use.
 export function cardState(card) {
@@ -15,9 +15,9 @@ export function cardState(card) {
 }
 // --- Folded saved events ----------------------------------------------------
 //
-// A saved event's card starts folded to a summary line (title, when, badges)
-// so a long list can be scanned; clicking the summary opens the form. Draft
-// cards have no summary and are always open.
+// A saved event's card starts folded to a summary (a date tile, the title,
+// when, badges) so a long list can be scanned; clicking the summary opens the
+// form. Draft cards have no summary and are always open.
 export function isCardOpen(card) {
     return find(card, ".card-summary").getAttribute("aria-expanded") === "true";
 }
@@ -31,7 +31,9 @@ export function setupFolding(card) {
     summary.addEventListener("click", () => setCardOpen(card, !isCardOpen(card)));
     setCardOpen(card, false);
 }
-export function setSummary(card, title, when, tags) {
+export function setSummary(card, { title, date, when, tags }) {
+    find(card, ".date-tile-weekday").textContent = date ? formatShortWeekday(date) : "";
+    find(card, ".date-tile-day").textContent = date ? String(Number(date.slice(8))) : "?";
     find(card, ".card-summary-title").textContent = title || "(No title)";
     find(card, ".card-summary-when").textContent = when;
     const container = find(card, ".card-summary-tags");
@@ -40,7 +42,7 @@ export function setSummary(card, title, when, tags) {
         const badge = document.createElement("span");
         badge.className = tag.warning ? "badge badge-warning" : "badge";
         badge.textContent = tag.text;
-        container.append(badge, " ");
+        container.append(badge);
     }
 }
 // --- Unsaved changes --------------------------------------------------------

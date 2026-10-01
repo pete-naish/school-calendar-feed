@@ -3,7 +3,7 @@
 // tucked away, correct its date or time when the school's calendar is wrong.
 import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic, isPastEvent } from "../appHelpers.js";
 import { addWeekdayHints, cardState, setCardOpen, setDirty, setSummary, setupFolding, showCardStatus, trackChanges, wireDefaultEndTime } from "./cardState.js";
-import { eventMinutes, formatSchoolSpan, todayIso } from "./dates.js";
+import { daysInclusive, eventMinutes, formatSchoolSpan, formatShortDate, todayIso } from "./dates.js";
 import { el, find } from "./dom.js";
 import { placeCard, rebuildWait, reloadEventList } from "./eventList.js";
 import { apiCall, calendarLabelFor, currentYearGroup, state, WHOLE_SCHOOL, yearGroupDescription } from "./state.js";
@@ -31,7 +31,7 @@ export function createSchoolEventCard(event) {
         tags.push({ text: "From school calendar" });
     if (event.correction)
         tags.push({ text: "Date corrected", warning: true });
-    setSummary(node, event.title, formatSchoolSpan(event), tags);
+    setSummary(node, { title: event.title, date: event.date, when: schoolEventWhen(event), tags });
     setupFolding(node);
     trackChanges(node);
     const group = currentYearGroup();
@@ -50,6 +50,21 @@ export function createSchoolEventCard(event) {
     setupDateCorrection(node, event);
     addWeekdayHints(node);
     return node;
+}
+// The line under a school event's title (the date tile has the day):
+// "09:00–10:00 · Hall", "All day", "Mon 26 Oct – Fri 30 Oct · 5 days".
+function schoolEventWhen(event) {
+    const parts = [];
+    if (event.time)
+        parts.push(`${event.time}${event.end_time ? `–${event.end_time}` : ""}`);
+    else if (event.end_date && event.end_date !== event.date) {
+        parts.push(`${formatShortDate(event.date)} – ${formatShortDate(event.end_date)}`, `${daysInclusive(event.date, event.end_date)} days`);
+    }
+    else
+        parts.push("All day");
+    if (event.location)
+        parts.push(event.location);
+    return parts.join(" · ");
 }
 async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
     const errorEl = find(card, ".field-error");

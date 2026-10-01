@@ -3,8 +3,8 @@
 // cards for new events use the same form - see drafts.ts.
 import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic, isOccurrence } from "../appHelpers.js";
 import { addWeekdayHints, cardState, refreshWeekdayHints, setDirty, setSummary, setupFolding, showCardStatus, trackChanges, wireDefaultEndTime, } from "./cardState.js";
-import { endsBeforeStart, formatDayDate, shiftIsoDate, todayIso } from "./dates.js";
-import { confirmSecondClick, el, find } from "./dom.js";
+import { daysInclusive, endsBeforeStart, formatDayDate, formatShortDate, shiftIsoDate, todayIso } from "./dates.js";
+import { confirmSecondClick, el, find, plural } from "./dom.js";
 import { placeCard, rebuildWait, reloadEventList, showListStatus, updateEventListState } from "./eventList.js";
 import { getCardExceptions, wireExceptionsSection } from "./exceptions.js";
 import { apiCall, currentYearGroup, state, yearGroupDescription } from "./state.js";
@@ -137,25 +137,33 @@ export function wireRecurrenceToggle(card) {
     });
     sync();
 }
-// "Thu 9 Oct 2026, 15:30–16:30 · Weekly until Thu 17 Dec 2026 · 1 exception"
+// The line under a saved event's title - the date tile beside it has the day:
+// "09:00–10:00 · Weekly until Thu 17 Dec · Hall", "Mon 2 Nov – Wed 4 Nov · 3 days".
 function manualEventWhen(event) {
-    let when = event.date ? formatDayDate(event.date) : "No date";
-    if (event.end_date && event.end_date !== event.date)
-        when += ` – ${formatDayDate(event.end_date)}`;
-    if (event.time)
-        when += `, ${event.time}${event.end_time ? `–${event.end_time}` : ""}`;
+    const parts = [];
+    if (event.end_date && event.end_date !== event.date) {
+        parts.push(`${formatShortDate(event.date)} – ${formatShortDate(event.end_date)}`, `${daysInclusive(event.date, event.end_date)} days`);
+        if (event.time)
+            parts.push(`from ${event.time}`);
+    }
+    else {
+        parts.push(event.time ? `${event.time}${event.end_time ? `–${event.end_time}` : ""}` : "All day");
+    }
     const repeat = RECURRENCE_LABELS[recurrenceToSelectValue(event.recurrence)];
     if (repeat)
-        when += ` · ${repeat}${event.recurrence?.until ? ` until ${formatDayDate(event.recurrence.until)}` : ""}`;
-    const exceptions = event.exceptions?.length ?? 0;
-    if (exceptions)
-        when += ` · ${exceptions} exception${exceptions === 1 ? "" : "s"}`;
-    return when;
+        parts.push(`${repeat}${event.recurrence?.until ? ` until ${formatShortDate(event.recurrence.until)}` : ""}`);
+    if (event.location)
+        parts.push(event.location);
+    return parts.join(" · ");
 }
 function setManualSummary(card, event) {
     const group = currentYearGroup();
-    const tags = cardState(card).shared && group ? [{ text: `All of ${group.label}` }] : [];
-    setSummary(card, event.title, manualEventWhen(event), tags);
+    const tags = [];
+    if (cardState(card).shared && group)
+        tags.push({ text: `All of ${group.label}` });
+    if (event.recurrence && event.exceptions.length)
+        tags.push({ text: plural(event.exceptions.length, "exception") });
+    setSummary(card, { title: event.title, date: event.date, when: manualEventWhen(event), tags });
 }
 export function createExistingEventCard(event) {
     const node = el.cardTemplate.content.firstElementChild.cloneNode(true);

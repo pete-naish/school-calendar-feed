@@ -16,9 +16,25 @@ export function formatDayDate(iso) {
 export function formatEventDate(iso) {
     return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
+// "Thu 22 Oct" - for the event list, where the month heading gives the year.
+export function formatShortDate(iso) {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
+// "October 2026", for the event list's month headings.
+export function formatMonthYear(iso) {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
 // "Thursday"
 export function formatWeekday(iso) {
     return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long" });
+}
+// "Thu", for a card's date tile.
+export function formatShortWeekday(iso) {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short" });
+}
+// The number of days from one date to another, counting both: 2-4 Nov is 3.
+export function daysInclusive(start, end) {
+    return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000) + 1;
 }
 // "Tue 27 Oct 2026 – Sat 31 Oct 2026", "Wed 7 Oct 2026, 14:30–15:30".
 export function formatSchoolSpan({ date = "", end_date, time, end_time }) {

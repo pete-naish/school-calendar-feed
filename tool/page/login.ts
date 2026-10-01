@@ -3,8 +3,9 @@
 import { cardState } from "./cardState.js";
 import { confirmSecondClick, el, resetConfirm } from "./dom.js";
 import { updateDraftControlsVisibility, updateExtractButtonState } from "./drafts.js";
-import { allEventCards, renderExistingEvents, renderWholeSchoolEvents } from "./eventList.js";
+import { allEventCards, renderExistingEvents, renderWholeSchoolEvents, resetEventFilters } from "./eventList.js";
 import { apiCall, calendarLabelFor, FOSPS, setYearGroups, sortedClasses, state, WHOLE_SCHOOL } from "./state.js";
+import { selectTab } from "./tabs.js";
 import type { CalendarsResponse, ClassListedEvent, ListResponse, SchoolEvent } from "../functions/api/_shared/types.d.ts";
 
 // Fills the calendar picker once the class list has arrived. Until then the
@@ -131,13 +132,16 @@ export async function handleLogin() {
   storageSet(sessionStorage, SESSION_KEY, JSON.stringify({ calendar, passcode }));
   storageSet(localStorage, LAST_CALENDAR_KEY, calendar);
   el.usernameInput.value = calendarLabelFor(calendar);
-  el.activeCalendarName.textContent = calendarLabelFor(calendar);
+  showCalendarHeading(calendar);
   el.loginSection.hidden = true;
+  el.siteHeader.hidden = false;
   el.appSection.hidden = false;
 
+  // Whole School can't add events - only describe the school's.
   const isWholeSchool = calendar === WHOLE_SCHOOL.code;
-  el.addSection.hidden = isWholeSchool;
+  el.tabAdd.hidden = isWholeSchool;
   el.wholeSchoolNotice.hidden = !isWholeSchool;
+  selectTab("events");
 
   // Which list comes back depends on the calendar (see ListResponse).
   if (isWholeSchool) {
@@ -145,6 +149,21 @@ export async function handleLogin() {
   } else {
     renderExistingEvents(data.events as ClassListedEvent[]);
   }
+}
+
+// The heading over the signed-in page: the year group (or FOSPS, or the
+// school) with its colour dot, and the calendar's own name. The colour is
+// the public page's for that year group, picked by its key in style.css.
+function showCalendarHeading(calendar: string) {
+  const group = state.yearGroups.find((g) => g.classes.some((c) => c.code === calendar));
+  const entry = state.allCalendars.find((c) => c.code === calendar);
+  if (calendar === WHOLE_SCHOOL.code) {
+    el.calendarGroupLabel.textContent = "Everyone at St Paul's";
+  } else {
+    el.calendarGroupLabel.textContent = entry?.yearLabel ?? "";
+  }
+  el.activeCalendarName.textContent = entry?.label ?? calendar;
+  el.appSection.dataset.hue = group ? group.key : calendar;
 }
 
 // What switching calendar or leaving the page would lose: pasted text not yet
@@ -177,18 +196,19 @@ export function handleSwitchCalendar() {
   el.pastCards.innerHTML = "";
   el.pastEvents.open = false;
   el.pastEvents.hidden = true;
-  el.saveSuccess.hidden = true;
+  el.extractError.hidden = true;
+  el.saveError.hidden = true;
   el.weekListPanel.hidden = true;
   el.weekListError.hidden = true;
+  el.weekListLoading.hidden = false;
   el.weekListOutput.value = "";
-  el.weekListButton.hidden = false;
   state.weekStart = null;
-  el.eventSearch.value = "";
-  el.eventKind.value = "";
+  resetEventFilters();
   el.existingStatus.hidden = true;
+  el.existingLoading.hidden = false;
   state.lastDeleted = null;
   el.appSection.hidden = true;
-  el.addSection.hidden = false;
+  el.siteHeader.hidden = true;
   el.wholeSchoolNotice.hidden = true;
   el.loginSection.hidden = false;
   updateDraftControlsVisibility();

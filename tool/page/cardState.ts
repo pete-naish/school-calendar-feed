@@ -2,7 +2,7 @@
 // the folded summary, the unsaved-changes marking, the status line, weekday
 // hints under date boxes and default end times.
 import { find } from "./dom.js";
-import { addMinutes, DEFAULT_MINUTES, formatWeekday } from "./dates.js";
+import { addMinutes, DEFAULT_MINUTES, formatShortWeekday, formatWeekday } from "./dates.js";
 import type { CardValue } from "./state.js";
 import type { EventException } from "../functions/api/_shared/types.d.ts";
 
@@ -39,9 +39,9 @@ export function cardState(card: HTMLElement): CardState {
 
 // --- Folded saved events ----------------------------------------------------
 //
-// A saved event's card starts folded to a summary line (title, when, badges)
-// so a long list can be scanned; clicking the summary opens the form. Draft
-// cards have no summary and are always open.
+// A saved event's card starts folded to a summary (a date tile, the title,
+// when, badges) so a long list can be scanned; clicking the summary opens the
+// form. Draft cards have no summary and are always open.
 
 export function isCardOpen(card: HTMLElement) {
   return find(card, ".card-summary").getAttribute("aria-expanded") === "true";
@@ -59,7 +59,12 @@ export function setupFolding(card: HTMLElement) {
   setCardOpen(card, false);
 }
 
-export function setSummary(card: HTMLElement, title: string, when: string, tags: { text: string; warning?: boolean }[]) {
+export function setSummary(
+  card: HTMLElement,
+  { title, date, when, tags }: { title: string; date: string; when: string; tags: { text: string; warning?: boolean }[] }
+) {
+  find(card, ".date-tile-weekday").textContent = date ? formatShortWeekday(date) : "";
+  find(card, ".date-tile-day").textContent = date ? String(Number(date.slice(8))) : "?";
   find(card, ".card-summary-title").textContent = title || "(No title)";
   find(card, ".card-summary-when").textContent = when;
   const container = find(card, ".card-summary-tags");
@@ -68,7 +73,7 @@ export function setSummary(card: HTMLElement, title: string, when: string, tags:
     const badge = document.createElement("span");
     badge.className = tag.warning ? "badge badge-warning" : "badge";
     badge.textContent = tag.text;
-    container.append(badge, " ");
+    container.append(badge);
   }
 }
 

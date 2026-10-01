@@ -4,11 +4,12 @@ import { el } from "./dom.js";
 import { apiCall, state } from "./state.js";
 import type { WeekResponse } from "../functions/api/_shared/types.d.ts";
 
-// No argument: this week (or next, on a Sunday - the server decides).
-// `shiftDays` (-7/+7) steps from the week already showing.
+// Built when its tab is first opened (selectTab()). No argument: this week
+// (or next, on a Sunday - the server decides). `shiftDays` (-7/+7) steps from
+// the week already showing.
 export async function handleWeekList(shiftDays?: number) {
   el.weekListError.hidden = true;
-  const buttons = [el.weekListButton, el.weekPrevButton, el.weekNextButton];
+  const buttons = [el.weekPrevButton, el.weekNextButton];
   buttons.forEach((b) => (b.disabled = true));
 
   const body: { calendar: string | null; passcode: string | null; week_start?: string } = {
@@ -19,6 +20,7 @@ export async function handleWeekList(shiftDays?: number) {
   const { ok, data } = await apiCall<WeekResponse>("/api/week", body);
 
   buttons.forEach((b) => (b.disabled = false));
+  el.weekListLoading.hidden = true;
   if (!ok) {
     el.weekListError.textContent = (data && (data.message || data.error)) || "Couldn't build the list - try again.";
     el.weekListError.hidden = false;
@@ -30,8 +32,6 @@ export async function handleWeekList(shiftDays?: number) {
   el.weekListOutput.value = data.text;
   el.weekCopyStatus.textContent = "";
   el.weekListPanel.hidden = false;
-  // The panel has its own arrows now; the button that opened it does nothing more.
-  el.weekListButton.hidden = true;
 }
 
 export async function handleCopyWeekList() {

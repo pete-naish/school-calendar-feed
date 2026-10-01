@@ -4,49 +4,155 @@
   <meta charset="utf-8">
   <title>St Paul's Enfield — Class Rep Calendar Tool</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <!-- Not deferred: applies a saved light/dark choice before the first paint. -->
+  <script src="page/theme.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1>Class rep calendar tool</h1>
-    <p>Add, edit, or remove events on your class (or FOSPS) calendar. Not affiliated with the school.
-      <a href="https://calendar.nai.sh/" target="_blank" rel="noopener">See the published calendars</a></p>
+  <header id="site-header" class="site-header" hidden>
+    <div class="site-header-inner">
+      <span class="brand">
+        <svg class="brand-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"></rect><path d="M3 9.5h18M8 2.5v4M16 2.5v4"></path></svg>
+        Class rep tool
+      </span>
+      <a class="header-link" href="https://calendar.nai.sh/" target="_blank" rel="noopener">Published calendars
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>
+      </a>
+      <button type="button" class="theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </div>
   </header>
 
   <main>
-    <section id="login-section">
-      <label for="calendar-select">Calendar</label>
-      <select id="calendar-select">
-        <option value="">Choose a calendar…</option>
-      </select>
+    <section id="login-section" class="login">
+      <div class="login-card">
+        <div class="login-brand">
+          <span class="login-mark">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"></rect><path d="M3 9.5h18M8 2.5v4M16 2.5v4"></path></svg>
+          </span>
+          <div>
+            <h1>Class rep tool</h1>
+            <span class="login-subtitle">St Paul's Enfield calendars</span>
+          </div>
+          <span class="spacer"></span>
+          <button type="button" class="theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+            <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+            <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+        </div>
+        <p class="login-intro">Add, edit, or remove events on your class (or FOSPS) calendar.</p>
 
-      <!-- Not shown: tells a password manager which calendar a saved passcode is for. -->
-      <input type="text" id="username-input" autocomplete="username" hidden>
-      <label for="passcode-input">Passcode</label>
-      <input type="password" id="passcode-input" autocomplete="current-password" placeholder="Passcode for this calendar">
+        <label class="field">Calendar
+          <select id="calendar-select">
+            <option value="">Choose a calendar…</option>
+          </select>
+        </label>
 
-      <button id="login-button" disabled>Continue</button>
-      <p id="login-error" class="error" role="alert" hidden></p>
+        <!-- Not shown: tells a password manager which calendar a saved passcode is for. -->
+        <input type="text" id="username-input" autocomplete="username" hidden>
+        <label class="field">Passcode
+          <input type="password" id="passcode-input" autocomplete="current-password" placeholder="Passcode for this calendar">
+        </label>
+
+        <button id="login-button" class="login-button" disabled>Continue</button>
+        <p id="login-error" class="error" role="alert" hidden></p>
+      </div>
+      <p class="login-footer">Not affiliated with the school. <a href="https://calendar.nai.sh/" target="_blank" rel="noopener">See the published calendars</a></p>
     </section>
 
-    <section id="app-section" hidden>
-      <div class="app-header">
-        <h2 id="active-calendar-name"></h2>
-        <button id="switch-calendar-button" class="link-button">Switch calendar</button>
+    <section id="app-section" class="app" hidden>
+      <div class="calendar-heading">
+        <div class="calendar-heading-text">
+          <span class="calendar-group"><span class="calendar-dot"></span><span id="calendar-group-label"></span></span>
+          <h1 id="active-calendar-name"></h1>
+          <p id="calendar-counts" class="calendar-counts"></p>
+        </div>
+        <button id="switch-calendar-button" class="secondary-button">Switch calendar</button>
       </div>
 
-      <p id="whole-school-notice" class="hint" hidden>These events come from the school's own calendar feed. You can add a description and location, and correct an upcoming event's date or time if the school's calendar has it wrong — titles, and which events appear at all, can't be changed in this tool.</p>
+      <div class="tabs" role="tablist" aria-label="Calendar sections">
+        <button type="button" role="tab" id="tab-events" aria-controls="existing-section" aria-selected="true">Events</button>
+        <button type="button" role="tab" id="tab-add" aria-controls="add-section" aria-selected="false" tabindex="-1"><span class="tab-long">Add events</span><span class="tab-short">Add</span></button>
+        <button type="button" role="tab" id="tab-week" aria-controls="week-section" aria-selected="false" tabindex="-1"><span class="tab-long">What's on this week</span><span class="tab-short">This week</span></button>
+      </div>
 
-      <section id="week-section">
-        <button id="week-list-button" class="secondary-button">What's on this week</button>
-        <p id="week-list-error" class="error" role="alert" hidden></p>
-        <div id="week-list-panel" hidden>
-          <div class="week-nav">
-            <button id="week-prev-button" class="secondary-button" aria-label="Previous week">‹</button>
-            <span id="week-list-label" aria-live="polite"></span>
-            <button id="week-next-button" class="secondary-button" aria-label="Next week">›</button>
+      <section id="existing-section" class="panel" role="tabpanel" aria-labelledby="tab-events">
+        <p id="whole-school-notice" class="notice" hidden>These events come from the school's own calendar feed. You can add a description and location, and correct an upcoming event's date or time if the school's calendar has it wrong — titles, and which events appear at all, can't be changed in this tool.</p>
+        <p id="school-events-notice" class="notice" hidden>Events marked <span class="badge badge-outline">From school calendar</span> come from the school's own feed - you can add a location and description, and correct an upcoming one's date or time if the school's calendar has it wrong.</p>
+        <p id="existing-status" class="banner banner-success" role="status" hidden>
+          <svg class="banner-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+          <span id="existing-status-text"></span>
+          <button type="button" id="undo-delete-button" class="banner-action" hidden>Undo</button>
+        </p>
+        <div id="event-filters" class="event-filters" hidden>
+          <label class="search">
+            <span class="visually-hidden">Search events</span>
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <input type="search" id="event-search" placeholder="Search title, place or description">
+          </label>
+          <div id="event-kind" class="segmented" role="group" aria-label="Show" hidden>
+            <button type="button" value="" aria-pressed="true">All</button>
+            <button type="button" value="rep" aria-pressed="false">Added here</button>
+            <button type="button" value="school" aria-pressed="false">From school</button>
           </div>
-          <textarea id="week-list-output" rows="12" aria-label="This week's list"></textarea>
+        </div>
+        <p id="existing-loading" class="hint">Loading…</p>
+        <p id="existing-empty" class="empty" hidden>No upcoming events.</p>
+        <div id="existing-cards" class="event-list"></div>
+        <details id="past-events" class="past-events" hidden>
+          <summary>Past events · <span id="past-count">0</span></summary>
+          <div id="past-cards" class="event-list"></div>
+        </details>
+      </section>
+
+      <section id="add-section" class="panel" role="tabpanel" aria-labelledby="tab-add" hidden>
+        <div class="paste-panel">
+          <div>
+            <h2 class="panel-title">Paste a message</h2>
+            <p class="hint">A WhatsApp message, newsletter paragraph, or anything describing one or more events. You'll check each one before it's saved.</p>
+          </div>
+          <label>
+            <span class="visually-hidden">Text to find events in</span>
+            <textarea id="paste-textarea" rows="5" placeholder="Paste text here…"></textarea>
+          </label>
+          <div class="paste-actions">
+            <button id="extract-button">Find events</button>
+            <span id="extract-status" class="hint" role="status"></span>
+            <span class="spacer"></span>
+            <button id="add-manual-card-button" class="secondary-button">+ Add one by hand</button>
+          </div>
+          <p id="extract-error" class="error" role="alert" hidden></p>
+        </div>
+
+        <div id="drafts-heading" class="drafts-heading" hidden>
+          <h2 class="panel-title">Check before saving</h2>
+          <span id="drafts-count" class="hint"></span>
+        </div>
+        <div id="draft-cards" class="event-list"></div>
+        <p id="save-error" class="error" role="alert" hidden></p>
+        <div id="save-bar" class="save-bar" hidden>
+          <span id="save-bar-text"></span>
+          <button id="save-all-button">Save</button>
+        </div>
+      </section>
+
+      <section id="week-section" class="panel" role="tabpanel" aria-labelledby="tab-week" hidden>
+        <p id="week-list-error" class="error" role="alert" hidden></p>
+        <p id="week-list-loading" class="hint">Loading…</p>
+        <div id="week-list-panel" class="week-panel" hidden>
+          <div class="week-nav">
+            <button id="week-prev-button" class="icon-button" aria-label="Previous week">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+            </button>
+            <span id="week-list-label" class="week-label" aria-live="polite"></span>
+            <button id="week-next-button" class="icon-button" aria-label="Next week">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+            </button>
+          </div>
+          <textarea id="week-list-output" rows="14" aria-label="This week's list"></textarea>
           <div class="week-copy-row">
             <button id="week-copy-button">Copy for WhatsApp</button>
             <span id="week-copy-status" class="hint" role="status"></span>
@@ -54,84 +160,48 @@
           <p class="hint">Built from the published calendar, so an edit saved just now can take a few minutes to show. You can tweak the text before copying.</p>
         </div>
       </section>
-
-      <section id="add-section">
-        <h3>Add events</h3>
-        <p class="hint">Paste a WhatsApp message, newsletter paragraph, or anything describing one or more events.</p>
-        <textarea id="paste-textarea" rows="6" placeholder="Paste text here…"></textarea>
-        <button id="extract-button">Extract events</button>
-        <p id="extract-error" class="error" role="alert" hidden></p>
-        <p id="extract-loading" class="hint" role="status" hidden>Reading that text…</p>
-
-        <div id="draft-cards"></div>
-        <button id="add-manual-card-button" class="secondary-button">+ Add an event manually</button>
-        <button id="save-all-button" hidden>Save all</button>
-        <p id="save-error" class="error" role="alert" hidden></p>
-        <p id="save-success" class="success" role="status" hidden></p>
-      </section>
-
-      <section id="existing-section">
-        <h3>Your calendar's events</h3>
-        <p id="school-events-notice" class="hint" hidden>Events marked <span class="badge">From school calendar</span> come from the school's own feed - you can add a location and description, and correct an upcoming one's date or time if the school's calendar has it wrong.</p>
-        <div id="event-filters" class="event-filters" hidden>
-          <label>Search
-            <input type="search" id="event-search" placeholder="Title, place or description">
-          </label>
-          <label id="event-kind-label" hidden>Show
-            <select id="event-kind">
-              <option value="">All events</option>
-              <option value="rep">Added here</option>
-              <option value="school">From school calendar</option>
-            </select>
-          </label>
-        </div>
-        <p id="existing-status" class="success" role="status" hidden><span id="existing-status-text"></span>
-          <button type="button" id="undo-delete-button" class="link-button" hidden>Undo</button></p>
-        <p id="existing-loading" class="hint">Loading…</p>
-        <p id="existing-empty" class="hint" hidden>No upcoming events.</p>
-        <div id="existing-cards"></div>
-        <details id="past-events" hidden>
-          <summary>Past events (<span id="past-count">0</span>)</summary>
-          <div id="past-cards"></div>
-        </details>
-      </section>
     </section>
   </main>
 
   <template id="event-card-template">
     <div class="event-card">
       <button type="button" class="card-summary" aria-expanded="false" hidden>
-        <span class="card-summary-title"></span>
-        <span class="card-summary-when"></span>
-        <span class="card-summary-badges"><span class="card-summary-tags"></span> <span class="badge badge-warning card-summary-unsaved" hidden>Unsaved changes</span></span>
+        <span class="date-tile"><span class="date-tile-strip"></span><span class="date-tile-weekday"></span><span class="date-tile-day"></span></span>
+        <span class="card-summary-text">
+          <span class="card-summary-title"></span>
+          <span class="card-summary-when"></span>
+          <span class="card-summary-badges"><span class="card-summary-tags"></span><span class="badge badge-warning card-summary-unsaved" hidden>Unsaved changes</span></span>
+        </span>
+        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
       </button>
+      <div class="card-draft-header" hidden>
+        <span class="badge card-origin">New</span>
+        <span class="spacer"></span>
+        <button type="button" class="danger-button small-button card-draft-remove">Remove</button>
+      </div>
       <div class="card-body">
-        <label>Title
-          <input type="text" class="field-title" maxlength="200" required>
-        </label>
-        <label class="checkbox-label field-year-group-label" hidden>
-          <input type="checkbox" class="field-year-group">
-          <span class="field-year-group-text"></span>
-        </label>
-        <p class="year-group-note hint" hidden></p>
-        <div class="field-row">
-          <label>Start date
+        <div class="card-fields">
+          <label class="field span-2">Title
+            <input type="text" class="field-title" maxlength="200" required>
+          </label>
+          <label class="checkbox-label span-2 field-year-group-label" hidden>
+            <input type="checkbox" class="field-year-group">
+            <span class="field-year-group-text"></span>
+          </label>
+          <p class="info span-2 year-group-note" hidden></p>
+          <label class="field">Start date
             <input type="date" class="field-date" required>
           </label>
-          <label>End date <span class="optional">(multi-day only)</span>
+          <label class="field"><span>End date <span class="optional">· Multi-day only</span></span>
             <input type="date" class="field-end-date">
           </label>
-        </div>
-        <div class="field-row">
-          <label>Start time
+          <label class="field">Start time
             <input type="time" class="field-time">
           </label>
-          <label>End time
+          <label class="field">End time
             <input type="time" class="field-end-time">
           </label>
-        </div>
-        <div class="field-row">
-          <label>Repeats
+          <label class="field">Repeats
             <select class="field-recurrence">
               <option value="">Doesn't repeat</option>
               <option value="daily">Daily</option>
@@ -140,61 +210,63 @@
               <option value="monthly">Monthly</option>
             </select>
           </label>
-          <label class="field-recurrence-until-label" hidden>Repeat until
+          <label class="field field-recurrence-until-label" hidden>Repeat until
             <input type="date" class="field-recurrence-until">
           </label>
-        </div>
-        <div class="field-exceptions" hidden>
-          <p class="exceptions-label">Exceptions (single-occurrence changes)</p>
-          <div class="exceptions-list"></div>
-          <p class="exceptions-unsaved hint" hidden>Not saved yet - press <strong>Save changes</strong> at the bottom of this event.</p>
-          <div class="exception-add-form">
-            <div class="field-row">
-              <label>Occurrence date
-                <input type="date" class="exception-date">
-              </label>
-              <label>Action
-                <select class="exception-action">
-                  <option value="cancelled">Cancel this occurrence</option>
-                  <option value="moved">Move this occurrence</option>
-                </select>
-              </label>
+          <div class="exceptions span-2 field-exceptions" hidden>
+            <div class="exceptions-heading">
+              <h3>Exceptions</h3>
+              <span class="hint">Move or cancel one day without changing the rest</span>
             </div>
-            <div class="field-row exception-scope-row" hidden>
-              <label>Applies to
-                <select class="exception-scope"></select>
-              </label>
+            <div class="exceptions-list"></div>
+            <p class="exceptions-unsaved" hidden>Not saved yet - press Save changes below.</p>
+            <div class="exception-add-form">
+              <div class="exception-grid">
+                <label class="field">Which day
+                  <input type="date" class="exception-date">
+                </label>
+                <label class="field">Change
+                  <select class="exception-action">
+                    <option value="cancelled">Cancel it</option>
+                    <option value="moved">Move it</option>
+                  </select>
+                </label>
+                <label class="field exception-scope-row" hidden>Applies to
+                  <select class="exception-scope"></select>
+                </label>
+              </div>
+              <div class="exception-grid exception-move-fields" hidden>
+                <label class="field">Move to
+                  <input type="date" class="exception-new-date">
+                </label>
+                <label class="field"><span>New start time <span class="optional">· Optional</span></span>
+                  <input type="time" class="exception-new-time">
+                </label>
+                <label class="field"><span>New end time <span class="optional">· Optional</span></span>
+                  <input type="time" class="exception-new-end-time">
+                </label>
+              </div>
+              <button type="button" class="secondary-button exception-add-button">Add exception</button>
             </div>
-            <div class="field-row exception-move-fields" hidden>
-              <label>New date
-                <input type="date" class="exception-new-date">
-              </label>
-              <label>New start time <span class="optional">(optional)</span>
-                <input type="time" class="exception-new-time">
-              </label>
-              <label>New end time <span class="optional">(optional)</span>
-                <input type="time" class="exception-new-end-time">
-              </label>
-            </div>
-            <button type="button" class="secondary-button exception-add-button">+ Add exception</button>
           </div>
+          <label class="field span-2"><span>Location <span class="optional">· Optional</span></span>
+            <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
+          </label>
+          <label class="field span-2">Description
+            <textarea class="field-description" rows="2" maxlength="2000"></textarea>
+          </label>
+          <!-- Hidden for now, not removed: readCardFields() still reads it, so saving
+               an event that already has a link keeps that link. -->
+          <label class="field span-2" hidden>Link
+            <input type="url" class="field-url" placeholder="https://…">
+          </label>
+          <p class="field-error error span-2" role="alert" hidden></p>
         </div>
-        <label>Location <span class="optional">(optional)</span>
-          <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
-        </label>
-        <label>Description
-          <textarea class="field-description" rows="2" maxlength="2000"></textarea>
-        </label>
-        <!-- Hidden for now, not removed: readCardFields() still reads it, so saving
-             an event that already has a link keeps that link. -->
-        <label hidden>Link
-          <input type="url" class="field-url" placeholder="https://…">
-        </label>
-        <p class="field-error error" role="alert" hidden></p>
         <div class="card-actions">
           <button type="button" class="card-save-button" hidden>Save changes</button>
-          <button type="button" class="card-remove-button">Remove</button>
-          <span class="card-unsaved hint" hidden>Unsaved changes</span>
+          <button type="button" class="danger-button card-remove-button">Delete</button>
+          <span class="spacer"></span>
+          <span class="card-unsaved" hidden>Unsaved changes</span>
           <span class="card-status hint" role="status"></span>
         </div>
       </div>
@@ -204,63 +276,72 @@
   <template id="whole-school-event-template">
     <div class="event-card whole-school-card">
       <button type="button" class="card-summary" aria-expanded="false">
-        <span class="card-summary-title"></span>
-        <span class="card-summary-when"></span>
-        <span class="card-summary-badges"><span class="card-summary-tags"></span> <span class="badge badge-warning card-summary-unsaved" hidden>Unsaved changes</span></span>
+        <span class="date-tile is-school"><span class="date-tile-strip"></span><span class="date-tile-weekday"></span><span class="date-tile-day"></span></span>
+        <span class="card-summary-text">
+          <span class="card-summary-title"></span>
+          <span class="card-summary-when"></span>
+          <span class="card-summary-badges"><span class="card-summary-tags"></span><span class="badge badge-warning card-summary-unsaved" hidden>Unsaved changes</span></span>
+        </span>
+        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
       </button>
       <div class="card-body">
-        <p class="ws-shared-note hint" hidden></p>
-        <p class="ws-corrected hint" hidden></p>
-        <label>Location <span class="optional">(optional)</span>
-          <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
-        </label>
-        <label>Description
-          <textarea class="field-description" rows="3" maxlength="2000"></textarea>
-        </label>
-        <p class="field-error error" role="alert" hidden></p>
+        <div class="card-fields">
+          <p class="info span-2 ws-shared-note" hidden></p>
+          <p class="warning span-2 ws-corrected" hidden></p>
+          <label class="field span-2"><span>Location <span class="optional">· Optional</span></span>
+            <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
+          </label>
+          <label class="field span-2">Description
+            <textarea class="field-description" rows="3" maxlength="2000"></textarea>
+          </label>
+          <p class="field-error error span-2" role="alert" hidden></p>
+        </div>
         <div class="card-actions">
           <button type="button" class="card-save-button">Save changes</button>
-          <span class="card-unsaved hint" hidden>Unsaved changes</span>
+          <span class="spacer"></span>
+          <span class="card-unsaved" hidden>Unsaved changes</span>
           <span class="card-status hint" role="status"></span>
         </div>
         <!-- Dates are the school's: correcting them is deliberately tucked away,
              with its own save, so a description edit can never move an event. -->
         <details class="date-correction" hidden>
           <summary>School's date or time wrong? Correct it…</summary>
-          <div class="correction-warning">
-            <p><strong>Only use this if the school's calendar is wrong and you're sure of the real date or time.</strong>
-              It changes this event for <span class="correction-audience"></span>. The school's own calendar won't change.</p>
-            <p class="correction-closure" hidden>This is a day school is closed, so recurring class events (PE etc.) will be skipped on the corrected dates instead.</p>
-          </div>
-          <p class="correction-school hint"></p>
-          <div class="field-row correction-all-day" hidden>
-            <label>First day
-              <input type="date" class="correction-start-date">
+          <div class="date-correction-body">
+            <div class="warning">
+              <p><strong>Only use this if the school's calendar is wrong and you're sure of the real date or time.</strong>
+                It changes this event for <span class="correction-audience"></span>. The school's own calendar won't change.</p>
+              <p class="correction-closure" hidden>This is a day school is closed, so recurring class events (PE etc.) will be skipped on the corrected dates instead.</p>
+            </div>
+            <p class="correction-school hint"></p>
+            <div class="exception-grid correction-all-day" hidden>
+              <label class="field">First day
+                <input type="date" class="correction-start-date">
+              </label>
+              <label class="field">Last day
+                <input type="date" class="correction-end-date">
+              </label>
+            </div>
+            <div class="exception-grid correction-timed" hidden>
+              <label class="field">Date
+                <input type="date" class="correction-date">
+              </label>
+              <label class="field">Start time
+                <input type="time" class="correction-time">
+              </label>
+              <label class="field">End time
+                <input type="time" class="correction-end-time">
+              </label>
+            </div>
+            <label class="field">How do you know?
+              <input type="text" class="correction-note" maxlength="300" placeholder="e.g. Newsletter 25 Sep says Mon 26 – Fri 30">
             </label>
-            <label>Last day
-              <input type="date" class="correction-end-date">
-            </label>
-          </div>
-          <div class="field-row correction-timed" hidden>
-            <label>Date
-              <input type="date" class="correction-date">
-            </label>
-            <label>Start time
-              <input type="time" class="correction-time">
-            </label>
-            <label>End time
-              <input type="time" class="correction-end-time">
-            </label>
-          </div>
-          <label>How do you know?
-            <input type="text" class="correction-note" maxlength="300" placeholder="e.g. Newsletter 25 Sep says Mon 26 – Fri 30">
-          </label>
-          <p class="hint">Kept with the change so others can see why. It's public, so no names or contact details.</p>
-          <p class="correction-confirm" role="status" hidden></p>
-          <p class="correction-error error" role="alert" hidden></p>
-          <div class="card-actions">
-            <button type="button" class="correction-save-button">Correct date</button>
-            <button type="button" class="secondary-button correction-undo-button" hidden>Go back to the school's date</button>
+            <p class="hint">Kept with the change so others can see why. It's public, so no names or contact details.</p>
+            <p class="correction-confirm" role="status" hidden></p>
+            <p class="correction-error error" role="alert" hidden></p>
+            <div class="correction-actions">
+              <button type="button" class="correction-save-button">Correct date</button>
+              <button type="button" class="secondary-button correction-undo-button" hidden>Go back to the school's date</button>
+            </div>
           </div>
         </details>
       </div>
