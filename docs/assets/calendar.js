@@ -432,7 +432,7 @@ function launchedCalendars() {
 // Same calendars as launchedCalendars(), but with each year group's classes
 // alphabetised by label (so parents can scan for their child's teacher)
 // rather than left in build-config order. Used wherever calendars are listed
-// for parents (the tiles, the per-app link list and "Other apps"). Groups
+// for parents (the tiles, the per-app link list and the "Other apps" addresses). Groups
 // stay in their original sequence and keep their classes adjacent, so this
 // doesn't disturb the mobile two-column pairing in the @media rule for
 // .cal-tiles.
