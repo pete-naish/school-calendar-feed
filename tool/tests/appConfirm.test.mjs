@@ -90,5 +90,5 @@ test("every call site passes the button's normal label", () => {
   const calls = [...source.matchAll(/\barmPublicConfirm\(([^;]*)\);/g)].map((m) => m[1].split(",").map((a) => a.trim()));
   assert.equal(calls.length, 3, "Save all, saved-event edit, school-event edit");
   for (const args of calls) assert.equal(args.length, 5, args.join(", "));
-  assert.deepEqual(calls.map((a) => a[1]).sort(), ['"Save all"', "originalText", "originalText"]);
+  assert.deepEqual(calls.map((a) => a[1]).sort(), ["originalText", "originalText", "saveAllLabel()"]);
 });

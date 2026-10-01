@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { LIMITS, overrideLengthError, validateEventInput, validateExtractedEvents } from "../functions/api/_shared/validate.ts";
+import { LIMITS, isOccurrence, overrideLengthError, validateEventInput, validateExtractedEvents } from "../functions/api/_shared/validate.ts";
 
 const event = (overrides) => ({ title: "PE", date: "2026-10-01", ...overrides });
 
@@ -240,4 +240,31 @@ test("an extracted end time before the start time is dropped with a warning", ()
   const { events, warnings } = validateExtractedEvents({ events: [event({ time: "15:00", end_time: "09:00" })] });
   assert.equal(events[0].end_time, null);
   assert.match(warnings[0], /end time before its start time/);
+});
+
+test("isOccurrence follows the series' own repeat", () => {
+  const weekly = { freq: "WEEKLY", interval: 1, until: "2026-12-17" };
+  assert.equal(isOccurrence("2026-10-08", "2026-10-01", weekly), true);
+  assert.equal(isOccurrence("2026-10-09", "2026-10-01", weekly), false); // a Friday
+  assert.equal(isOccurrence("2026-09-24", "2026-10-01", weekly), false); // before it starts
+  assert.equal(isOccurrence("2026-12-24", "2026-10-01", weekly), false); // after "repeat until"
+  const fortnightly = { ...weekly, interval: 2 };
+  assert.equal(isOccurrence("2026-10-15", "2026-10-01", fortnightly), true);
+  assert.equal(isOccurrence("2026-10-08", "2026-10-01", fortnightly), false);
+  assert.equal(isOccurrence("2026-10-04", "2026-10-01", { freq: "DAILY", interval: 1, until: "2026-12-17" }), true);
+  const monthly = { freq: "MONTHLY", interval: 1, until: "2027-06-01" };
+  assert.equal(isOccurrence("2026-11-01", "2026-10-01", monthly), true);
+  assert.equal(isOccurrence("2026-11-02", "2026-10-01", monthly), false);
+  assert.equal(isOccurrence("2027-03-01", "2026-10-01", { ...monthly, interval: 3 }), false);
+  assert.equal(isOccurrence("2027-01-01", "2026-10-01", { ...monthly, interval: 3 }), true);
+  // Across the clocks going back: still a whole number of days.
+  assert.equal(isOccurrence("2026-10-29", "2026-10-22", weekly), true);
+});
+
+test("an exception on a day the event doesn't repeat on is refused", () => {
+  const result = validateEventInput(
+    event({ recurrence: { freq: "WEEKLY", interval: 1, until: "2026-12-01" }, exceptions: [{ date: "2026-10-09", action: "cancelled" }] })
+  );
+  assert.equal(result.valid, false);
+  assert.match(result.error, /2026-10-09 isn't a day this event repeats on/);
 });

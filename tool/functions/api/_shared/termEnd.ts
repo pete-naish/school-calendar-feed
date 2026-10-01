@@ -35,19 +35,26 @@ function fallbackDate(afterDateIso: string) {
   return d.toISOString().slice(0, 10);
 }
 
+// Every "Last Day of ... Term" date in the published whole-school calendar,
+// earliest first - empty if the fetch fails. Never throws. events-list.ts sends
+// these to the tool, which suggests one when a rep picks a repeat by hand.
+export async function getTermEndDates(): Promise<string[]> {
+  try {
+    const resp = await fetch(WHOLE_SCHOOL_ICS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!resp.ok) return [];
+    return extractTitledDates(await resp.text())
+      .filter((e) => TERM_END_PATTERN.test(e.summary))
+      .map((e) => e.date)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
 // Returns an ISO date - the earliest "Last Day of ... Term" event on or
 // after afterDateIso, or a fixed fallback horizon if none is found/the
 // fetch fails. Never throws.
 export async function getNextTermEndDate(afterDateIso: string): Promise<string> {
-  try {
-    const resp = await fetch(WHOLE_SCHOOL_ICS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
-    if (!resp.ok) return fallbackDate(afterDateIso);
-    const text = await resp.text();
-    const candidates = extractTitledDates(text)
-      .filter((e) => TERM_END_PATTERN.test(e.summary) && e.date >= afterDateIso)
-      .sort((a, b) => (a.date < b.date ? -1 : 1));
-    return candidates.length > 0 ? candidates[0].date : fallbackDate(afterDateIso);
-  } catch {
-    return fallbackDate(afterDateIso);
-  }
+  const next = (await getTermEndDates()).find((date) => date >= afterDateIso);
+  return next ?? fallbackDate(afterDateIso);
 }

@@ -5,6 +5,7 @@ import { fetchWholeSchoolEvents, fetchClassSchoolEvents } from "./_shared/wholeS
 import { applyOverrides } from "./_shared/wholeSchoolOverrides.ts";
 import { applyCorrections, CORRECTIONS_PATH } from "./_shared/schoolEventCorrections.ts";
 import { readErrorResponse } from "./_shared/errors.ts";
+import { getTermEndDates } from "./_shared/termEnd.ts";
 import type { RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext } from "./_shared/env.ts";
 
@@ -58,6 +59,9 @@ export async function onRequestPost({ request, env }: ApiContext) {
     // feed has them too, i.e. they're year-wide and an edit reaches both.
     const group = yearGroupFor(calendar);
     const siblings = group ? group.classes.filter((cls) => cls.code !== calendar) : [];
+    // Term end dates, for the tool to suggest as a repeat's "repeat until"
+    // (never fails - just empty if the feed can't be read).
+    const termEnds = getTermEndDates();
     const [own, shared, schoolEvents, siblingSchoolEvents, overrides, corrections] = await retryable(() =>
       Promise.all([
         getManualEventsFile(env, calendar),
@@ -76,7 +80,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
     }));
     const events = [...own.events, ...shared.events.map((e) => ({ ...e, year_group: true })), ...school];
     const sorted = events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-    return jsonResponse({ events: sorted });
+    return jsonResponse({ events: sorted, term_ends: await termEnds });
   } catch (err) {
     return jsonResponse(readErrorResponse(err), 502);
   }

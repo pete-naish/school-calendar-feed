@@ -63,7 +63,11 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
   PE): saved as `classes: ["rec-a"]` on the exception, absent meaning every
   class. Where the same date has both a year-wide and a class-specific
   exception, the class-specific one wins for that class; two that would clash
-  (both year-wide, or sharing a class) are refused.
+  (both year-wide, or sharing a class) are refused. An exception has to fall on
+  a day the series actually repeats on (`isOccurrence()` in
+  `_shared/validate.ts`, mirrored in `appHelpers.ts` so the page can say so
+  before saving) - so changing a series' day means removing its old
+  exceptions first.
 - `functions/api/*.js` - Cloudflare Pages Functions (file-based routing:
   `functions/api/parse.ts` becomes `POST /api/parse`, etc). Each endpoint
   re-validates the calendar code and passcode independently.
@@ -124,7 +128,9 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
   splitting it into VEVENT blocks and regex-matching `SUMMARY`/`DTSTART` per
   block - no ICS parser dependency needed. Used only to default a
   newly-detected recurring event's "repeat until"; falls back to a fixed
-  ~12-week horizon if the fetch fails or nothing matches), `wholeSchool.ts`
+  ~12-week horizon if the fetch fails or nothing matches; `events-list.ts`
+also sends the term end dates as `term_ends`, so the page can suggest one when
+a rep picks a repeat by hand), `wholeSchool.ts`
   (lists current whole-school events the same way - by reading the
   published `.ics` - rather than re-implementing `build_ics.py`'s
   classification logic in JS), `wholeSchoolOverrides.ts` (commits a

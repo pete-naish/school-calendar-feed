@@ -146,6 +146,8 @@ export interface SaveResponse {
 // events, unflagged.
 export interface ListResponse {
   events: ClassListedEvent[] | SchoolEvent[];
+  // "Last Day of ... Term" dates, earliest first (not for Whole School).
+  term_ends?: string[];
 }
 
 export interface UpdateResponse {

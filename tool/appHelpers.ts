@@ -80,3 +80,18 @@ export function eventLastDay(event: Dated): string {
 export function isPastEvent(event: Dated, today: string) {
   return eventLastDay(event) < today;
 }
+
+// Whether `date` is a day a series starting on `start` repeats on - the same
+// rule as isOccurrence() in functions/api/_shared/validate.ts, which the
+// server checks every exception against. Keep the two in step
+// (tests/occurrence.test.mjs compares them).
+export function isOccurrence(date: string, start: string, recurrence: { freq: string; interval: number; until: string }) {
+  if (date < start || date > recurrence.until) return false;
+  if (recurrence.freq === "MONTHLY") {
+    const months = (Number(date.slice(0, 4)) - Number(start.slice(0, 4))) * 12 + Number(date.slice(5, 7)) - Number(start.slice(5, 7));
+    return date.slice(8) === start.slice(8) && months % recurrence.interval === 0;
+  }
+  const step = recurrence.freq === "WEEKLY" ? 7 * recurrence.interval : recurrence.interval;
+  const days = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000);
+  return days % step === 0;
+}

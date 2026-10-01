@@ -236,6 +236,23 @@ function timeOrderError(event: EventFields): string | null {
   return null;
 }
 
+// Whether `date` is one of the days a series starting on `start` repeats on,
+// by the RRULE scripts/build_ics.py writes for it: every `interval` days or
+// weeks, or the same day of the month every `interval` months (a month without
+// that day has no occurrence), from the start through `until`. An exception
+// on any other day would never apply. Closure days aren't counted out - a
+// cancelled PE on an inset day is harmless. Keep in step with isOccurrence()
+// in tool/appHelpers.ts.
+export function isOccurrence(date: string, start: string, recurrence: Recurrence) {
+  if (date < start || date > recurrence.until) return false;
+  if (recurrence.freq === "MONTHLY") {
+    const months = (Number(date.slice(0, 4)) - Number(start.slice(0, 4))) * 12 + Number(date.slice(5, 7)) - Number(start.slice(5, 7));
+    return date.slice(8) === start.slice(8) && months % recurrence.interval === 0;
+  }
+  const step = recurrence.freq === "WEEKLY" ? 7 * recurrence.interval : recurrence.interval;
+  return daysBetween(start, date) % step === 0;
+}
+
 // Validates/repairs the array of events Claude returned from record_events.
 // Drops (rather than fails on) individual bad entries, so a single malformed
 // event doesn't blank out an otherwise-good extraction.
@@ -327,5 +344,9 @@ export function validateEventInput(
   const cleaned: EventFields = { title, date: event.date, end_date, ...common };
   const timeError = timeOrderError(cleaned);
   if (timeError) return { valid: false, error: timeError };
+  const stray = recurrence && cleaned.exceptions.find((exc) => !isOccurrence(exc.date, cleaned.date, recurrence));
+  if (stray) {
+    return { valid: false, error: `The exception on ${stray.date} isn't a day this event repeats on - remove it` };
+  }
   return { valid: true, event: cleaned };
 }

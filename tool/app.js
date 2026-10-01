@@ -1,4 +1,4 @@
-import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic, isPastEvent } from "./appHelpers.js";
+import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic, isOccurrence, isPastEvent } from "./appHelpers.js";
 // The element `selector` finds inside `root`. The page's templates always
 // have it, so a miss is a bug - which throws on first use, as it always has.
 function find(root, selector) {
@@ -50,6 +50,7 @@ const state = {
     calendar: null,
     passcode: null,
     weekStart: null, // Monday (YYYY-MM-DD) of the week showing in the weekly list
+    termEnds: [], // "Last Day of ... Term" dates from events-list, for suggestRepeatUntil()
 };
 // The page's own elements - always there, since index.html and this ship together.
 function byId(id) {
@@ -57,6 +58,7 @@ function byId(id) {
 }
 const el = {
     calendarSelect: byId("calendar-select"),
+    usernameInput: byId("username-input"),
     passcodeInput: byId("passcode-input"),
     loginButton: byId("login-button"),
     loginError: byId("login-error"),
@@ -76,6 +78,13 @@ const el = {
     saveAllButton: byId("save-all-button"),
     saveError: byId("save-error"),
     saveSuccess: byId("save-success"),
+    eventFilters: byId("event-filters"),
+    eventSearch: byId("event-search"),
+    eventKind: byId("event-kind"),
+    eventKindLabel: byId("event-kind-label"),
+    existingStatus: byId("existing-status"),
+    existingStatusText: byId("existing-status-text"),
+    undoDeleteButton: byId("undo-delete-button"),
     existingLoading: byId("existing-loading"),
     existingEmpty: byId("existing-empty"),
     existingCards: byId("existing-cards"),
@@ -92,6 +101,7 @@ const el = {
     weekPrevButton: byId("week-prev-button"),
     weekNextButton: byId("week-next-button"),
     weekCopyButton: byId("week-copy-button"),
+    weekCopyStatus: byId("week-copy-status"),
 };
 // Fills the calendar picker once the class list has arrived. Until then the
 // picker only holds its "Choose a calendar…" placeholder, so login stays
@@ -114,15 +124,9 @@ async function loadCalendars() {
     setYearGroups(data.yearGroups);
     fillCalendarPicker();
 }
+// Class calendars first - nearly everyone here is a class rep - then FOSPS and
+// the restricted Whole School entry.
 function fillCalendarPicker() {
-    const wholeSchoolOpt = document.createElement("option");
-    wholeSchoolOpt.value = WHOLE_SCHOOL.code;
-    wholeSchoolOpt.textContent = WHOLE_SCHOOL.label;
-    el.calendarSelect.appendChild(wholeSchoolOpt);
-    const fospsOpt = document.createElement("option");
-    fospsOpt.value = FOSPS.code;
-    fospsOpt.textContent = FOSPS.label;
-    el.calendarSelect.appendChild(fospsOpt);
     for (const group of YEAR_GROUPS) {
         const optgroup = document.createElement("optgroup");
         optgroup.label = group.label;
@@ -134,9 +138,65 @@ function fillCalendarPicker() {
         }
         el.calendarSelect.appendChild(optgroup);
     }
+    const other = document.createElement("optgroup");
+    other.label = "Other";
+    for (const entry of [FOSPS, WHOLE_SCHOOL])
+        other.appendChild(new Option(entry.label, entry.code));
+    el.calendarSelect.appendChild(other);
+    const last = storageGet(localStorage, LAST_CALENDAR_KEY);
+    if (last && ALL_CALENDARS.some((c) => c.code === last))
+        el.calendarSelect.value = last;
+}
+// --- Staying signed in ----------------------------------------------------------
+//
+// The calendar and passcode are kept for the tab (sessionStorage), so a
+// refresh doesn't mean looking the passcode up again; closing the tab or
+// "Switch calendar" forgets them. The last calendar picked is remembered
+// (localStorage, no passcode) to preselect it next time. The passcode box also
+// lets a password manager save it, with the calendar as its username. Storage
+// can be missing or throw (private windows, blocked site data), which just
+// means none of this happens.
+const SESSION_KEY = "rep-tool-session";
+const LAST_CALENDAR_KEY = "rep-tool-last-calendar";
+function storageGet(storage, key) {
+    try {
+        return storage.getItem(key);
+    }
+    catch {
+        return null;
+    }
+}
+function storageSet(storage, key, value) {
+    try {
+        if (value === null)
+            storage.removeItem(key);
+        else
+            storage.setItem(key, value);
+    }
+    catch {
+        // not available - nothing to remember
+    }
+}
+// Signs straight back in after a refresh, if this tab was signed in.
+function restoreSession() {
+    let saved = null;
+    try {
+        saved = JSON.parse(storageGet(sessionStorage, SESSION_KEY) || "null");
+    }
+    catch {
+        // a garbled entry is the same as none
+    }
+    if (!saved || typeof saved.calendar !== "string" || typeof saved.passcode !== "string")
+        return;
+    if (!ALL_CALENDARS.some((c) => c.code === saved.calendar))
+        return;
+    el.calendarSelect.value = saved.calendar;
+    el.passcodeInput.value = saved.passcode;
+    updateLoginButtonState();
+    handleLogin();
 }
 function init() {
-    loadCalendars();
+    loadCalendars().then(restoreSession);
     el.calendarSelect.addEventListener("change", updateLoginButtonState);
     el.passcodeInput.addEventListener("input", updateLoginButtonState);
     el.passcodeInput.addEventListener("keydown", (e) => {
@@ -156,6 +216,9 @@ function init() {
     el.weekPrevButton.addEventListener("click", () => handleWeekList(-7));
     el.weekNextButton.addEventListener("click", () => handleWeekList(7));
     el.weekCopyButton.addEventListener("click", handleCopyWeekList);
+    el.eventSearch.addEventListener("input", applyEventFilters);
+    el.eventKind.addEventListener("change", applyEventFilters);
+    el.undoDeleteButton.addEventListener("click", handleUndoDelete);
     window.addEventListener("beforeunload", (e) => {
         if (state.calendar && hasUnsavedWork())
             e.preventDefault();
@@ -220,6 +283,11 @@ function localValidationError(value) {
     }
     if (value.recurrence && !value.recurrence.until)
         return "Repeat until date is required for a repeating event.";
+    const recurrence = value.recurrence;
+    const stray = recurrence && value.exceptions.find((exc) => !isOccurrence(exc.date, value.date, recurrence));
+    if (stray) {
+        return `The exception on ${formatDayDate(stray.date)} isn't a day this event repeats on any more - remove it, or change the event back.`;
+    }
     return null;
 }
 function updateLoginButtonState() {
@@ -256,6 +324,7 @@ async function handleLogin() {
     el.loginButton.textContent = "Continue";
     if (!ok) {
         el.loginButton.disabled = false;
+        storageSet(sessionStorage, SESSION_KEY, null);
         if (status === 401) {
             el.loginError.textContent = "Wrong passcode for this calendar.";
         }
@@ -269,6 +338,10 @@ async function handleLogin() {
     }
     state.calendar = calendar;
     state.passcode = passcode;
+    state.termEnds = Array.isArray(data.term_ends) ? data.term_ends : [];
+    storageSet(sessionStorage, SESSION_KEY, JSON.stringify({ calendar, passcode }));
+    storageSet(localStorage, LAST_CALENDAR_KEY, calendar);
+    el.usernameInput.value = calendarLabelFor(calendar);
     el.activeCalendarName.textContent = calendarLabelFor(calendar);
     el.loginSection.hidden = true;
     el.appSection.hidden = false;
@@ -283,27 +356,43 @@ async function handleLogin() {
         renderExistingEvents(data.events);
     }
 }
-let switchDisarmTimer;
-function disarmSwitchCalendar() {
-    clearTimeout(switchDisarmTimer);
-    delete el.switchCalendarButton.dataset.armed;
-    el.switchCalendarButton.classList.remove("confirm");
-    el.switchCalendarButton.textContent = "Switch calendar";
-}
-// With unsaved work on the page, the first click says it'll be lost and the
-// second (within a few seconds) switches anyway.
-function handleSwitchCalendar() {
-    if (hasUnsavedWork() && el.switchCalendarButton.dataset.armed !== "1") {
-        el.switchCalendarButton.dataset.armed = "1";
-        el.switchCalendarButton.classList.add("confirm");
-        el.switchCalendarButton.textContent = "Unsaved changes will be lost - click again to switch";
-        switchDisarmTimer = setTimeout(disarmSwitchCalendar, 8000);
-        return;
+// Two clicks for something that loses work: the first relabels `button` with
+// `question` (in red) and returns false; a second click within 8 seconds -
+// long enough to read the question on a phone - returns true. Otherwise the
+// button goes back to how it was.
+const confirmTimers = new WeakMap();
+function confirmSecondClick(button, question) {
+    if (button.dataset.confirming === "1") {
+        resetConfirm(button);
+        return true;
     }
-    disarmSwitchCalendar();
+    button.dataset.confirming = "1";
+    button.dataset.confirmLabel = button.textContent ?? "";
+    button.classList.add("confirm");
+    button.textContent = question;
+    confirmTimers.set(button, setTimeout(() => resetConfirm(button), 8000));
+    return false;
+}
+function resetConfirm(button) {
+    clearTimeout(confirmTimers.get(button));
+    if (button.dataset.confirming !== "1")
+        return;
+    button.textContent = button.dataset.confirmLabel ?? "";
+    button.classList.remove("confirm");
+    delete button.dataset.confirming;
+    delete button.dataset.confirmLabel;
+}
+// With unsaved work on the page, the first click says it'll be lost.
+function handleSwitchCalendar() {
+    if (hasUnsavedWork() && !confirmSecondClick(el.switchCalendarButton, "Unsaved changes will be lost - click again to switch"))
+        return;
+    resetConfirm(el.switchCalendarButton);
+    storageSet(sessionStorage, SESSION_KEY, null);
     state.calendar = null;
     state.passcode = null;
+    state.termEnds = [];
     el.passcodeInput.value = "";
+    el.usernameInput.value = "";
     el.pasteTextarea.value = "";
     lastExtractedText = "";
     updateExtractButtonState();
@@ -316,7 +405,12 @@ function handleSwitchCalendar() {
     el.weekListPanel.hidden = true;
     el.weekListError.hidden = true;
     el.weekListOutput.value = "";
+    el.weekListButton.hidden = false;
     state.weekStart = null;
+    el.eventSearch.value = "";
+    el.eventKind.value = "";
+    el.existingStatus.hidden = true;
+    lastDeleted = null;
     el.appSection.hidden = true;
     el.addSection.hidden = false;
     el.wholeSchoolNotice.hidden = true;
@@ -544,6 +638,23 @@ function wireExceptionsSection(card, initialExceptions, { shared = false } = {})
     wireDefaultEndTime(newTimeInput, newEndTimeInput, {
         minutes: () => eventMinutes(find(card, ".field-time").value, find(card, ".field-end-time").value),
     });
+    // The occurrence picker only offers the series' own days where it can: from
+    // the first to the last, in steps of a week (or two, or a day) - browsers that
+    // honour `step` grey out the rest. A monthly series can't be put as a step.
+    const syncOccurrenceLimits = () => {
+        const { date, recurrence } = readCardFields(card);
+        dateInput.min = date;
+        dateInput.max = recurrence?.until ?? "";
+        const step = recurrence && recurrence.freq !== "MONTHLY" ? (recurrence.freq === "WEEKLY" ? 7 : 1) * recurrence.interval : null;
+        if (step)
+            dateInput.step = String(step);
+        else
+            dateInput.removeAttribute("step");
+    };
+    for (const cls of [".field-date", ".field-recurrence", ".field-recurrence-until"]) {
+        find(card, cls).addEventListener("change", syncOccurrenceLimits);
+    }
+    syncOccurrenceLimits();
     find(card, ".exception-add-button").addEventListener("click", () => {
         const errorEl = find(card, ".field-error");
         errorEl.hidden = true;
@@ -553,6 +664,10 @@ function wireExceptionsSection(card, initialExceptions, { shared = false } = {})
         };
         if (!dateInput.value)
             return refuse("Choose the date of the occurrence to change.");
+        const { date: start, recurrence } = readCardFields(card);
+        if (recurrence?.until && !isOccurrence(dateInput.value, start, { ...recurrence, until: recurrence.until })) {
+            return refuse(`This event doesn't happen on ${formatDayDate(dateInput.value)} - choose one of the days it repeats on.`);
+        }
         // Built up field by field; the select only offers "cancelled" and "moved".
         const exception = { date: dateInput.value, action: actionSelect.value };
         if (!scopeRow.hidden && scopeSelect.value)
@@ -580,14 +695,29 @@ function wireExceptionsSection(card, initialExceptions, { shared = false } = {})
         refreshWeekdayHints(card);
     });
 }
-// Shows the "Repeat until" field only once a repeat frequency is picked.
+// "Repeat until" when a rep picks a repeat by hand: the end of the term the
+// event starts in, as an extracted repeat gets (see termEnd.ts), or about 12
+// weeks on if the term dates aren't known. Just a suggestion - it's editable.
+function suggestRepeatUntil(start) {
+    const termEnd = state.termEnds.find((date) => date >= start);
+    return termEnd ?? shiftIsoDate(start, 84);
+}
+// Shows the "Repeat until" field only once a repeat frequency is picked,
+// filling in a suggestion when it's empty.
 function wireRecurrenceToggle(card) {
     const select = find(card, ".field-recurrence");
     const untilLabel = find(card, ".field-recurrence-until-label");
+    const untilInput = find(card, ".field-recurrence-until");
     const sync = () => {
         untilLabel.hidden = !select.value;
     };
-    select.addEventListener("change", sync);
+    select.addEventListener("change", () => {
+        if (select.value && !untilInput.value) {
+            untilInput.value = suggestRepeatUntil(find(card, ".field-date").value || todayIso());
+            refreshWeekdayHints(card);
+        }
+        sync();
+    });
     sync();
 }
 // --- Weekdays under date boxes ----------------------------------------------
@@ -684,6 +814,8 @@ function setDirty(card, dirty) {
         delete card.dataset.dirty;
     find(card, ".card-summary-unsaved").hidden = !dirty;
     find(card, ".card-unsaved").hidden = !dirty;
+    if (dirty)
+        showCardStatus(card, "");
     const exceptionsNote = card.querySelector(".exceptions-unsaved");
     if (exceptionsNote && !dirty)
         exceptionsNote.hidden = true;
@@ -697,8 +829,17 @@ function trackChanges(card) {
     card.addEventListener("input", onEdit);
     card.addEventListener("change", onEdit);
 }
+function plural(count, noun) {
+    return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+// "Save 3 events" - unless it's mid-save or asking "Save anyway".
+function saveAllLabel() {
+    return `Save ${plural(el.draftCards.children.length, "event")}`;
+}
 function updateDraftControlsVisibility() {
     el.saveAllButton.hidden = el.draftCards.children.length === 0;
+    if (!el.saveAllButton.disabled && !el.saveAllButton.dataset.confirmPublic)
+        el.saveAllButton.textContent = saveAllLabel();
 }
 function addDraftCard(event) {
     const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
@@ -708,7 +849,13 @@ function addDraftCard(event) {
     setupYearGroupControls(node);
     addWeekdayHints(node);
     find(node, ".card-save-button").hidden = true; // drafts save via "Save all", not individually
-    find(node, ".card-remove-button").addEventListener("click", () => {
+    // A blank card goes straight away; one with something in it (typed, or
+    // read from pasted text) asks first.
+    const removeButton = find(node, ".card-remove-button");
+    removeButton.addEventListener("click", () => {
+        const { title, date } = readCardFields(node);
+        if ((title || date) && !confirmSecondClick(removeButton, "Really remove?"))
+            return;
         node.remove();
         updateDraftControlsVisibility();
     });
@@ -748,9 +895,9 @@ async function handleSaveAll() {
     const { ok, data } = resp;
     el.saveAllButton.disabled = false;
     disarmPublicConfirm(el.saveAllButton);
-    el.saveAllButton.textContent = "Save all";
+    el.saveAllButton.textContent = saveAllLabel();
     if (isConfirmPublic(resp)) {
-        armPublicConfirm(el.saveAllButton, "Save all", el.saveError, resp.data.message, el.draftCards);
+        armPublicConfirm(el.saveAllButton, saveAllLabel(), el.saveError, resp.data.message, el.draftCards);
         return;
     }
     if (!ok) {
@@ -758,9 +905,8 @@ async function handleSaveAll() {
         el.saveError.hidden = false;
         return;
     }
-    const skipped = data.skipped_duplicates ? ` (${data.skipped_duplicates} duplicate skipped)` : "";
-    const wait = data.rebuild_triggered ? "within a few minutes" : "within 6 hours";
-    el.saveSuccess.textContent = `${data.saved} event(s) saved${skipped}. They'll appear in the calendar ${wait}.`;
+    const skipped = data.skipped_duplicates ? ` (${plural(data.skipped_duplicates, "duplicate")} skipped)` : "";
+    el.saveSuccess.textContent = `${plural(data.saved, "event")} saved${skipped}. ${data.saved === 1 ? "It'll" : "They'll"} appear in the calendar ${rebuildWait(data.rebuild_triggered)}.`;
     el.saveSuccess.hidden = false;
     el.draftCards.innerHTML = "";
     el.pasteTextarea.value = "";
@@ -791,9 +937,21 @@ async function handleWeekList(shiftDays) {
         return;
     }
     state.weekStart = data.week_start;
-    el.weekListLabel.textContent = `${formatEventDate(data.week_start)} – ${formatEventDate(data.week_end)}`;
+    const which = relativeWeek(data.week_start);
+    el.weekListLabel.textContent = `${which ? `${which}: ` : ""}${formatEventDate(data.week_start)} – ${formatEventDate(data.week_end)}`;
     el.weekListOutput.value = data.text;
+    el.weekCopyStatus.textContent = "";
     el.weekListPanel.hidden = false;
+    // The panel has its own arrows now; the button that opened it does nothing more.
+    el.weekListButton.hidden = true;
+}
+// "This week" / "Next week" / "Last week" for a week starting on `monday`,
+// relative to the week (Monday-Sunday) today is in, in London.
+function relativeWeek(monday) {
+    const today = todayIso();
+    const thisMonday = shiftIsoDate(today, -((new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7));
+    const weeks = Math.round((Date.parse(`${monday}T00:00:00Z`) - Date.parse(`${thisMonday}T00:00:00Z`)) / (7 * 86400000));
+    return { [-1]: "Last week", 0: "This week", 1: "Next week" }[weeks] ?? "";
 }
 function shiftIsoDate(iso, days) {
     const d = new Date(`${iso}T00:00:00Z`);
@@ -802,7 +960,6 @@ function shiftIsoDate(iso, days) {
 }
 async function handleCopyWeekList() {
     const text = el.weekListOutput.value;
-    const originalText = el.weekCopyButton.textContent;
     let copied = false;
     try {
         await navigator.clipboard.writeText(text);
@@ -814,10 +971,7 @@ async function handleCopyWeekList() {
         el.weekListOutput.select();
         copied = document.execCommand("copy");
     }
-    el.weekCopyButton.textContent = copied ? "Copied ✓" : "Press Ctrl/Cmd+C to copy";
-    setTimeout(() => {
-        el.weekCopyButton.textContent = originalText;
-    }, 2000);
+    el.weekCopyStatus.textContent = copied ? "Copied ✓ - paste it into WhatsApp." : "Couldn't copy - the text is selected, so press Ctrl/Cmd+C.";
 }
 function formatEventDate(iso) {
     return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -862,13 +1016,75 @@ function renderEventLists(events, makeCard) {
     }
     for (const event of past.reverse())
         el.pastCards.appendChild(cardFor(event));
+    applyEventFilters();
+}
+// After a save changes an event's dates: moves its card to where the list
+// would have put it - upcoming in date order, or past newest first.
+function placeCard(card, event) {
+    card.dataset.date = event.date;
+    const past = isPastEvent(event, todayIso());
+    const list = past ? el.pastCards : el.existingCards;
+    const before = [...list.children].find((c) => c !== card && (past ? c.dataset.date < event.date : c.dataset.date > event.date));
+    const focused = document.activeElement;
+    list.insertBefore(card, before ?? null);
+    if (past)
+        el.pastEvents.open = true;
+    // Moving it drops the focus (on its save button, say) - put that back.
+    if (focused instanceof HTMLElement && card.contains(focused))
+        focused.focus();
+    card.scrollIntoView({ block: "nearest" });
+    applyEventFilters();
+}
+// --- Search and filter ----------------------------------------------------------
+//
+// A search box over the list (title, location, description - including
+// unsaved edits) once there are enough events to need one, and an "Added here"
+// / "From school calendar" choice when a class's list has both.
+const FILTER_FROM = 6;
+function allEventCards() {
+    return [...el.existingCards.children, ...el.pastCards.children];
+}
+function cardMatchesFilters(card) {
+    const query = el.eventSearch.value.trim().toLowerCase();
+    const kind = el.eventKind.value;
+    if (kind && card.dataset.kind !== kind)
+        return false;
+    if (!query)
+        return true;
+    const text = [
+        find(card, ".card-summary-title").textContent,
+        find(card, ".field-location").value,
+        find(card, ".field-description").value,
+    ].join(" ");
+    return text.toLowerCase().includes(query);
+}
+function applyEventFilters() {
+    for (const card of allEventCards())
+        card.hidden = !cardMatchesFilters(card);
     updateEventListState();
 }
 function updateEventListState() {
-    const pastTotal = el.pastCards.children.length;
-    el.existingEmpty.hidden = el.existingCards.children.length > 0;
-    el.pastCount.textContent = String(pastTotal);
-    el.pastEvents.hidden = pastTotal === 0;
+    const shown = (list) => [...list.children].filter((c) => !c.hidden).length;
+    const filtering = Boolean(el.eventSearch.value.trim() || el.eventKind.value);
+    const pastShown = shown(el.pastCards);
+    el.existingEmpty.textContent = filtering ? "No upcoming events match." : "No upcoming events.";
+    el.existingEmpty.hidden = shown(el.existingCards) > 0;
+    el.pastCount.textContent = String(pastShown);
+    el.pastEvents.hidden = pastShown === 0;
+    const cards = allEventCards();
+    el.eventFilters.hidden = cards.length < FILTER_FROM && !filtering;
+    const kinds = new Set(cards.map((c) => c.dataset.kind));
+    el.eventKindLabel.hidden = !(kinds.has("school") && kinds.has("rep")) && !el.eventKind.value;
+}
+// How soon a saved change reaches the published calendars (see
+// triggerRebuild() in _shared/github.ts).
+function rebuildWait(rebuildTriggered) {
+    return rebuildTriggered ? "within a few minutes" : "within 6 hours";
+}
+// The line by a card's buttons saying what its last save did. Cleared by the
+// next edit (setDirty()).
+function showCardStatus(card, text) {
+    find(card, ".card-status").textContent = text;
 }
 // The date, plus the start (and end) time when the event has one.
 function formatEventWhen(event) {
@@ -893,6 +1109,8 @@ function renderWholeSchoolEvents(events) {
 function createSchoolEventCard(event) {
     const node = el.wholeSchoolCardTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.id = event.id;
+    node.dataset.date = event.date;
+    node.dataset.kind = "school";
     find(node, ".field-description").value = event.description || "";
     find(node, ".field-location").value = event.location || "";
     const tags = [];
@@ -1098,11 +1316,12 @@ async function submitCorrection(card, event, button, message, armedLabel, correc
     }
     const fresh = createSchoolEventCard(updated);
     const status = find(fresh, ".correction-confirm");
-    status.textContent = "Saved ✓ - the calendars update in a few minutes, and people's calendar apps pick it up on their next refresh.";
+    status.textContent = `Saved ✓ - the calendars update ${rebuildWait(data.rebuild_triggered)}, and people's calendar apps pick it up on their next refresh.`;
     status.hidden = false;
     find(fresh, ".date-correction").open = true;
     setCardOpen(fresh, true);
     card.replaceWith(fresh);
+    placeCard(fresh, updated);
 }
 async function reloadEventList() {
     const { ok, data } = await apiCall("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
@@ -1126,10 +1345,7 @@ async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
     const originalText = button.dataset.label || button.textContent;
     if (Object.keys(changes).length === 0) {
         setDirty(card, false);
-        button.textContent = "No changes";
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 2000);
+        showCardStatus(card, "Nothing to save - no changes.");
         return;
     }
     button.disabled = true;
@@ -1157,18 +1373,21 @@ async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
     }
     Object.assign(saved, changes);
     setDirty(card, false);
-    button.textContent = "Saved ✓";
-    setTimeout(() => {
-        button.textContent = originalText;
-    }, 2000);
+    button.textContent = originalText;
+    showCardStatus(card, `Saved ✓ - calendars update ${rebuildWait(data.rebuild_triggered)}.`);
 }
 function renderExistingEvents(events) {
     el.schoolEventsNotice.hidden = !events.some((e) => e.school_event);
     renderEventLists(events, (event) => (event.school_event ? createSchoolEventCard(event) : createExistingEventCard(event)));
 }
+// What each saved event's card last saved, for undoing a delete (the form
+// itself may hold unsaved edits by then).
+const savedValues = new WeakMap();
 function createExistingEventCard(event) {
     const node = el.cardTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.id = event.id;
+    node.dataset.date = event.date;
+    node.dataset.kind = "rep";
     if (event.year_group)
         node.dataset.shared = "1";
     fillCardFields(node, event);
@@ -1177,6 +1396,7 @@ function createExistingEventCard(event) {
     wireExceptionsSection(node, event.exceptions, { shared: Boolean(event.year_group) });
     setupYearGroupControls(node, { saved: true, shared: Boolean(event.year_group) });
     addWeekdayHints(node);
+    savedValues.set(node, { ...readCardFields(node), year_group: Boolean(event.year_group) });
     setManualSummary(node, readCardFields(node));
     setupFolding(node);
     trackChanges(node);
@@ -1215,29 +1435,24 @@ async function handleUpdateExisting(card, id, button) {
         return;
     }
     disarmPublicConfirm(button);
+    button.textContent = originalText;
     if (!ok) {
         errorEl.textContent = (data && data.message) || "Couldn't save changes - try again.";
         errorEl.hidden = false;
-        button.textContent = originalText;
         return;
     }
+    savedValues.set(card, { ...value, year_group: Boolean(card.dataset.shared) });
     setDirty(card, false);
     setManualSummary(card, value);
-    button.textContent = "Saved ✓";
-    setTimeout(() => {
-        button.textContent = originalText;
-    }, 2000);
+    showCardStatus(card, `Saved ✓ - calendars update ${rebuildWait(data.rebuild_triggered)}.`);
+    placeCard(card, value);
 }
+// The event the last delete removed, for its Undo - cleared by switching
+// calendar or by undoing it.
+let lastDeleted = null;
 async function handleDeleteExisting(card, id, button) {
-    if (!button.classList.contains("confirm")) {
-        button.classList.add("confirm");
-        button.textContent = "Really delete?";
-        setTimeout(() => {
-            button.classList.remove("confirm");
-            button.textContent = "Delete";
-        }, 4000);
+    if (!confirmSecondClick(button, "Really delete?"))
         return;
-    }
     button.disabled = true;
     button.textContent = "Deleting…";
     const { ok, data } = await apiCall("/api/events-delete", { calendar: state.calendar, passcode: state.passcode, id });
@@ -1246,11 +1461,42 @@ async function handleDeleteExisting(card, id, button) {
         errorEl.textContent = (data && data.message) || "Couldn't delete - try again.";
         errorEl.hidden = false;
         button.disabled = false;
-        button.classList.remove("confirm");
         button.textContent = "Delete";
         return;
     }
+    lastDeleted = savedValues.get(card) ?? null;
+    const title = lastDeleted?.title || "the event";
     card.remove();
     updateEventListState();
+    showListStatus(`Deleted "${title}" - it'll be gone from calendars ${rebuildWait(data.rebuild_triggered)}.`, Boolean(lastDeleted));
+}
+// The line above the list for what happened to an event no longer on it.
+function showListStatus(text, offerUndo = false) {
+    el.existingStatusText.textContent = text;
+    el.undoDeleteButton.hidden = !offerUndo;
+    el.existingStatus.hidden = false;
+}
+// Puts a deleted event back by saving it again, as it was last saved - for
+// every class of the year if it was shared. It gets a new id, so to calendar
+// apps it's a new event. The rep already confirmed any contact details in it.
+async function handleUndoDelete() {
+    const event = lastDeleted;
+    if (!event)
+        return;
+    el.undoDeleteButton.disabled = true;
+    const { ok, data } = await apiCall("/api/save", {
+        calendar: state.calendar,
+        passcode: state.passcode,
+        events: [event],
+        confirm_public: true,
+    });
+    el.undoDeleteButton.disabled = false;
+    if (!ok) {
+        showListStatus((data && data.message) || "Couldn't put it back - try again.", true);
+        return;
+    }
+    lastDeleted = null;
+    showListStatus(`Put "${event.title}" back - calendars update ${rebuildWait(data.rebuild_triggered)}.`);
+    await reloadEventList();
 }
 init();

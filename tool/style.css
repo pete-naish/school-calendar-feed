@@ -441,3 +441,33 @@ button.link-button.confirm {
 #week-list-output {
   line-height: 1.4;
 }
+
+a {
+  color: var(--fg);
+}
+
+header p a {
+  white-space: nowrap;
+}
+
+/* Search box and kind filter above the list, side by side where there's room. */
+.event-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  column-gap: 0.75rem;
+}
+
+#existing-status button {
+  margin-left: 0.4rem;
+}
+
+.card-status {
+  align-self: center;
+}
+
+.week-copy-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+}

@@ -9,7 +9,8 @@
 <body>
   <header>
     <h1>Class rep calendar tool</h1>
-    <p>Add, edit, or remove events on your class (or FOSPS) calendar. Not affiliated with the school.</p>
+    <p>Add, edit, or remove events on your class (or FOSPS) calendar. Not affiliated with the school.
+      <a href="https://calendar.nai.sh/" target="_blank" rel="noopener">See the published calendars</a></p>
   </header>
 
   <main>
@@ -19,11 +20,13 @@
         <option value="">Choose a calendar…</option>
       </select>
 
+      <!-- Not shown: tells a password manager which calendar a saved passcode is for. -->
+      <input type="text" id="username-input" autocomplete="username" hidden>
       <label for="passcode-input">Passcode</label>
-      <input type="password" id="passcode-input" autocomplete="off" placeholder="Passcode for this calendar">
+      <input type="password" id="passcode-input" autocomplete="current-password" placeholder="Passcode for this calendar">
 
       <button id="login-button" disabled>Continue</button>
-      <p id="login-error" class="error" hidden></p>
+      <p id="login-error" class="error" role="alert" hidden></p>
     </section>
 
     <section id="app-section" hidden>
@@ -36,15 +39,18 @@
 
       <section id="week-section">
         <button id="week-list-button" class="secondary-button">What's on this week</button>
-        <p id="week-list-error" class="error" hidden></p>
+        <p id="week-list-error" class="error" role="alert" hidden></p>
         <div id="week-list-panel" hidden>
           <div class="week-nav">
             <button id="week-prev-button" class="secondary-button" aria-label="Previous week">‹</button>
-            <span id="week-list-label"></span>
+            <span id="week-list-label" aria-live="polite"></span>
             <button id="week-next-button" class="secondary-button" aria-label="Next week">›</button>
           </div>
           <textarea id="week-list-output" rows="12" aria-label="This week's list"></textarea>
-          <button id="week-copy-button">Copy for WhatsApp</button>
+          <div class="week-copy-row">
+            <button id="week-copy-button">Copy for WhatsApp</button>
+            <span id="week-copy-status" class="hint" role="status"></span>
+          </div>
           <p class="hint">Built from the published calendar, so an edit saved just now can take a few minutes to show. You can tweak the text before copying.</p>
         </div>
       </section>
@@ -54,19 +60,33 @@
         <p class="hint">Paste a WhatsApp message, newsletter paragraph, or anything describing one or more events.</p>
         <textarea id="paste-textarea" rows="6" placeholder="Paste text here…"></textarea>
         <button id="extract-button">Extract events</button>
-        <p id="extract-error" class="error" hidden></p>
-        <p id="extract-loading" class="hint" hidden>Reading that text…</p>
+        <p id="extract-error" class="error" role="alert" hidden></p>
+        <p id="extract-loading" class="hint" role="status" hidden>Reading that text…</p>
 
         <div id="draft-cards"></div>
         <button id="add-manual-card-button" class="secondary-button">+ Add an event manually</button>
         <button id="save-all-button" hidden>Save all</button>
-        <p id="save-error" class="error" hidden></p>
-        <p id="save-success" class="success" hidden></p>
+        <p id="save-error" class="error" role="alert" hidden></p>
+        <p id="save-success" class="success" role="status" hidden></p>
       </section>
 
       <section id="existing-section">
         <h3>Your calendar's events</h3>
         <p id="school-events-notice" class="hint" hidden>Events marked <span class="badge">From school calendar</span> come from the school's own feed - only their location and description can be edited here.</p>
+        <div id="event-filters" class="event-filters" hidden>
+          <label>Search
+            <input type="search" id="event-search" placeholder="Title, place or description">
+          </label>
+          <label id="event-kind-label" hidden>Show
+            <select id="event-kind">
+              <option value="">All events</option>
+              <option value="rep">Added here</option>
+              <option value="school">From school calendar</option>
+            </select>
+          </label>
+        </div>
+        <p id="existing-status" class="success" role="status" hidden><span id="existing-status-text"></span>
+          <button type="button" id="undo-delete-button" class="link-button" hidden>Undo</button></p>
         <p id="existing-loading" class="hint">Loading…</p>
         <p id="existing-empty" class="hint" hidden>No upcoming events.</p>
         <div id="existing-cards"></div>
@@ -170,11 +190,12 @@
         <label hidden>Link
           <input type="url" class="field-url" placeholder="https://…">
         </label>
-        <p class="field-error error" hidden></p>
+        <p class="field-error error" role="alert" hidden></p>
         <div class="card-actions">
           <button type="button" class="card-save-button" hidden>Save changes</button>
           <button type="button" class="card-remove-button">Remove</button>
           <span class="card-unsaved hint" hidden>Unsaved changes</span>
+          <span class="card-status hint" role="status"></span>
         </div>
       </div>
     </div>
@@ -196,10 +217,11 @@
         <label>Description
           <textarea class="field-description" rows="3" maxlength="2000"></textarea>
         </label>
-        <p class="field-error error" hidden></p>
+        <p class="field-error error" role="alert" hidden></p>
         <div class="card-actions">
           <button type="button" class="card-save-button">Save changes</button>
           <span class="card-unsaved hint" hidden>Unsaved changes</span>
+          <span class="card-status hint" role="status"></span>
         </div>
         <!-- Dates are the school's: correcting them is deliberately tucked away,
              with its own save, so a description edit can never move an event. -->
@@ -234,8 +256,8 @@
             <input type="text" class="correction-note" maxlength="300" placeholder="e.g. Newsletter 25 Sep says Mon 26 – Fri 30">
           </label>
           <p class="hint">Kept with the change so others can see why. It's public, so no names or contact details.</p>
-          <p class="correction-confirm" hidden></p>
-          <p class="correction-error error" hidden></p>
+          <p class="correction-confirm" role="status" hidden></p>
+          <p class="correction-error error" role="alert" hidden></p>
           <div class="card-actions">
             <button type="button" class="correction-save-button">Correct date</button>
             <button type="button" class="secondary-button correction-undo-button" hidden>Go back to the school's date</button>
