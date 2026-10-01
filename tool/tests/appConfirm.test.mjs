@@ -3,10 +3,17 @@
 // The "Save anyway" button logic in appHelpers.ts, run against fake buttons.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { isConfirmPublic, armPublicConfirm, disarmPublicConfirm, confirmPublicField } from "../appHelpers.ts";
 
-const source = readFileSync(new URL("../app.ts", import.meta.url), "utf8");
+// The page's own code: app.ts and its modules in page/.
+const pageDir = new URL("../page/", import.meta.url);
+const source = [
+  readFileSync(new URL("../app.ts", import.meta.url), "utf8"),
+  ...readdirSync(pageDir)
+    .filter((f) => f.endsWith(".ts"))
+    .map((f) => readFileSync(new URL(f, pageDir), "utf8")),
+].join("\n");
 
 // A button and its error line as the handlers see them; `watch` records the
 // "input" listener so the test can fire it, as an edit to the card would.

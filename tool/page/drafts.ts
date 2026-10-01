@@ -1,0 +1,139 @@
+// Adding events: pasting text for Claude to read events from, typing one in
+// by hand, and saving the new ("draft") cards together.
+import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic } from "../appHelpers.js";
+import { addWeekdayHints } from "./cardState.js";
+import { confirmSecondClick, el, find, plural } from "./dom.js";
+import { fillCardFields, localValidationError, readCardFields, setupYearGroupControls, wireCardDefaultEndTime, wireRecurrenceToggle } from "./eventCard.js";
+import { rebuildWait, renderExistingEvents } from "./eventList.js";
+import { apiCall, state } from "./state.js";
+import type { DraftEvent } from "./state.js";
+import type { ClassListedEvent, ListResponse, ParseResponse, SaveResponse } from "../functions/api/_shared/types.d.ts";
+
+// "Extract events" stays disabled until there's text it hasn't already been
+// through (state.lastExtractedText), so a second press can't add every event
+// twice.
+export function updateExtractButtonState() {
+  const text = el.pasteTextarea.value.trim();
+  el.extractButton.disabled = state.extracting || !text || text === state.lastExtractedText;
+}
+
+export async function handleExtract() {
+  const text = el.pasteTextarea.value;
+  if (!text.trim()) return;
+
+  el.extractError.hidden = true;
+  el.extractLoading.hidden = false;
+  state.extracting = true;
+  updateExtractButtonState();
+
+  const { ok, data } = await apiCall<ParseResponse>("/api/parse", { calendar: state.calendar, passcode: state.passcode, text });
+
+  el.extractLoading.hidden = true;
+  state.extracting = false;
+  if (ok && data.events?.length) state.lastExtractedText = text.trim();
+  updateExtractButtonState();
+
+  if (!ok) {
+    el.extractError.textContent = (data && data.message) || "Couldn't extract events - try again, or add the event manually below.";
+    el.extractError.hidden = false;
+    return;
+  }
+
+  if (!data.events || data.events.length === 0) {
+    el.extractError.textContent = "No events found in that text - try pasting more detail, or add one manually below.";
+    el.extractError.hidden = false;
+  }
+
+  for (const event of data.events || []) {
+    addDraftCard(event);
+  }
+}
+
+// "Save 3 events" - unless it's mid-save or asking "Save anyway".
+function saveAllLabel() {
+  return `Save ${plural(el.draftCards.children.length, "event")}`;
+}
+
+export function updateDraftControlsVisibility() {
+  el.saveAllButton.hidden = el.draftCards.children.length === 0;
+  if (!el.saveAllButton.disabled && !confirmPublicField(el.saveAllButton).confirm_public) el.saveAllButton.textContent = saveAllLabel();
+}
+
+export function addDraftCard(event: DraftEvent) {
+  const node = el.cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
+  fillCardFields(node, event);
+  wireCardDefaultEndTime(node);
+  wireRecurrenceToggle(node);
+  setupYearGroupControls(node);
+  addWeekdayHints(node);
+  find<HTMLButtonElement>(node, ".card-save-button").hidden = true; // drafts save via "Save all", not individually
+  // A blank card goes straight away; one with something in it (typed, or
+  // read from pasted text) asks first.
+  const removeButton = find<HTMLButtonElement>(node, ".card-remove-button");
+  removeButton.addEventListener("click", () => {
+    const { title, date } = readCardFields(node);
+    if ((title || date) && !confirmSecondClick(removeButton, "Really remove?")) return;
+    node.remove();
+    updateDraftControlsVisibility();
+  });
+  el.draftCards.appendChild(node);
+  updateDraftControlsVisibility();
+}
+
+export async function handleSaveAll() {
+  const cards = [...el.draftCards.querySelectorAll<HTMLElement>(".event-card")];
+  if (cards.length === 0) return;
+
+  el.saveError.hidden = true;
+  let hasFieldError = false;
+  const events = cards.map((card) => {
+    const errorEl = find(card, ".field-error");
+    const value = readCardFields(card);
+    const error = localValidationError(value);
+    if (error) {
+      errorEl.textContent = error;
+      errorEl.hidden = false;
+      hasFieldError = true;
+    } else {
+      errorEl.hidden = true;
+    }
+    return value;
+  });
+  if (hasFieldError) return;
+
+  el.saveAllButton.disabled = true;
+  el.saveAllButton.textContent = "Saving…";
+
+  const resp = await apiCall<SaveResponse>("/api/save", {
+    calendar: state.calendar,
+    passcode: state.passcode,
+    events,
+    ...confirmPublicField(el.saveAllButton),
+  });
+  const { ok, data } = resp;
+
+  el.saveAllButton.disabled = false;
+  disarmPublicConfirm(el.saveAllButton);
+  el.saveAllButton.textContent = saveAllLabel();
+
+  if (isConfirmPublic(resp)) {
+    armPublicConfirm(el.saveAllButton, saveAllLabel(), el.saveError, resp.data.message, el.draftCards);
+    return;
+  }
+  if (!ok) {
+    el.saveError.textContent = (data && data.message) || "Couldn't save - try again.";
+    el.saveError.hidden = false;
+    return;
+  }
+
+  const skipped = data.skipped_duplicates ? ` (${plural(data.skipped_duplicates, "duplicate")} skipped)` : "";
+  el.saveSuccess.textContent = `${plural(data.saved, "event")} saved${skipped}. ${data.saved === 1 ? "It'll" : "They'll"} appear in the calendar ${rebuildWait(data.rebuild_triggered)}.`;
+  el.saveSuccess.hidden = false;
+  el.draftCards.innerHTML = "";
+  el.pasteTextarea.value = "";
+  updateExtractButtonState();
+  updateDraftControlsVisibility();
+
+  const listResult = await apiCall<ListResponse>("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
+  if (listResult.ok) renderExistingEvents(listResult.data.events as ClassListedEvent[]);
+}

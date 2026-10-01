@@ -17,5 +17,6 @@
     "skipLibCheck": true,
     "newLine": "lf"
   },
-  "files": ["docs/assets/calendar.ts", "tool/app.ts", "tool/appHelpers.ts"]
+  "files": ["docs/assets/calendar.ts", "tool/app.ts", "tool/appHelpers.ts"],
+  "include": ["tool/page/*.ts"]
 }

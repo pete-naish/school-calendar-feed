@@ -1,7 +1,7 @@
 // Run with: node --test tool/tests/
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { onRequest } from "../functions/api/_middleware.ts";
 
@@ -122,7 +122,9 @@ test("index.html loads only its own script and stylesheet, with no inline script
 });
 
 test("the page's scripts and style.css use nothing the CSP would block", () => {
-  for (const file of ["app.js", "appHelpers.js"]) {
+  const pageModules = readdirSync(new URL("../page/", import.meta.url)).filter((f) => f.endsWith(".js"));
+  assert.ok(pageModules.length > 0);
+  for (const file of ["app.js", "appHelpers.js", ...pageModules.map((f) => `page/${f}`)]) {
     const js = read(file);
     assert.doesNotMatch(js, /\beval\s*\(|new Function\b|setTimeout\(\s*["'`]|setInterval\(\s*["'`]/);
     assert.doesNotMatch(js, /setAttribute\(\s*["']style["']|\.cssText\b|insertAdjacentHTML|document\.write/);

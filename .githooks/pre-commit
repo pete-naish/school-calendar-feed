@@ -8,7 +8,7 @@
 set -u
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
-GENERATED=(docs/assets/calendar.js tool/app.js tool/appHelpers.js)
+GENERATED=(docs/assets/calendar.js tool/app.js tool/appHelpers.js tool/page/*.js)
 
 if [ ! -d node_modules ]; then
   echo "pre-commit: node_modules is missing - run npm install first." >&2
@@ -21,7 +21,8 @@ if ! build_output=$(npm run -s build 2>&1); then
   exit 1
 fi
 
-stale=$(git diff --name-only -- "${GENERATED[@]}")
+# Changed and not staged - or a new page module's .js never added at all.
+stale=$(git diff --name-only -- "${GENERATED[@]}"; git ls-files --others --exclude-standard -- "${GENERATED[@]}")
 if [ -n "$stale" ]; then
   echo "pre-commit: npm run build changed files that aren't staged:" >&2
   echo "$stale" | sed 's/^/  /' >&2

@@ -13,7 +13,7 @@ if ! grep -Eq '\bgit\b[^;&|]*[[:space:]](commit|push)\b' <<<"$command"; then
 fi
 
 cd "$CLAUDE_PROJECT_DIR" || exit 0
-GENERATED=(docs/assets/calendar.js tool/app.js tool/appHelpers.js)
+GENERATED=(docs/assets/calendar.js tool/app.js tool/appHelpers.js tool/page/*.js)
 
 if ! build_output=$(npm run -s build 2>&1); then
   echo "npm run build failed - fix it before committing or pushing:" >&2
@@ -27,7 +27,8 @@ if grep -Eq '\bgit\b[^;&|]*[[:space:]]commit\b' <<<"$command"; then
   # it names.
   stale=()
   for f in "${GENERATED[@]}"; do
-    git diff --quiet -- "$f" && continue
+    # Unchanged and tracked (a new page module's .js must be added too).
+    git diff --quiet -- "$f" && [ -z "$(git ls-files --others --exclude-standard -- "$f")" ] && continue
     grep -Eq "git[[:space:]]+add\b.*(\s|^)(-A|--all|\.|$f)(\s|$|;|&)" <<<"$command" && continue
     stale+=("$f")
   done
@@ -37,6 +38,11 @@ if grep -Eq '\bgit\b[^;&|]*[[:space:]]commit\b' <<<"$command"; then
   fi
 else
   # Pushing: what's committed must match what the current .ts builds to.
+  untracked=$(git ls-files --others --exclude-standard -- "${GENERATED[@]}")
+  if [ -n "$untracked" ]; then
+    echo "npm run build made $(tr '\n' ' ' <<<"$untracked")- commit the new .js before pushing." >&2
+    exit 2
+  fi
   if ! git diff --quiet HEAD -- "${GENERATED[@]}"; then
     echo "The committed .js is out of date with its .ts: npm run build changed $(git diff --name-only HEAD -- "${GENERATED[@]}" | tr '\n' ' ')- commit the rebuilt .js before pushing." >&2
     exit 2

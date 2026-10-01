@@ -17,11 +17,11 @@ Cloudflare Pages Functions. Still no build step at deploy time - it deploys
 via Cloudflare's zero-build-command git integration:
 
 - The Functions (`functions/**/*.ts`) are compiled by Cloudflare itself.
-- The page's `app.ts` and `appHelpers.ts` compile to the `app.js` and
-  `appHelpers.js` beside them, which are what's served - so they're
+- The page's `app.ts`, `appHelpers.ts` and the modules in `page/` each
+  compile to the `.js` beside them, which is what's served - so it's
   committed. After editing a page `.ts`, run `npm run build` (from the repo
-  root) and commit both; CI fails if the committed `.js` is out of date.
-  Never edit the `.js` by hand.
+  root) and commit both; CI fails if the committed `.js` is out of date, or a
+  new module's `.js` is missing. Never edit the `.js` by hand.
 
 `npm run typecheck` checks both under `strict` (`tsconfig.json` for the
 Functions, `tsconfig.browser.json` for the pages - the parent page's
@@ -31,7 +31,13 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
 
 ## How it works
 
-- `index.html` / `app.ts` (+ `appHelpers.ts`) / `style.css` - the frontend. Calendar picker →
+- `index.html` / `app.ts` / `style.css` - the frontend. `app.ts` only wires up
+  the page; the code is in `page/`, one ES module per part of the page (login,
+  drafts, the event list, the two kinds of event card, exceptions, the weekly
+  list - `app.ts`'s opening comment lists them), loaded by the browser as
+  modules with no bundler. Each card's state (saved value, unsaved edits,
+  exceptions) lives in `page/cardState.ts`, not in the DOM. `appHelpers.ts`
+  holds the helpers the tests import. Calendar picker →
   passcode → paste text → review/edit extracted events → save. A "+ Add an
   event manually" button is always available too - pasting text through
   Claude is optional, not required. A second section lists and lets you
@@ -394,7 +400,7 @@ The tool is for reps, not the public, so it's locked down and kept out of
 search results. Cloudflare Pages applies `_headers` to static files only and
 never to Functions responses, so there are two places:
 
-- `tool/_headers` - the page, `app.js` and `style.css`: `X-Robots-Tag:
+- `tool/_headers` - the page, its scripts and `style.css`: `X-Robots-Tag:
   noindex, nofollow` (a header rather than `robots.txt`, because a crawler that
   `robots.txt` blocks never sees a noindex), `nosniff`, no framing, no
   referrer, and a Content-Security-Policy that allows only the tool's own
@@ -407,7 +413,7 @@ never to Functions responses, so there are two places:
 
 The CSP is strict enough that some ordinary changes break the page: a web
 font, an inline `<style>` or `style="..."`, a third-party script, an
-`onclick=`. `tests/headers.test.mjs` fails if `index.html`, `app.js` or
+`onclick=`. `tests/headers.test.mjs` fails if `index.html`, the page's scripts or
 `style.css` stop fitting it - loosen the policy in `_headers` deliberately, not
 to make an error go away. If the tool moves to a custom domain, also turn on
 HSTS there (Cloudflare dashboard, SSL/TLS, Edge Certificates).
