@@ -44,7 +44,6 @@ export const el = {
   draftsHeading: byId("drafts-heading"),
   draftsCount: byId("drafts-count"),
   saveBar: byId("save-bar"),
-  saveBarText: byId("save-bar-text"),
   saveAllButton: byId<HTMLButtonElement>("save-all-button"),
   saveError: byId("save-error"),
   eventFilters: byId("event-filters"),
@@ -60,6 +59,7 @@ export const el = {
   pastCount: byId("past-count"),
   pastCards: byId("past-cards"),
   schoolEventsNotice: byId("school-events-notice"),
+  schoolNoticeDismiss: byId<HTMLButtonElement>("school-notice-dismiss"),
   cardTemplate: byId<HTMLTemplateElement>("event-card-template"),
   weekListError: byId("week-list-error"),
   weekListLoading: byId("week-list-loading"),
@@ -68,6 +68,7 @@ export const el = {
   weekListOutput: byId<HTMLTextAreaElement>("week-list-output"),
   weekPrevButton: byId<HTMLButtonElement>("week-prev-button"),
   weekNextButton: byId<HTMLButtonElement>("week-next-button"),
+  weekRefreshButton: byId<HTMLButtonElement>("week-refresh-button"),
   weekCopyButton: byId<HTMLButtonElement>("week-copy-button"),
   weekCopyStatus: byId("week-copy-status"),
 };

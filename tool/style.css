@@ -141,6 +141,21 @@
 .app[data-hue="fosps"] { --accent: #e34948; }
 .app[data-hue="whole-school"] { --accent: var(--ink); }
 
+/* The selected tab's underline: the accent, or a deeper shade of it where the
+   public page's colour is too faint against the light grey page (under 3:1).
+   Dark mode's backgrounds are dark enough for all of them. */
+.app { --accent-line: var(--accent); }
+.app[data-hue="year1"] { --accent-line: #c84e1f; }
+.app[data-hue="year2"] { --accent-line: #14875f; }
+.app[data-hue="year3"] { --accent-line: #a87000; }
+.app[data-hue="year4"] { --accent-line: #c4527f; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .app { --accent-line: var(--accent); }
+}
+
+:root[data-theme="dark"] .app { --accent-line: var(--accent); }
+
 * {
   box-sizing: border-box;
 }
@@ -266,10 +281,14 @@ input[type="checkbox"] {
 /* The day of the week under a date box (see addWeekdayHints() in cardState.ts). */
 .weekday {
   display: block;
-  min-height: 1.3em;
   font-size: 12px;
   font-weight: 400;
   color: var(--muted);
+}
+
+/* No date, no weekday - and no gap where it would be. */
+.weekday:empty {
+  display: none;
 }
 
 .checkbox-label {
@@ -566,7 +585,7 @@ button:disabled {
 .tabs [role="tab"][aria-selected="true"] {
   color: var(--fg);
   font-weight: 600;
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--accent-line);
 }
 
 .panel {
@@ -583,6 +602,17 @@ button:disabled {
 .notice {
   color: var(--muted);
   font-size: 14px;
+}
+
+.notice-dismiss {
+  min-height: 32px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--fg-soft);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .banner {
@@ -1046,6 +1076,16 @@ button:disabled {
   flex-direction: column;
   gap: 12px;
   padding: 4px 20px 20px;
+}
+
+/* A timed correction: the date on its own row, then start and end side by
+   side - not a date and a start time with the end time left alone below. */
+.correction-timed {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.correction-timed > :first-child {
+  grid-column: 1 / -1;
 }
 
 .correction-confirm {

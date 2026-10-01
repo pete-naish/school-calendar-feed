@@ -1,18 +1,27 @@
 // The list of a calendar's saved events: upcoming, then the folded "Past
 // events", with search and filter, kept in date order as events change.
-import { isPastEvent } from "../appHelpers.js";
+import { isPastEvent, nextOccurrence } from "../appHelpers.js";
 import { cardState, isCardOpen, setCardOpen } from "./cardState.js";
 import { formatMonthYear, todayIso } from "./dates.js";
 import { el, find, plural } from "./dom.js";
 import { createExistingEventCard } from "./eventCard.js";
 import { createSchoolEventCard } from "./schoolCard.js";
-import { apiCall, state, WHOLE_SCHOOL } from "./state.js";
+import { apiCall, state, storageGet, storageSet, WHOLE_SCHOOL } from "./state.js";
 export function renderWholeSchoolEvents(events) {
     el.schoolEventsNotice.hidden = true;
     renderEventLists(events, createSchoolEventCard);
 }
+// The note explaining "From school calendar" events, until a rep says "Got it"
+// - remembered in this browser, so it isn't at the top of every visit.
+const SCHOOL_NOTICE_KEY = "rep-tool-school-notice-seen";
+export function wireSchoolNotice() {
+    el.schoolNoticeDismiss.addEventListener("click", () => {
+        storageSet(localStorage, SCHOOL_NOTICE_KEY, "1");
+        el.schoolEventsNotice.hidden = true;
+    });
+}
 export function renderExistingEvents(events) {
-    el.schoolEventsNotice.hidden = !events.some((e) => e.school_event);
+    el.schoolEventsNotice.hidden = !events.some((e) => e.school_event) || storageGet(localStorage, SCHOOL_NOTICE_KEY) === "1";
     renderEventLists(events, (event) => (event.school_event ? createSchoolEventCard(event) : createExistingEventCard(event)));
 }
 export async function reloadEventList() {
@@ -23,6 +32,11 @@ export async function reloadEventList() {
         renderWholeSchoolEvents(data.events);
     else
         renderExistingEvents(data.events);
+}
+// The day an event is listed under, and its date tile shows: a repeating
+// event's next day (nextOccurrence() in appHelpers.ts), else its first.
+export function listDate(event) {
+    return nextOccurrence(event, todayIso(), state.calendar);
 }
 // Upcoming events in date order, then past ones newest first in the folded
 // "Past events" section, so the list a rep lands on doesn't fill up with
@@ -52,12 +66,17 @@ function renderEventLists(events, makeCard) {
     el.pastCards.innerHTML = "";
     const today = todayIso();
     const past = [];
+    const upcoming = [];
     for (const event of events) {
         if (isPastEvent(event, today))
             past.push(event);
         else
-            el.existingCards.appendChild(cardFor(event));
+            upcoming.push({ event, date: listDate(event) });
     }
+    // The server lists by first day; a repeating event goes by its next one.
+    upcoming.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    for (const { event } of upcoming)
+        el.existingCards.appendChild(cardFor(event));
     for (const event of past.reverse())
         el.pastCards.appendChild(cardFor(event));
     applyEventFilters();
@@ -65,12 +84,13 @@ function renderEventLists(events, makeCard) {
 // After a save changes an event's dates: moves its card to where the list
 // would have put it - upcoming in date order, or past newest first.
 export function placeCard(card, event) {
-    cardState(card).date = event.date;
+    const at = listDate(event);
+    cardState(card).date = at;
     const past = isPastEvent(event, todayIso());
     const list = past ? el.pastCards : el.existingCards;
     const before = cardsIn(list).find((c) => {
         const date = cardState(c).date ?? "";
-        return c !== card && (past ? date < event.date : date > event.date);
+        return c !== card && (past ? date < at : date > at);
     });
     const focused = document.activeElement;
     list.insertBefore(card, before ?? null);

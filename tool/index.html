@@ -80,9 +80,10 @@
       </div>
 
       <section id="existing-section" class="panel" role="tabpanel" aria-labelledby="tab-events">
-        <p id="whole-school-notice" class="notice" hidden>These events come from the school's own calendar feed. You can add a description and location, and correct an upcoming event's date or time if the school's calendar has it wrong — titles, and which events appear at all, can't be changed in this tool.</p>
-        <p id="school-events-notice" class="notice" hidden>Events marked <span class="badge badge-outline">From school calendar</span> come from the school's own feed - you can add a location and description, and correct an upcoming one's date or time if the school's calendar has it wrong.</p>
-        <p id="existing-status" class="banner banner-success" role="status" hidden>
+        <p id="whole-school-notice" class="notice" hidden>These come from the school's own calendar. You can add a description and location, or correct an upcoming event's date or time, but not change titles or which events appear.</p>
+        <p id="school-events-notice" class="notice" hidden><span class="badge badge-outline">From school calendar</span> events are the school's: add a location and description, or correct a wrong date.
+          <button type="button" id="school-notice-dismiss" class="notice-dismiss">Got it</button></p>
+        <p id="existing-status" class="banner banner-success" role="status" tabindex="-1" hidden>
           <svg class="banner-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
           <span id="existing-status-text"></span>
           <button type="button" id="undo-delete-button" class="banner-action" hidden>Undo</button>
@@ -127,14 +128,14 @@
           <p id="extract-error" class="error" role="alert" hidden></p>
         </div>
 
-        <div id="drafts-heading" class="drafts-heading" hidden>
+        <div id="drafts-heading" class="drafts-heading" tabindex="-1" hidden>
           <h2 class="panel-title">Check before saving</h2>
           <span id="drafts-count" class="hint"></span>
         </div>
         <div id="draft-cards" class="event-list"></div>
         <p id="save-error" class="error" role="alert" hidden></p>
         <div id="save-bar" class="save-bar" hidden>
-          <span id="save-bar-text"></span>
+          <span id="save-bar-text">Nothing is published until you save.</span>
           <button id="save-all-button">Save</button>
         </div>
       </section>
@@ -155,6 +156,7 @@
           <textarea id="week-list-output" rows="14" aria-label="This week's list"></textarea>
           <div class="week-copy-row">
             <button id="week-copy-button">Copy for WhatsApp</button>
+            <button id="week-refresh-button" class="secondary-button">Refresh</button>
             <span id="week-copy-status" class="hint" role="status"></span>
           </div>
           <p class="hint">Built from the published calendar, so an edit saved just now can take a few minutes to show. You can tweak the text before copying.</p>

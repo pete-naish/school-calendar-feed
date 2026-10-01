@@ -1,19 +1,20 @@
 // The "What's on this week" WhatsApp list.
-import { formatEventDate, relativeWeek, shiftIsoDate } from "./dates.js";
+import { formatDate, relativeWeek, shiftIsoDate } from "./dates.js";
 import { el } from "./dom.js";
 import { apiCall, state } from "./state.js";
-// Built when its tab is first opened (selectTab()). No argument: this week
-// (or next, on a Sunday - the server decides). `shiftDays` (-7/+7) steps from
-// the week already showing.
+// Built each time its tab is opened (selectTab()), and by Refresh. No
+// argument: this week (or next, on a Sunday - the server decides).
+// `shiftDays` steps from the week already showing: -7/+7 for the arrows, 0 to
+// build the same week again.
 export async function handleWeekList(shiftDays) {
     el.weekListError.hidden = true;
-    const buttons = [el.weekPrevButton, el.weekNextButton];
+    const buttons = [el.weekPrevButton, el.weekNextButton, el.weekRefreshButton];
     buttons.forEach((b) => (b.disabled = true));
     const body = {
         calendar: state.calendar,
         passcode: state.passcode,
     };
-    if (shiftDays && state.weekStart)
+    if (shiftDays !== undefined && state.weekStart)
         body.week_start = shiftIsoDate(state.weekStart, shiftDays);
     const { ok, data } = await apiCall("/api/week", body);
     buttons.forEach((b) => (b.disabled = false));
@@ -25,7 +26,8 @@ export async function handleWeekList(shiftDays) {
     }
     state.weekStart = data.week_start;
     const which = relativeWeek(data.week_start);
-    el.weekListLabel.textContent = `${which ? `${which}: ` : ""}${formatEventDate(data.week_start)} – ${formatEventDate(data.week_end)}`;
+    const range = `${formatDate(data.week_start, { weekday: false })} – ${formatDate(data.week_end, { weekday: false })}`;
+    el.weekListLabel.textContent = which ? `${which}: ${range}` : range;
     el.weekListOutput.value = data.text;
     el.weekCopyStatus.textContent = "";
     el.weekListPanel.hidden = false;

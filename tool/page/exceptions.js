@@ -8,9 +8,9 @@
 // separate endpoint.
 import { isOccurrence } from "../appHelpers.js";
 import { cardState, refreshWeekdayHints, setDirty, wireDefaultEndTime } from "./cardState.js";
-import { endsBeforeStart, eventMinutes, formatDayDate, formatShortDate } from "./dates.js";
+import { endsBeforeStart, eventMinutes, formatDate } from "./dates.js";
 import { find } from "./dom.js";
-import { readCardFields } from "./eventCard.js";
+import { readCardFields, showEditedExceptions } from "./eventCard.js";
 import { currentYearGroup, sortedClasses } from "./state.js";
 export function getCardExceptions(card) {
     return cardState(card).exceptions;
@@ -19,6 +19,7 @@ export function getCardExceptions(card) {
 function setCardExceptions(card, exceptions) {
     cardState(card).exceptions = exceptions;
     renderExceptionsList(card);
+    showEditedExceptions(card);
     setDirty(card, true);
     find(card, ".exceptions-unsaved").hidden = false;
 }
@@ -39,9 +40,9 @@ function exceptionScopeText(card, exc) {
 // "Thu 22 Oct", "Thu 29 Oct → Fri 30 Oct, 09:00–10:00"
 function formatExceptionChange(exc) {
     if (exc.action === "cancelled")
-        return formatShortDate(exc.date);
+        return formatDate(exc.date);
     const timeText = exc.new_time ? `, ${exc.new_time}${exc.new_end_time ? `–${exc.new_end_time}` : ""}` : "";
-    return `${formatShortDate(exc.date)} → ${formatShortDate(exc.new_date)}${timeText}`;
+    return `${formatDate(exc.date)} → ${formatDate(exc.new_date)}${timeText}`;
 }
 // Whether two same-date exceptions would clash: both unscoped (every class),
 // or both scoped with a class in common. An unscoped one alongside a
@@ -78,7 +79,7 @@ function renderExceptionsList(card) {
         removeButton.addEventListener("click", () => {
             setCardExceptions(card, getCardExceptions(card).filter((_, i) => i !== index));
         });
-        removeButton.setAttribute("aria-label", `Remove the exception on ${formatDayDate(exc.date)}`);
+        removeButton.setAttribute("aria-label", `Remove the exception on ${formatDate(exc.date)}`);
         row.append(kind, text, scope, removeButton);
         container.appendChild(row);
     });
@@ -150,7 +151,7 @@ export function wireExceptionsSection(card, initialExceptions, { shared = false 
             return refuse("Choose the date of the occurrence to change.");
         const { date: start, recurrence } = readCardFields(card);
         if (recurrence?.until && !isOccurrence(dateInput.value, start, { ...recurrence, until: recurrence.until })) {
-            return refuse(`This event doesn't happen on ${formatDayDate(dateInput.value)} - choose one of the days it repeats on.`);
+            return refuse(`This event doesn't happen on ${formatDate(dateInput.value)} - choose one of the days it repeats on.`);
         }
         // Built up field by field; the select only offers "cancelled" and "moved".
         const exception = { date: dateInput.value, action: actionSelect.value };

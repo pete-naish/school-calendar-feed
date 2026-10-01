@@ -61,3 +61,53 @@ export function isOccurrence(date, start, recurrence) {
     const days = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000);
     return days % step === 0;
 }
+// A repeating event's `i`th regular day after its first (0: the first), or
+// null when that month has no such day (a monthly series from the 31st).
+function nthOccurrence(start, freq, interval, i) {
+    const d = new Date(`${start}T00:00:00Z`);
+    if (freq === "MONTHLY") {
+        const day = d.getUTCDate();
+        d.setUTCDate(1);
+        d.setUTCMonth(d.getUTCMonth() + i * interval);
+        const lastDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+        if (day > lastDay)
+            return null;
+        d.setUTCDate(day);
+    }
+    else {
+        d.setUTCDate(d.getUTCDate() + i * interval * (freq === "WEEKLY" ? 7 : 1));
+    }
+    return d.toISOString().slice(0, 10);
+}
+// The day the event list shows a repeating event under: the first day on or
+// after `today` it happens - its own days less the ones cancelled or moved
+// away, plus the days moved to - so a weekly PE that began in September
+// shows next Thursday, not its first one. For `calendar`, an exception limited
+// to other classes doesn't count. Anything that doesn't repeat (or has no day
+// left) shows its first day. Closure days the build skips (half term etc.)
+// aren't known here, so one of those can be shown.
+export function nextOccurrence(event, today, calendar = null) {
+    const r = event.recurrence;
+    if (!r || !r.freq || !r.until)
+        return event.date;
+    const applying = (event.exceptions || []).filter((exc) => !exc.classes || exc.classes.length === 0 || (calendar !== null && exc.classes.includes(calendar)));
+    const away = new Set(applying.map((exc) => exc.date));
+    let next = null;
+    for (const exc of applying) {
+        if (exc.action === "moved" && exc.new_date >= today && (!next || exc.new_date < next))
+            next = exc.new_date;
+    }
+    // Every repeat is capped at 400 days (validate.ts), so 1000 steps covers it.
+    for (let i = 0; i < 1000; i++) {
+        const day = nthOccurrence(event.date, r.freq, r.interval || 1, i);
+        if (day === null)
+            continue;
+        if (day > r.until || (next && day >= next))
+            break;
+        if (day >= today && !away.has(day)) {
+            next = day;
+            break;
+        }
+    }
+    return next ?? event.date;
+}

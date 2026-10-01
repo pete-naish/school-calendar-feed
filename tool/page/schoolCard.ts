@@ -3,7 +3,7 @@
 // tucked away, correct its date or time when the school's calendar is wrong.
 import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic, isPastEvent } from "../appHelpers.js";
 import { addWeekdayHints, cardState, setCardOpen, setDirty, setSummary, setupFolding, showCardStatus, trackChanges, wireDefaultEndTime } from "./cardState.js";
-import { daysInclusive, eventMinutes, formatSchoolSpan, formatShortDate, todayIso } from "./dates.js";
+import { daysInclusive, eventMinutes, formatDate, formatSchoolSpan, todayIso } from "./dates.js";
 import { el, find } from "./dom.js";
 import type { Field } from "./dom.js";
 import { placeCard, rebuildWait, reloadEventList } from "./eventList.js";
@@ -63,7 +63,7 @@ function schoolEventWhen(event: ListedSchoolEvent) {
   const parts = [];
   if (event.time) parts.push(`${event.time}${event.end_time ? `–${event.end_time}` : ""}`);
   else if (event.end_date && event.end_date !== event.date) {
-    parts.push(`${formatShortDate(event.date)} – ${formatShortDate(event.end_date)}`, `${daysInclusive(event.date, event.end_date)} days`);
+    parts.push(`${formatDate(event.date)} – ${formatDate(event.end_date)}`, `${daysInclusive(event.date, event.end_date)} days`);
   } else parts.push("All day");
   if (event.location) parts.push(event.location);
   return parts.join(" · ");

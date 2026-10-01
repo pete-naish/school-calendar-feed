@@ -1,11 +1,23 @@
 // The signed-in page's three tabs: Events, Add events, and What's on this
 // week. A standard tablist: Left/Right (and Home/End) move between the tabs
-// shown, and only the selected one is in the Tab order.
+// shown, and only the selected one is in the Tab order. The open tab is kept
+// for the browser tab, like the sign-in, so a refresh comes back to it.
 import { el } from "./dom.js";
-import { state } from "./state.js";
+import { state, storageGet, storageSet } from "./state.js";
 import { handleWeekList } from "./weekList.js";
 
 export type TabName = "events" | "add" | "week";
+
+const TAB_KEY = "rep-tool-tab";
+
+export function rememberedTab(): TabName | null {
+  const tab = storageGet(sessionStorage, TAB_KEY);
+  return tab === "events" || tab === "add" || tab === "week" ? tab : null;
+}
+
+export function forgetTab() {
+  storageSet(sessionStorage, TAB_KEY, null);
+}
 
 function tabs(): { name: TabName; tab: HTMLButtonElement; panel: HTMLElement }[] {
   return [
@@ -23,8 +35,10 @@ export function selectTab(name: TabName, { focus = false } = {}) {
     t.panel.hidden = !selected;
     if (selected && focus) t.tab.focus();
   }
-  // The weekly list is built when it's first wanted, not at sign-in.
-  if (name === "week" && !state.weekStart) handleWeekList();
+  storageSet(sessionStorage, TAB_KEY, name);
+  // The weekly list is built each time it's opened (the same week again, once
+  // one is showing), so it picks up anything saved since.
+  if (name === "week") handleWeekList(state.weekStart ? 0 : undefined);
 }
 
 export function wireTabs() {

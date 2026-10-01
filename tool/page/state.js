@@ -61,3 +61,25 @@ export async function apiCall(path, payload) {
     }
     return { ok: resp.ok, status: resp.status, data };
 }
+// Browser storage (sessionStorage or localStorage) that can be missing or
+// throw - a private window, blocked site data - in which case nothing is
+// remembered and everything still works.
+export function storageGet(storage, key) {
+    try {
+        return storage.getItem(key);
+    }
+    catch {
+        return null;
+    }
+}
+export function storageSet(storage, key, value) {
+    try {
+        if (value === null)
+            storage.removeItem(key);
+        else
+            storage.setItem(key, value);
+    }
+    catch {
+        // not available - nothing to remember
+    }
+}

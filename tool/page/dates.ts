@@ -14,19 +14,19 @@ export function shiftIsoDate(iso: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-// "Thu, 9 Oct 2026"
-export function formatDayDate(iso: string) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-}
+// Written out by hand rather than with toLocaleDateString: browsers abbreviate
+// September as "Sept" in en-GB, where the weekly list's text (built by the
+// server) says "Sep".
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// "9 Oct 2026"
-export function formatEventDate(iso: string) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-}
-
-// "Thu 22 Oct" - for the event list, where the month heading gives the year.
-export function formatShortDate(iso: string) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+// The one way the tool writes a date: "Thu 8 Oct", with the year only when it
+// isn't this year's ("Thu 7 Jan 2027") - the same style as the weekly list.
+// `weekday: false` drops the day name, for a range of whole weeks ("28 Sep").
+export function formatDate(iso: string, { weekday = true } = {}) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const year = iso.slice(0, 4) === todayIso().slice(0, 4) ? "" : ` ${iso.slice(0, 4)}`;
+  return `${weekday ? `${WEEKDAYS[d.getUTCDay()]} ` : ""}${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}${year}`;
 }
 
 // "October 2026", for the event list's month headings.
@@ -41,7 +41,7 @@ export function formatWeekday(iso: string) {
 
 // "Thu", for a card's date tile.
 export function formatShortWeekday(iso: string) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short" });
+  return WEEKDAYS[new Date(`${iso}T00:00:00Z`).getUTCDay()];
 }
 
 // The number of days from one date to another, counting both: 2-4 Nov is 3.
@@ -49,11 +49,11 @@ export function daysInclusive(start: string, end: string) {
   return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000) + 1;
 }
 
-// "Tue 27 Oct 2026 – Sat 31 Oct 2026", "Wed 7 Oct 2026, 14:30–15:30".
+// "Tue 27 Oct – Sat 31 Oct", "Wed 7 Oct, 14:30–15:30".
 export function formatSchoolSpan({ date = "", end_date, time, end_time }: SpanFields) {
-  if (time) return `${formatDayDate(date)}, ${time}${end_time ? `–${end_time}` : ""}`;
-  if (end_date && end_date !== date) return `${formatDayDate(date)} – ${formatDayDate(end_date)}`;
-  return formatDayDate(date);
+  if (time) return `${formatDate(date)}, ${time}${end_time ? `–${end_time}` : ""}`;
+  if (end_date && end_date !== date) return `${formatDate(date)} – ${formatDate(end_date)}`;
+  return formatDate(date);
 }
 
 // "This week" / "Next week" / "Last week" for a week starting on `monday`,

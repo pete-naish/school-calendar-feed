@@ -18,7 +18,7 @@
 import { el } from "./page/dom.js";
 import { addDraftCard, handleExtract, handleSaveAll, updateExtractButtonState } from "./page/drafts.js";
 import { blankEvent, handleUndoDelete } from "./page/eventCard.js";
-import { wireEventFilters } from "./page/eventList.js";
+import { wireEventFilters, wireSchoolNotice } from "./page/eventList.js";
 import { handleLogin, handleSwitchCalendar, hasUnsavedWork, loadCalendars, restoreSession, updateLoginButtonState } from "./page/login.js";
 import { state } from "./page/state.js";
 import { wireTabs } from "./page/tabs.js";
@@ -43,8 +43,10 @@ function init() {
   wireTabs();
   el.weekPrevButton.addEventListener("click", () => handleWeekList(-7));
   el.weekNextButton.addEventListener("click", () => handleWeekList(7));
+  el.weekRefreshButton.addEventListener("click", () => handleWeekList(0));
   el.weekCopyButton.addEventListener("click", handleCopyWeekList);
   wireEventFilters();
+  wireSchoolNotice();
   el.undoDeleteButton.addEventListener("click", handleUndoDelete);
   window.addEventListener("beforeunload", (e) => {
     if (state.calendar && hasUnsavedWork()) e.preventDefault();

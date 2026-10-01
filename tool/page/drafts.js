@@ -23,9 +23,11 @@ export async function handleExtract() {
     el.extractError.hidden = true;
     state.extracting = true;
     updateExtractButtonState();
-    el.extractStatus.textContent = "Reading that text…";
+    el.extractButton.textContent = "Finding events…";
+    el.extractStatus.textContent = "This can take a few seconds.";
     const { ok, data } = await apiCall("/api/parse", { calendar: state.calendar, passcode: state.passcode, text });
     state.extracting = false;
+    el.extractButton.textContent = "Find events";
     el.extractStatus.textContent = "";
     if (ok && data.events?.length)
         state.lastExtractedText = text.trim();
@@ -44,6 +46,10 @@ export async function handleExtract() {
     }
     if (data.events?.length) {
         el.extractStatus.textContent = `Found ${plural(data.events.length, "event")} in this text. Change the text to look again.`;
+        // The new cards are below the paste box - off the screen on a phone - so
+        // go to them.
+        el.draftsHeading.focus({ preventScroll: true });
+        el.draftsHeading.scrollIntoView({ block: "start" });
     }
 }
 // "Save 3 events" - unless it's mid-save or asking "Save anyway".
@@ -56,8 +62,7 @@ export function updateDraftControlsVisibility() {
     const count = el.draftCards.children.length;
     el.draftsHeading.hidden = count === 0;
     el.saveBar.hidden = count === 0;
-    el.draftsCount.textContent = `${plural(count, "new event")} · nothing is published until you save`;
-    el.saveBarText.textContent = `${plural(count, "new event")} ready to save`;
+    el.draftsCount.textContent = `${plural(count, "new event")} to check`;
     if (!el.saveAllButton.disabled && !confirmPublicField(el.saveAllButton).confirm_public)
         el.saveAllButton.textContent = saveAllLabel();
 }
@@ -139,6 +144,9 @@ export async function handleSaveAll() {
     updateDraftControlsVisibility();
     selectTab("events");
     showListStatus(`${plural(data.saved, "event")} saved${skipped}. ${data.saved === 1 ? "It'll" : "They'll"} appear in the calendar ${rebuildWait(data.rebuild_triggered)}.`);
+    // The save button just disappeared with the bar, so put the focus on what
+    // happened (and its Undo) rather than leave it nowhere.
+    el.existingStatus.focus({ preventScroll: true });
     el.existingStatus.scrollIntoView({ block: "nearest" });
     const listResult = await apiCall("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
     if (listResult.ok)

@@ -13,10 +13,10 @@ import {
   trackChanges,
   wireDefaultEndTime,
 } from "./cardState.js";
-import { daysInclusive, endsBeforeStart, formatDayDate, formatShortDate, shiftIsoDate, todayIso } from "./dates.js";
+import { daysInclusive, endsBeforeStart, formatDate, shiftIsoDate, todayIso } from "./dates.js";
 import { confirmSecondClick, el, find, plural } from "./dom.js";
 import type { Field } from "./dom.js";
-import { placeCard, rebuildWait, reloadEventList, showListStatus, updateEventListState } from "./eventList.js";
+import { listDate, placeCard, rebuildWait, reloadEventList, showListStatus, updateEventListState } from "./eventList.js";
 import { getCardExceptions, wireExceptionsSection } from "./exceptions.js";
 import { apiCall, currentYearGroup, state, yearGroupDescription } from "./state.js";
 import type { CardRecurrence, CardValue, DraftEvent } from "./state.js";
@@ -66,7 +66,7 @@ export function localValidationError(value: CardValue) {
   const recurrence = value.recurrence as Recurrence | null;
   const stray = recurrence && value.exceptions.find((exc) => !isOccurrence(exc.date, value.date, recurrence));
   if (stray) {
-    return `The exception on ${formatDayDate(stray.date)} isn't a day this event repeats on any more - remove it, or change the event back.`;
+    return `The exception on ${formatDate(stray.date)} isn't a day this event repeats on any more - remove it, or change the event back.`;
   }
   return null;
 }
@@ -164,15 +164,23 @@ export function wireRecurrenceToggle(card: HTMLElement) {
 function manualEventWhen(event: Omit<CardValue, "year_group">) {
   const parts = [];
   if (event.end_date && event.end_date !== event.date) {
-    parts.push(`${formatShortDate(event.date)} – ${formatShortDate(event.end_date)}`, `${daysInclusive(event.date, event.end_date)} days`);
+    parts.push(`${formatDate(event.date)} – ${formatDate(event.end_date)}`, `${daysInclusive(event.date, event.end_date)} days`);
     if (event.time) parts.push(`from ${event.time}`);
   } else {
     parts.push(event.time ? `${event.time}${event.end_time ? `–${event.end_time}` : ""}` : "All day");
   }
   const repeat = RECURRENCE_LABELS[recurrenceToSelectValue(event.recurrence)];
-  if (repeat) parts.push(`${repeat}${event.recurrence?.until ? ` until ${formatShortDate(event.recurrence.until)}` : ""}`);
+  if (repeat) parts.push(`${repeat}${event.recurrence?.until ? ` until ${formatDate(event.recurrence.until)}` : ""}`);
   if (event.location) parts.push(event.location);
   return parts.join(" · ");
+}
+
+// While exceptions are being added or removed (not yet saved), the summary
+// counts the ones on the card - alongside its "Unsaved changes" badge - rather
+// than the saved ones, so it agrees with the list below it.
+export function showEditedExceptions(card: HTMLElement) {
+  const saved = cardState(card).saved;
+  if (saved) setManualSummary(card, { ...saved, exceptions: getCardExceptions(card) });
 }
 
 function setManualSummary(card: HTMLElement, event: Omit<CardValue, "year_group">) {
@@ -180,14 +188,14 @@ function setManualSummary(card: HTMLElement, event: Omit<CardValue, "year_group"
   const tags = [];
   if (cardState(card).shared && group) tags.push({ text: `All of ${group.label}` });
   if (event.recurrence && event.exceptions.length) tags.push({ text: plural(event.exceptions.length, "exception") });
-  setSummary(card, { title: event.title, date: event.date, when: manualEventWhen(event), tags });
+  setSummary(card, { title: event.title, date: listDate(event), when: manualEventWhen(event), tags });
 }
 
 export function createExistingEventCard(event: ClassListedEvent & { school_event?: undefined }) {
   const node = el.cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
   const card = cardState(node);
   card.id = event.id;
-  card.date = event.date;
+  card.date = listDate(event);
   card.kind = "rep";
   card.shared = Boolean(event.year_group);
   fillCardFields(node, event);

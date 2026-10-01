@@ -4,8 +4,8 @@ import { cardState } from "./cardState.js";
 import { confirmSecondClick, el, resetConfirm } from "./dom.js";
 import { updateDraftControlsVisibility, updateExtractButtonState } from "./drafts.js";
 import { allEventCards, renderExistingEvents, renderWholeSchoolEvents, resetEventFilters } from "./eventList.js";
-import { apiCall, calendarLabelFor, FOSPS, setYearGroups, sortedClasses, state, WHOLE_SCHOOL } from "./state.js";
-import { selectTab } from "./tabs.js";
+import { apiCall, calendarLabelFor, FOSPS, setYearGroups, sortedClasses, state, storageGet, storageSet, WHOLE_SCHOOL } from "./state.js";
+import { forgetTab, rememberedTab, selectTab } from "./tabs.js";
 // Fills the calendar picker once the class list has arrived. Until then the
 // picker only holds its "Choose a calendar…" placeholder, so login stays
 // disabled; if the list can't be fetched, say so rather than show an empty picker.
@@ -56,30 +56,11 @@ function fillCalendarPicker() {
 // refresh doesn't mean looking the passcode up again; closing the tab or
 // "Switch calendar" forgets them. The last calendar picked is remembered
 // (localStorage, no passcode) to preselect it next time. The passcode box also
-// lets a password manager save it, with the calendar as its username. Storage
-// can be missing or throw (private windows, blocked site data), which just
-// means none of this happens.
+// lets a password manager save it, with the calendar as its username. The tab
+// that was open is remembered for the tab too (tabs.ts), so a refresh comes
+// back to it.
 const SESSION_KEY = "rep-tool-session";
 const LAST_CALENDAR_KEY = "rep-tool-last-calendar";
-function storageGet(storage, key) {
-    try {
-        return storage.getItem(key);
-    }
-    catch {
-        return null;
-    }
-}
-function storageSet(storage, key, value) {
-    try {
-        if (value === null)
-            storage.removeItem(key);
-        else
-            storage.setItem(key, value);
-    }
-    catch {
-        // not available - nothing to remember
-    }
-}
 // Signs straight back in after a refresh, if this tab was signed in.
 export function restoreSession() {
     let saved = null;
@@ -137,7 +118,8 @@ export async function handleLogin() {
     const isWholeSchool = calendar === WHOLE_SCHOOL.code;
     el.tabAdd.hidden = isWholeSchool;
     el.wholeSchoolNotice.hidden = !isWholeSchool;
-    selectTab("events");
+    const tab = rememberedTab();
+    selectTab(tab && !(tab === "add" && isWholeSchool) ? tab : "events");
     // Which list comes back depends on the calendar (see ListResponse).
     if (isWholeSchool) {
         renderWholeSchoolEvents(data.events);
@@ -176,6 +158,7 @@ export function handleSwitchCalendar() {
         return;
     resetConfirm(el.switchCalendarButton);
     storageSet(sessionStorage, SESSION_KEY, null);
+    forgetTab();
     state.calendar = null;
     state.passcode = null;
     state.termEnds = [];

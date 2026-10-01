@@ -268,7 +268,9 @@ plus the whole-school ones (and, for a class, the FOSPS ones, shown with their
 (`*bold*` day headings, `•` bullets, then location and description). The text
 lands in an editable box with a **Copy for WhatsApp** button, and the ‹ ›
 arrows step to other weeks. The default week is this one - or, on a Sunday
-(London time), the coming one.
+(London time), the coming one. The list is built again each time the tab is
+opened, and by its **Refresh** button, so a save made meanwhile shows up once
+it's published.
 
 `/api/week` (`functions/api/week.ts`, logic in `_shared/weekList.ts`) reads
 the *published* `<calendar>.ics`, `whole-school.ics` and `fosps.ics` rather than the source
