@@ -149,7 +149,7 @@
     }
     .facts > div { min-width: 0; }
     .facts dt { font-size: 0.8125rem; line-height: 1.4; color: var(--muted); margin: 0 0 var(--s1, 0.25rem); }
-    .facts dd { font-size: 0.875rem; line-height: 1.5; margin: 0; text-wrap: pretty; }
+    .facts dd { font-size: 0.875rem; line-height: 1.5; margin: 0; text-wrap: pretty; overflow-wrap: break-word; }
     @media (max-width: 900px) { .facts { grid-template-columns: 1fr; gap: var(--s5); max-width: 40rem; } }
     @media (max-width: 560px) { .facts { grid-template-columns: 1fr; gap: var(--s5); } }
     .hero .cal-card { margin-top: var(--s16); }
@@ -235,7 +235,7 @@
         <div><dt>Source</dt><dd>
           Whole School events are copied from the school's <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">public calendar</a> every six hours. Class Reps add the class events. Free to use, and we're only human, so double-check anything important against info sent by the school.</dd></div>
         <div><dt>Adding a calendar</dt><dd>Tap Apple Calendar, Google Calendar or Outlook above, then confirm when your calendar app asks. After that, new dates appear automatically — no need to check back or repeat this.</dd></div>
-        <div id="google-phone"><dt>Google Calendar on your phone</dt><dd>Calendars added on a computer can be hidden on your phone at first. In the Google Calendar app, open the menu (&#9776;) and tick each St Paul's calendar. On Android, if one still doesn't show, go to Settings, tap the calendar and turn on Sync. Using iPhone's own Calendar app with a Google account? Visit <a href="https://calendar.google.com/calendar/syncselect">calendar.google.com/calendar/syncselect</a> and tick the calendars there.</dd></div>
+        <div id="google-phone"><dt>Google Calendar on your phone</dt><dd>Calendars added on a computer can be hidden on your phone at first. In the Google Calendar app, open the menu (&#9776;) and tick each St Paul's calendar. On Android, if one still doesn't show, go to Settings, tap the calendar and turn on Sync. Using iPhone's own Calendar app with a Google account? Open <a href="https://calendar.google.com/calendar/syncselect">Google's sync settings</a> and tick the calendars there.</dd></div>
         <div><dt>Other apps</dt><dd>Using a different calendar app? Copy one of these addresses and paste it wherever your app offers to "subscribe by URL" or "add calendar from internet": <span id="ics-links"></span></dd></div>
         <div><dt>Nothing happened?</dt><dd>Try opening this page in your phone's default browser (Safari on iPhone, Chrome on Android), or use the address under "Other apps" instead.</dd></div>
       </dl>
