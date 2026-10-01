@@ -68,6 +68,11 @@
   --chip-text-dark: #14140f;
   --chip-text-light: #ffffff;
   --cal-neutral-text: var(--chip-text-light);
+  /* Whole School's chips (and list dots, and key) are a quiet grey rather
+     than its ink: it's on most days, and solid black blocks drowned out the
+     class and FOSPS colours. The checkbox and dot elsewhere keep the ink. */
+  --cal-neutral-chip: #e6e6e6;
+  --cal-neutral-chip-text: #171717;
   --cal-1-text: var(--chip-text-light);
   --cal-2-text: var(--chip-text-dark);
   --cal-3-text: var(--chip-text-dark);
@@ -119,6 +124,8 @@
     --link-color: #8ab4f8;
 
     --cal-neutral-text: var(--chip-text-dark);
+    --cal-neutral-chip: #333333;
+    --cal-neutral-chip-text: #ededed;
     --cal-1-text: var(--chip-text-dark);
     --cal-2-text: var(--chip-text-dark);
     --cal-3-text: var(--chip-text-dark);
@@ -150,6 +157,8 @@
     --link-color: #8ab4f8;
 
     --cal-neutral-text: var(--chip-text-dark);
+    --cal-neutral-chip: #333333;
+    --cal-neutral-chip-text: #ededed;
     --cal-1-text: var(--chip-text-dark);
     --cal-2-text: var(--chip-text-dark);
     --cal-3-text: var(--chip-text-dark);
@@ -160,26 +169,31 @@
     --cal-8-text: var(--chip-text-dark);
   }
 
-/* No box: the calendar sits on the page canvas. A narrow rail on the left
-   holds the calendar list (the calendar-app layout); the toolbar and grid
-   take the rest. Spacing and alignment do the separating; only the grid
-   draws lines. */
-.cal-card {
+/* --- Subscribe: two steps side by side in one bordered section (stacked on
+   a phone) - pick calendars, then add them to your app. --- */
+.subscribe {
   display: grid;
-  grid-template-columns: 15rem minmax(0, 1fr);
-  gap: 2.5rem;
-  align-items: start;
-  background: var(--cal-surface-alt);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--cal-border);
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.cal-rail {
-  display: grid;
-  gap: 1.25rem;
-  padding-top: 0.25rem;
+.subscribe-pick,
+.subscribe-add {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem;
+  min-width: 0;
 }
 
-.cal-rail h2,
-#calendar-add-label {
+.subscribe-add {
+  background: var(--cal-surface-weekend);
+  border-left: 1px solid var(--cal-border);
+}
+
+.step-title {
   margin: 0;
   font-size: 1.375rem;
   font-weight: 600;
@@ -188,332 +202,411 @@
   color: var(--cal-fg);
 }
 
-.cal-rail-note {
-  margin: 0.25rem 0 0;
-  font-size: 0.8125rem;
+.step-hint {
+  margin: -0.5rem 0 0;
+  font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--cal-muted);
-  max-width: 22ch;
   text-wrap: pretty;
 }
 
-/* A calendar's name called out within otherwise-muted rail copy - not a
-   link, just brought up to full contrast. */
+.subscribe-add .step-hint:not(#app-question) {
+  margin-top: 0;
+}
+
+/* A calendar's name called out within otherwise-muted copy. */
+.step-hint strong,
 .cal-highlight {
   color: var(--cal-fg);
   font-weight: 600;
 }
 
-.cal-main {
-  min-width: 0;
-}
-
 @media (max-width: 800px) {
-  .cal-card {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+  .subscribe {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .cal-rail-note {
-    max-width: none;
-  }
-
-  /* Two columns once the rail has the full page width to itself. Year
-     groups' two classes are placed consecutively (see renderTiles in
-     calendar.js) so they land side by side rather than split across rows;
-     Whole School and FOSPS span both columns so they don't pair with an
-     unrelated class either. */
-  .cal-tiles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 0.75rem;
-  }
-
-  .cal-tile--wide {
-    grid-column: 1 / -1;
+  .subscribe-add {
+    border-left: 0;
+    border-top: 1px solid var(--cal-border);
   }
 }
 
-/* One row per launched calendar: a real, visible checkbox (preview on/off
-   and, below, what the platform buttons act on) tinted in the calendar's
-   colour so it doubles as the legend, and its name. */
+@media (max-width: 600px) {
+  .subscribe-pick,
+  .subscribe-add {
+    padding: 1.5rem 1rem;
+  }
+}
+
+/* Step 1: a row per calendar, two columns - each year's two classes side by
+   side (see displayOrder in calendar.ts), Whole School and FOSPS first. The
+   whole row is the tap target; a ticked one is shaded. The checkbox takes the
+   calendar's colour, so the list doubles as the key. */
 .cal-tiles {
   display: grid;
-  gap: 0.35rem;
-  margin: 0;
-  padding: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 0.75rem;
+  margin: 0 -0.5rem;
 }
 
 .cal-tile {
-  min-width: 0;
-}
-
-.cal-tile-toggle {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
   min-width: 0;
-  padding: 0;
-  font-size: 0.875rem;
-  font-weight: 500;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
   line-height: 1.3;
   color: var(--cal-fg);
   cursor: pointer;
   user-select: none;
+  transition: background-color 150ms ease;
 }
 
-.cal-tile-toggle input {
+.cal-tile:hover {
+  background: var(--cal-surface-weekend);
+}
+
+.cal-tile.is-on {
+  background: var(--cal-surface);
+}
+
+.cal-tile input {
   appearance: auto;
-  width: 1rem;
-  height: 1rem;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
   margin: 0;
   accent-color: var(--tile-color, var(--cal-fg));
   cursor: pointer;
 }
 
-.cal-tile-toggle input:focus-visible {
+.cal-tile input:focus-visible {
   outline: 2px solid var(--cal-focus);
   outline-offset: 2px;
 }
 
-.cal-tile-toggle .mono {
-  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 500;
+.cal-tile-name {
+  min-width: 0;
 }
 
-/* Platform buttons: one per calendar app, acting on the ticked calendars.
-   Soft-surface, no border. A single ticked calendar makes each a direct
-   link; several make it a disclosure listing one link per calendar. */
-.cal-add-group {
+.cal-tile-name strong {
+  font-weight: 600;
+}
+
+.cal-tile-year {
+  color: var(--cal-muted);
+}
+
+/* Step 2: the app, as one segmented choice. */
+.app-choice {
   display: grid;
-  gap: 0.5rem;
-}
-
-#calendar-add-hint {
-  margin-bottom: 0.75rem;
-}
-
-.cal-add-buttons {
-  display: grid;
-  gap: 0.35rem;
-  justify-items: start;
-}
-
-.cal-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  height: 2rem;
-  padding: 0 0.75rem 0 0.6rem;
-  border: 0;
-  border-radius: 6px;
-  background: var(--cal-surface);
-  color: var(--cal-fg);
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
-}
-
-.cal-add::before {
-  content: "+";
-  font-size: 1rem;
-  line-height: 1;
-  margin-top: -1px;
-}
-
-.cal-add:hover,
-.cal-add[aria-expanded="true"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
   background: var(--cal-border);
 }
 
-.cal-add[aria-disabled="true"] {
-  opacity: 0.45;
-  cursor: default;
-  pointer-events: none;
-}
-
-.cal-add:focus-visible {
-  outline: 2px solid var(--cal-focus);
-  outline-offset: 2px;
-}
-
-.cal-add-list {
-  display: grid;
-  gap: 0.25rem;
-  margin: 0;
-  padding: 0.25rem 0 0 1.1rem;
-  font-size: 0.8125rem;
-  list-style: "\2192\a0";
-}
-
-.cal-add-list li {
-  padding-left: 0.35rem;
-}
-
-.cal-add-list a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--cal-fg);
-  font-weight: 500;
-  text-decoration: none;
-  min-height: 1.75rem;
-}
-
-.cal-add-list a:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-
-/* Already clicked this session (see CLICKED_STORAGE_KEY in calendar.js), so a
-   parent subscribing to several can see which are left. */
-.cal-add-list a.is-clicked {
-  color: var(--cal-muted);
-  font-weight: 400;
-}
-
-/* Plain feed addresses in the facts strip, for apps not covered above. */
-#ics-links a {
-  color: inherit;
-}
-
-#ics-links a + a::before {
-  content: " · ";
-  color: var(--cal-muted);
-}
-
-@media (max-width: 800px) {
-  /* Stacked above the toolbar: buttons in a row where they fit. */
-  .cal-add-buttons {
-    grid-template-columns: repeat(auto-fit, minmax(10rem, max-content));
-  }
-}
-
-.cal-dot {
-  display: inline-block;
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.dot-whole { background: var(--cal-neutral); }
-.dot-reception { background: var(--cal-1); }
-.dot-year1 { background: var(--cal-2); }
-.dot-year2 { background: var(--cal-3); }
-.dot-year3 { background: var(--cal-4); }
-.dot-year4 { background: var(--cal-5); }
-.dot-year5 { background: var(--cal-6); }
-.dot-year6 { background: var(--cal-7); }
-.dot-fosps { background: var(--cal-8); }
-
-/* --- Toolbar --- */
-.cal-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  padding: 0;
-  margin: 0 0 0.75rem;
-}
-
-.cal-nav-dates,
-.cal-nav-tools {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.cal-nav button {
-  background: transparent;
+.app-choice button {
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
   border: 0;
+  border-radius: 9px;
+  background: transparent;
   color: var(--cal-fg);
-  border-radius: 6px;
-  height: 2rem;
-  padding: 0 0.75rem;
-  cursor: pointer;
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 500;
-  line-height: 1;
-  transition: background-color 150ms ease, color 150ms ease;
+  cursor: pointer;
 }
 
-.cal-nav button:hover {
-  background: var(--cal-surface);
+.app-choice button[aria-pressed="true"] {
+  background: var(--cal-surface-alt);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
 }
 
-.cal-nav button:focus-visible {
+.app-choice button:focus-visible,
+.add-link:focus-visible,
+.copy-button:focus-visible,
+.icon-button:focus-visible,
+.cal-list-item:focus-visible,
+.cal-list-more:focus-visible {
   outline: 2px solid var(--cal-focus);
   outline-offset: 2px;
 }
 
-#cal-prev,
-#cal-next {
-  width: 2rem;
-  padding: 0;
-  text-align: center;
-  font-size: 1.1rem;
-}
-
-#cal-month-label {
-  font-weight: 500;
-  font-size: 1rem;
-  letter-spacing: -0.01em;
-  /* Fixed, not min-width: day labels ("Wednesday, 17 September 2026") are
-     much longer than month labels ("September 2026") - with only a
-     min-width the box still grows/shrinks with the text, which shoves the
-     "next" button around every time the view or date changes. Sized for
-     the longest realistic label ("Wednesday, DD Month YYYY"). */
-  width: 16rem;
-  text-align: center;
+/* Full labels, or short ones on a phone: "Apple Calendar" / "Apple",
+   "Add to Apple Calendar" / "Add". */
+.label-short {
+  display: none;
 }
 
 @media (max-width: 600px) {
-  #cal-month-label {
-    width: auto;
-    flex: 1;
-    order: -1;
-    flex-basis: 100%;
-    text-align: left;
+  .label-long {
+    display: none;
   }
+
+  .label-short {
+    display: inline;
+  }
+}
+
+/* "1 of 3 added", and a bar. */
+.add-progress {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.add-progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--cal-fg);
+}
+
+#add-progress-count {
+  font-weight: 400;
+  color: var(--cal-muted);
+}
+
+.add-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--cal-border);
+  overflow: hidden;
+}
+
+#add-progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--cal-fg);
+  transition: width 200ms ease;
+}
+
+/* The checklist: a row per ticked calendar, each with its own Add link. */
+.add-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.add-list:empty {
+  display: none;
+}
+
+.add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border: 1px solid var(--cal-border);
+  border-radius: 12px;
+  background: var(--cal-surface-alt);
+}
+
+.add-dot {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--dot-color);
+}
+
+.add-row .cal-tile-name {
+  flex-grow: 1;
+  font-size: 0.9375rem;
+}
+
+.add-link {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 8px;
+  background: var(--button-bg, var(--cal-fg));
+  color: var(--button-fg, var(--cal-surface-alt));
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 150ms ease;
+}
+
+.add-link:hover {
+  background: var(--button-bg-hover, var(--cal-fg));
+}
+
+/* Tapped already: a quiet tick, still a link in case the app didn't open. */
+.add-link.is-added {
+  background: transparent;
+  color: var(--success, #1a7a3c);
+  padding: 0 0.75rem;
+}
+
+.add-link.is-added:hover {
+  background: var(--cal-surface);
+}
+
+/* --- Toolbar: the title, then dates, view and refresh. --- */
+.cal-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.preview-title {
+  flex-grow: 1;
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--cal-fg);
+}
+
+.cal-nav-dates {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cal-nav-dates[hidden] {
+  display: none;
+}
+
+.cal-nav-dates button,
+.icon-button {
+  height: 2.5rem;
+  border: 1px solid var(--cal-border);
+  border-radius: 8px;
+  background: var(--cal-surface-alt);
+  color: var(--cal-fg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.cal-nav-dates button {
+  padding: 0 0.875rem;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  padding: 0;
+}
+
+.cal-nav-dates button:hover,
+.icon-button:hover {
+  background: var(--cal-surface);
+}
+
+.cal-nav-dates button:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 2px;
+}
+
+/* Refresh: just the icon, no border. It spins while it works. */
+.cal-refresh {
+  border: 0;
+  background: transparent;
+  color: var(--cal-muted);
+}
+
+.cal-refresh.is-busy svg {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Segmented control on a soft surface; the active segment is filled. */
 .cal-view-switch {
   display: flex;
   gap: 2px;
-  padding: 2px;
-  border-radius: 8px;
+  padding: 3px;
+  border-radius: 10px;
   background: var(--cal-surface);
 }
 
-.cal-nav .cal-view-switch .view-button {
+.cal-view-switch .view-button {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 7px;
   background: transparent;
   color: var(--cal-muted);
-  height: calc(2rem - 4px);
-  padding: 0 0.75rem;
-  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
 }
 
-.cal-nav .cal-view-switch .view-button:hover {
+.cal-view-switch .view-button:hover {
   color: var(--cal-fg);
-  background: transparent;
 }
 
-.cal-nav .cal-view-switch .view-button.active {
+.cal-view-switch .view-button.active {
   background: var(--cal-fg);
   color: var(--cal-surface-alt);
+  font-weight: 600;
 }
 
-.cal-nav .cal-view-switch .view-button:focus-visible {
+.cal-view-switch .view-button:focus-visible {
+  outline: 2px solid var(--cal-focus);
   outline-offset: -2px;
+}
+
+@media (max-width: 600px) {
+  .preview-title {
+    flex-basis: 100%;
+  }
+
+  /* Seven slivers of a week don't help on a phone. */
+  .view-button--wide {
+    display: none;
+  }
+}
+
+/* Which colour is which, for the calendars ticked. */
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--cal-muted);
+}
+
+.cal-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cal-legend-swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
 }
 
 /* --- Grid --- */
@@ -719,9 +812,9 @@
 
 #day-dialog-close {
   flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  margin: -0.25rem -0.5rem 0 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -0.6rem -0.85rem 0 0;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -841,11 +934,183 @@
   display: none;
 }
 
+/* --- List view: the coming weeks by day. --- */
+.cal-list {
+  display: grid;
+}
+
+.cal-list[hidden] {
+  display: none;
+}
+
+.cal-list-day {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.875rem 0;
+  border-top: 1px solid var(--cal-border);
+}
+
+.cal-list-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+}
+
+.cal-list-weekday,
+.cal-list-month {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--cal-muted);
+}
+
+.cal-list-daynum {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--cal-fg);
+}
+
+.cal-list-today {
+  margin-top: 0.25rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--cal-today-ring);
+  color: var(--cal-surface-alt);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.cal-list-items {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cal-list-item {
+  display: grid;
+  grid-template-columns: 0.625rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cal-fg);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cal-list-item:hover {
+  background: var(--cal-surface-weekend);
+}
+
+.cal-list-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-top: 0.45rem;
+  border-radius: 50%;
+  background: var(--dot-color);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.cal-list-text {
+  display: grid;
+}
+
+.cal-list-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.cal-list-meta {
+  font-size: 0.875rem;
+  color: var(--cal-muted);
+}
+
+.cal-list-more {
+  justify-self: start;
+  min-height: 2.75rem;
+  margin-top: 0.5rem;
+  padding: 0 1rem;
+  border: 1px solid var(--cal-border);
+  border-radius: 8px;
+  background: var(--cal-surface-alt);
+  color: var(--cal-fg);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* --- Help: each calendar's address, to copy. --- */
+.copy-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.copy-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  border: 1px solid var(--cal-border);
+  border-radius: 10px;
+}
+
+.copy-name {
+  flex-grow: 1;
+  font-size: 0.9375rem;
+}
+
+.copy-button {
+  min-height: 2.5rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--cal-border);
+  border-radius: 8px;
+  background: var(--cal-surface-alt);
+  color: var(--cal-fg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.copy-button.is-copied {
+  border-color: transparent;
+  color: var(--success, #1a7a3c);
+  font-weight: 600;
+}
+
+/* Shown when the browser won't let the page copy: the address, to copy by hand. */
+.copy-row code {
+  flex-basis: 100%;
+  margin: 0 0.5rem 0.5rem 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .cal-add,
-  .cal-ics,
-  .cal-nav button,
-  .cal-day {
+  .cal-tile,
+  .add-link,
+  .icon-button,
+  .cal-nav-dates button,
+  .cal-day,
+  #add-progress-fill {
     transition: none;
+  }
+
+  .cal-refresh.is-busy svg {
+    animation: none;
   }
 }

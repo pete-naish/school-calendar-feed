@@ -1,6 +1,6 @@
 import ICAL from "./vendor/ical.min.js";
 import CLASSES from "../classes.js";
-import type { ClassConfig, YearGroupConfig } from "../classes.js";
+import type { YearGroupConfig } from "../classes.js";
 
 type IcalTime = InstanceType<typeof ICAL.Time>;
 
@@ -30,7 +30,7 @@ interface Instance {
   dayKeys: string[];
 }
 
-type View = "month" | "week" | "day";
+type View = "list" | "month" | "week" | "day";
 type ToggleState = Record<string, boolean>;
 
 // The year groups and their classes come from docs/classes.js - the single
@@ -97,12 +97,17 @@ const STORAGE_KEY = "stpauls-calendar-toggles";
 // returning visitor's ticked calendars aren't lost.
 const LEGACY_TOGGLE_KEYS: Record<string, string> = { "rec-a": "rr", "rec-b": "rgp" };
 const VIEW_STORAGE_KEY = "stpauls-calendar-view";
-const VIEWS: View[] = ["month", "week", "day"];
-// Which "Subscribe to ..." links (one per platform + calendar) have been
-// clicked, so a parent working through several can see which are done. Per
-// tab session only: sessionStorage survives the Google/Outlook links
-// navigating away and back, but a later visit starts fresh, since a click
-// isn't proof the subscription actually went through.
+const VIEWS: View[] = ["list", "month", "week", "day"];
+// Phone-sized: the month grid's chips are too narrow to read, so List is the
+// default view and Week (seven slivers) isn't offered.
+const NARROW = window.matchMedia("(max-width: 600px)");
+// The calendar app the parent picked in step 2, remembered for next time.
+const APP_STORAGE_KEY = "stpauls-calendar-app";
+// Which "Add" links (one per platform + calendar) have been tapped, so a
+// parent working through several can see which are done ("1 of 3 added").
+// Per tab session only: sessionStorage survives the Google/Outlook links
+// navigating away and back, but a later visit starts fresh, since a tap isn't
+// proof the subscription actually went through.
 const CLICKED_STORAGE_KEY = "stpauls-subscribe-clicked";
 
 const TODAY = new Date();
@@ -111,6 +116,8 @@ const WINDOW_END = ICAL.Time.fromJSDate(addDays(TODAY, 400), true);
 const MAX_OCCURRENCES_PER_EVENT = 1000;
 const MAX_CHIPS_PER_DAY = 3;
 const MAX_CHIPS_PER_DAY_WEEK = 8;
+// The List view shows this many weeks ahead, and "Show more" adds as many again.
+const LIST_WEEKS = 4;
 
 const LONDON_DATE_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" });
 const LONDON_TIME_FMT = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
@@ -213,13 +220,15 @@ function saveToggleState(state: ToggleState) {
 }
 
 function loadView(): View {
+  let saved: string | null = null;
   try {
-    const saved = localStorage.getItem(VIEW_STORAGE_KEY);
-    if (VIEWS.includes(saved as View)) return saved as View;
+    saved = localStorage.getItem(VIEW_STORAGE_KEY);
   } catch {
     // localStorage unavailable - fall through to the default
   }
-  return "month";
+  if (saved === "week" && NARROW.matches) return "list";
+  if (VIEWS.includes(saved as View)) return saved as View;
+  return NARROW.matches ? "list" : "month";
 }
 
 function saveView(view: View) {
@@ -227,6 +236,27 @@ function saveView(view: View) {
     localStorage.setItem(VIEW_STORAGE_KEY, view);
   } catch {
     // localStorage unavailable - view choice just won't persist
+  }
+}
+
+// The app picked last time, else a guess from the device: Apple's own
+// devices use Apple Calendar, Android uses Google's. Anyone else can switch.
+function loadPlatform(): string {
+  try {
+    const saved = localStorage.getItem(APP_STORAGE_KEY);
+    if (PLATFORMS.some((p) => p.key === saved)) return saved as string;
+  } catch {
+    // localStorage unavailable - guess
+  }
+  if (/iPhone|iPad|Macintosh/.test(navigator.userAgent)) return "apple";
+  return "google";
+}
+
+function savePlatform(key: string) {
+  try {
+    localStorage.setItem(APP_STORAGE_KEY, key);
+  } catch {
+    // localStorage unavailable - the choice just won't persist
   }
 }
 
@@ -265,11 +295,21 @@ function formatDayLabel(date: Date) {
   return date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
+// Written out by hand: en-GB abbreviates September as "Sept".
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// "28 Sep – 4 Oct 2026"
 function formatWeekLabel(monday: Date) {
   const sunday = addDays(monday, 6);
-  const start = monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  const end = sunday.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const start = `${monday.getDate()} ${MONTHS_SHORT[monday.getMonth()]}`;
+  const end = `${sunday.getDate()} ${MONTHS_SHORT[sunday.getMonth()]} ${sunday.getFullYear()}`;
   return `${start} – ${end}`;
+}
+
+// "Mon 2 Nov", for the List view.
+function formatShortDate(date: Date) {
+  return `${WEEKDAYS_SHORT[date.getDay()]} ${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}`;
 }
 
 // build_ics.py prefixes every class/FOSPS event's published title with its
@@ -407,14 +447,21 @@ function byId<T extends HTMLElement = HTMLElement>(id: string): T {
 
 const el = {
   toggles: byId("calendar-toggles"),
+  pickHint: byId("pick-hint"),
   comingSoon: document.getElementById("coming-soon"),
-  addButtons: document.getElementById("calendar-add"),
-  addHint: document.getElementById("calendar-add-hint"),
+  platformChoice: byId("platform-choice"),
+  addProgress: byId("add-progress"),
+  addProgressCount: byId("add-progress-count"),
+  addProgressFill: byId("add-progress-fill"),
+  addHint: byId("calendar-add-hint"),
   addList: byId<HTMLUListElement>("calendar-add-list"),
-  addGoogleNote: document.getElementById("calendar-add-google"),
-  icsLinks: document.getElementById("ics-links"),
+  addGoogleNote: byId("calendar-add-google"),
+  icsLinks: byId<HTMLUListElement>("ics-links"),
   grid: byId("calendar-grid"),
   dayAgenda: byId("calendar-day-agenda"),
+  list: byId("calendar-list"),
+  legend: byId<HTMLUListElement>("calendar-legend"),
+  navDates: byId("cal-nav-dates"),
   monthLabel: byId("cal-month-label"),
   prevButton: byId<HTMLButtonElement>("cal-prev"),
   nextButton: byId<HTMLButtonElement>("cal-next"),
@@ -459,14 +506,19 @@ function tagClick(link: HTMLElement, cal: Calendar, platform: string) {
   link.dataset.platform = platform;
 }
 
-function countClick(event: Event) {
-  const link = (event.target as Element).closest<HTMLAnchorElement>("a[data-cal]");
-  if (!link || window.location.hostname !== STATS_HOST) return;
+// One beacon: which calendar, which app. Only from the live site.
+function sendCount(calendar: string | undefined, platform: string | undefined) {
+  if (window.location.hostname !== STATS_HOST) return;
   try {
-    navigator.sendBeacon(STATS_URL, JSON.stringify({ calendar: link.dataset.cal, platform: link.dataset.platform }));
+    navigator.sendBeacon(STATS_URL, JSON.stringify({ calendar, platform }));
   } catch {
     // Never let counting get in the way of subscribing.
   }
+}
+
+function countClick(event: Event) {
+  const link = (event.target as Element).closest<HTMLElement>("[data-cal]");
+  if (link) sendCount(link.dataset.cal, link.dataset.platform);
 }
 
 function displayName(cal: Calendar) {
@@ -476,16 +528,18 @@ function displayName(cal: Calendar) {
 // One link per (platform, calendar). Every platform subscribes to a single
 // feed per link, which is why the buttons below fan out to a list when more
 // than one calendar is ticked.
-const PLATFORMS: { key: string; label: string; url: (cal: Calendar) => string }[] = [
-  { key: "apple", label: "Apple Calendar", url: (cal) => feedUrls(cal).webcal },
+const PLATFORMS: { key: string; label: string; short: string; url: (cal: Calendar) => string }[] = [
+  { key: "apple", label: "Apple Calendar", short: "Apple", url: (cal) => feedUrls(cal).webcal },
   {
     key: "google",
     label: "Google Calendar",
+    short: "Google",
     url: (cal) => `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feedUrls(cal).webcal)}`,
   },
   {
     key: "outlook",
     label: "Outlook",
+    short: "Outlook",
     url: (cal) =>
       `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(feedUrls(cal).https)}&name=${encodeURIComponent(
         `St Paul's: ${displayName(cal)}`
@@ -493,16 +547,23 @@ const PLATFORMS: { key: string; label: string; url: (cal: Calendar) => string }[
   },
 ];
 
+let platform = loadPlatform();
+
+// "Year 1 1S": the year group muted, the class itself in bold.
 function tileName(cal: Calendar) {
   const name = document.createElement("span");
   name.className = "cal-tile-name";
   if (cal.groupLabel) {
-    const code = document.createElement("span");
-    code.className = "mono";
+    const year = document.createElement("span");
+    year.className = "cal-tile-year";
+    year.textContent = cal.groupLabel;
+    const code = document.createElement("strong");
     code.textContent = cal.label;
-    name.append(document.createTextNode(`${cal.groupLabel} `), code);
+    name.append(year, " ", code);
   } else {
-    name.textContent = cal.label;
+    const strong = document.createElement("strong");
+    strong.textContent = cal.label;
+    name.append(strong);
   }
   return name;
 }
@@ -514,10 +575,9 @@ function launchedCalendars() {
 // Same calendars as launchedCalendars(), but with each year group's classes
 // alphabetised by label (so parents can scan for their child's teacher)
 // rather than left in build-config order. Used wherever calendars are listed
-// for parents (the tiles, the per-app link list and the "Other apps" addresses). Groups
-// stay in their original sequence and keep their classes adjacent, so this
-// doesn't disturb the mobile two-column pairing in the @media rule for
-// .cal-tiles.
+// for parents (the tiles, the add checklist and the copy rows). Groups stay in
+// their original sequence and keep their classes adjacent, so each year's two
+// classes share a row of the two-column tile grid.
 function displayOrder() {
   const groups = new Map<string, Calendar[]>();
   for (const cal of launchedCalendars()) {
@@ -528,130 +588,178 @@ function displayOrder() {
   return [...groups.values()].flatMap((classes) => classes.sort((a, b) => a.label.localeCompare(b.label)));
 }
 
+function selectedCalendars() {
+  return displayOrder().filter((cal) => toggleState[cal.code]);
+}
+
+// Step 1: a row per calendar - a checkbox in the calendar's colour (so the
+// list doubles as the key) and its name. Ticking one also shows its events in
+// the preview, and adds it to step 2's checklist.
 function renderTiles() {
   el.toggles.innerHTML = "";
-  displayOrder().forEach((cal, i) => {
-    const tile = document.createElement("div");
-    // Whole School and FOSPS aren't half of a year-group pair, so they span
-    // both mobile columns (see the @media rule in calendar.css) rather than
-    // ending up next to an unrelated class - this relies on every launched
-    // year group contributing its classes in twos, immediately after one
-    // another, which holds as long as both of a year's classes are launched
-    // together.
-    tile.className = "cal-tile" + (cal.groupLabel ? "" : " cal-tile--wide");
-    tile.style.setProperty("--tile-color", `var(${cal.colorVar})`);
-    tile.style.setProperty("--i", String(i));
-
+  for (const cal of displayOrder()) {
     const label = document.createElement("label");
-    label.className = "cal-tile-toggle";
+    label.className = "cal-tile";
+    label.style.setProperty("--tile-color", `var(${cal.colorVar})`);
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = toggleState[cal.code];
     checkbox.addEventListener("change", () => {
       toggleState[cal.code] = checkbox.checked;
+      label.classList.toggle("is-on", checkbox.checked);
       saveToggleState(toggleState);
       render();
       renderAddActions();
     });
+    label.classList.toggle("is-on", checkbox.checked);
     label.append(checkbox, tileName(cal));
-    tile.appendChild(label);
-    el.toggles.appendChild(tile);
-  });
+    el.toggles.appendChild(label);
+  }
 }
 
-let openPlatform: string | null = null;
+// A returning visitor (or one who's changed the defaults) doesn't need telling
+// what we ticked for them.
+function renderPickHint() {
+  const onlyDefaults = displayOrder().every((cal) => toggleState[cal.code] === DEFAULT_ON.has(cal.code));
+  if (!onlyDefaults) return;
+  el.pickHint.innerHTML = "";
+  const strong = (text: string) => Object.assign(document.createElement("strong"), { textContent: text });
+  el.pickHint.append("We've ticked ", strong("Whole School"), " and ", strong("FOSPS"), ". Add your child's class.");
+}
 
-// Three platform buttons acting on the ticked calendars. Exactly one ticked:
-// each button is a direct link. Several: each button discloses one link per
-// ticked calendar underneath (a platform can only subscribe to one feed per
-// click). None: buttons are disabled.
+// Step 2's app choice: Apple Calendar / Google Calendar / Outlook, one
+// pressed. On a phone the labels shorten to Apple / Google / Outlook.
+function renderPlatformChoice() {
+  el.platformChoice.innerHTML = "";
+  for (const p of PLATFORMS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(p.key === platform));
+    const long = Object.assign(document.createElement("span"), { className: "label-long", textContent: p.label });
+    const short = Object.assign(document.createElement("span"), { className: "label-short", textContent: p.short });
+    button.append(long, short);
+    button.addEventListener("click", () => {
+      platform = p.key;
+      savePlatform(platform);
+      renderPlatformChoice();
+      renderAddActions();
+    });
+    el.platformChoice.appendChild(button);
+  }
+}
+
+function isAdded(cal: Calendar) {
+  return clickedLinks.has(`${platform}:${cal.code}`);
+}
+
+// An add link, before and after it's been tapped: "Add to Apple Calendar"
+// (just "Add" on a phone), then a tick and "Added" - still a link, in case the
+// app didn't open the first time.
+function fillAddLink(link: HTMLAnchorElement, cal: Calendar, p: (typeof PLATFORMS)[number]) {
+  link.innerHTML = "";
+  const added = isAdded(cal);
+  link.classList.toggle("is-added", added);
+  if (added) {
+    link.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+    link.append("Added");
+    link.setAttribute("aria-label", `Added ${displayName(cal)} to ${p.label} - tap to add it again`);
+  } else {
+    const long = Object.assign(document.createElement("span"), { className: "label-long", textContent: `Add to ${p.label}` });
+    const short = Object.assign(document.createElement("span"), { className: "label-short", textContent: "Add" });
+    link.append(long, short);
+    link.setAttribute("aria-label", `Add ${displayName(cal)} to ${p.label}`);
+  }
+}
+
+function renderProgress(selected: Calendar[]) {
+  const done = selected.filter(isAdded).length;
+  el.addProgress.hidden = selected.length < 2;
+  el.addProgressCount.textContent = `${done} of ${selected.length} added`;
+  el.addProgressFill.style.width = `${selected.length ? (done / selected.length) * 100 : 0}%`;
+}
+
+// Step 2's checklist: one row per ticked calendar, each with its own link,
+// since a calendar app only takes one subscription per tap.
 function renderAddActions() {
-  if (!el.addButtons) return;
-  const selected = displayOrder().filter((cal) => toggleState[cal.code]);
-  el.addButtons.innerHTML = "";
+  const selected = selectedCalendars();
+  const p = PLATFORMS.find((x) => x.key === platform)!;
   el.addList.innerHTML = "";
-  el.addList.hidden = true;
-  if (selected.length <= 1) openPlatform = null;
 
-  for (const platform of PLATFORMS) {
-    let control: HTMLAnchorElement | HTMLSpanElement | HTMLButtonElement;
-    if (selected.length === 1) {
-      const link = document.createElement("a");
-      link.href = platform.url(selected[0]);
-      tagClick(link, selected[0], platform.key);
-      control = link;
-      control.setAttribute("aria-label", `Add ${displayName(selected[0])} to ${platform.label}`);
-    } else if (selected.length === 0) {
-      control = document.createElement("span");
-      control.setAttribute("aria-disabled", "true");
-      control.title = "Pick a calendar first";
-    } else {
-      const button = document.createElement("button");
-      button.type = "button";
-      control = button;
-      control.setAttribute("aria-expanded", String(openPlatform === platform.key));
-      control.setAttribute("aria-controls", "calendar-add-list");
-      control.addEventListener("click", () => {
-        openPlatform = openPlatform === platform.key ? null : platform.key;
-        renderAddActions();
-      });
-    }
-    control.className = "cal-add";
-    control.append(document.createTextNode(platform.label));
-    el.addButtons.appendChild(control);
+  for (const cal of selected) {
+    const item = document.createElement("li");
+    item.className = "add-row";
+    item.style.setProperty("--dot-color", `var(${cal.colorVar})`);
+    const dot = Object.assign(document.createElement("span"), { className: "add-dot" });
+    dot.setAttribute("aria-hidden", "true");
+    const link = document.createElement("a");
+    link.className = "add-link";
+    link.href = p.url(cal);
+    tagClick(link, cal, p.key);
+    fillAddLink(link, cal, p);
+    // Updated in place rather than re-rendered: replacing the link while it's
+    // being clicked can stop the browser following it.
+    link.addEventListener("click", () => {
+      clickedLinks.add(`${p.key}:${cal.code}`);
+      saveClickedLinks(clickedLinks);
+      fillAddLink(link, cal, p);
+      renderProgress(selected);
+    });
+    item.append(dot, tileName(cal), link);
+    el.addList.appendChild(item);
   }
+  renderProgress(selected);
 
-  if (openPlatform && selected.length > 1) {
-    const platform = PLATFORMS.find((p) => p.key === openPlatform)!;
-    for (const cal of selected) {
-      const item = document.createElement("li");
-      const link = document.createElement("a");
-      link.href = platform.url(cal);
-      tagClick(link, cal, platform.key);
-      link.textContent = `Subscribe to ${displayName(cal)}`;
-      const clickedKey = `${platform.key}:${cal.code}`;
-      link.classList.toggle("is-clicked", clickedLinks.has(clickedKey));
-      link.addEventListener("click", () => {
-        clickedLinks.add(clickedKey);
-        saveClickedLinks(clickedLinks);
-        link.classList.add("is-clicked");
-      });
-      item.appendChild(link);
-      el.addList.appendChild(item);
-    }
-    el.addList.hidden = false;
-  }
-
-  if (el.addHint) {
-    el.addHint.innerHTML = "";
-    if (selected.length === 0) {
-      el.addHint.textContent = "Pick a calendar above to get started.";
-    } else if (selected.length === 1) {
-      const name = document.createElement("span");
-      name.className = "cal-highlight";
-      name.textContent = displayName(selected[0]);
-      el.addHint.append("Tap your app below — it'll ask you to confirm before subscribing to ", name, ".");
-    } else {
-      el.addHint.textContent = "Tap your app below, then subscribe to each calendar separately.";
-    }
+  if (selected.length === 0) {
+    el.addHint.textContent = "Tick a calendar in step 1 first.";
+  } else {
+    el.addHint.textContent =
+      selected.length === 1
+        ? "Your app asks you to confirm. After that, new dates appear on their own - no need to come back."
+        : "Your app asks you to confirm each one. After that, new dates appear on their own - no need to come back.";
   }
 
   // Google Calendar often leaves a calendar added on the web hidden (or, on
   // Android, unsynced) in its phone app until the parent ticks it there, and
-  // nothing in the cid link can change that. Point at the how-to in the FAQ.
-  if (el.addGoogleNote) el.addGoogleNote.hidden = selected.length === 0;
+  // nothing in the cid link can change that. Point at the how-to in Help.
+  el.addGoogleNote.hidden = selected.length === 0 || platform !== "google";
 }
 
-// Plain https feed addresses for apps not covered by the platform buttons.
+// For apps without a button: each calendar's plain https address, to copy and
+// paste into the app. Copied, never opened - opening it would make most
+// phones import a one-off copy that never updates. Where copying isn't
+// allowed, the address is shown to copy by hand.
 function renderIcsLinks() {
-  if (!el.icsLinks) return;
   el.icsLinks.innerHTML = "";
   for (const cal of displayOrder()) {
-    const link = document.createElement("a");
-    link.href = feedUrls(cal).https;
-    tagClick(link, cal, "link");
-    link.textContent = displayName(cal);
-    el.icsLinks.appendChild(link);
+    const url = feedUrls(cal).https;
+    const item = document.createElement("li");
+    item.className = "copy-row";
+    const name = Object.assign(document.createElement("span"), { className: "copy-name", textContent: displayName(cal) });
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy-button";
+    button.textContent = "Copy";
+    button.setAttribute("aria-label", `Copy the address for ${displayName(cal)}`);
+    tagClick(button, cal, "link");
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        button.textContent = "Copied";
+        button.classList.add("is-copied");
+        setTimeout(() => {
+          button.textContent = "Copy";
+          button.classList.remove("is-copied");
+        }, 2500);
+      } catch {
+        if (!item.querySelector("code")) {
+          const code = Object.assign(document.createElement("code"), { textContent: url });
+          item.append(code);
+        }
+        button.textContent = "Copy it below";
+      }
+    });
+    item.append(name, button);
+    el.icsLinks.appendChild(item);
   }
 }
 
@@ -677,6 +785,17 @@ function renderComingSoon() {
   el.comingSoon.textContent = `${lead} ${verb} once they're ready.`;
 }
 
+// A chip's colours: the calendar's own, unless it has quieter ones for chips -
+// Whole School's light grey (--cal-neutral-chip in calendar.css), so the most
+// common events don't drown out a class's colour.
+function chipBackground(colorVar: string) {
+  return `var(${colorVar}-chip, var(${colorVar}))`;
+}
+
+function chipText(colorVar: string) {
+  return `var(${colorVar}-chip-text, var(${colorVar}-text))`;
+}
+
 function buildDayCell(cellDate: Date, { isOtherMonth = false, maxChips = MAX_CHIPS_PER_DAY } = {}) {
   const key = londonDateKey(cellDate);
   const todayKey = londonDateKey(TODAY);
@@ -693,8 +812,8 @@ function buildDayCell(cellDate: Date, { isOtherMonth = false, maxChips = MAX_CHI
   for (const inst of dayEvents.slice(0, maxChips)) {
     const chip = document.createElement("div");
     chip.className = "cal-chip";
-    chip.style.background = `var(${inst.colorVar})`;
-    chip.style.color = `var(${inst.colorVar}-text)`;
+    chip.style.background = chipBackground(inst.colorVar);
+    chip.style.color = chipText(inst.colorVar);
     chip.textContent = inst.title;
     chip.title = inst.title;
     cell.appendChild(chip);
@@ -775,23 +894,137 @@ function renderDayAgenda() {
   }
 }
 
+// Which colour is which, for the calendars ticked.
+function renderLegend() {
+  el.legend.innerHTML = "";
+  for (const cal of selectedCalendars()) {
+    const item = document.createElement("li");
+    const swatch = Object.assign(document.createElement("span"), { className: "cal-legend-swatch" });
+    swatch.style.background = chipBackground(cal.colorVar);
+    item.append(swatch, displayName(cal));
+    el.legend.appendChild(item);
+  }
+}
+
+// How many weeks the List view shows; "Show more" adds LIST_WEEKS each time.
+let listWeeks = LIST_WEEKS;
+
+function dateFromKey(key: string) {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// The line under an event in the List view: its calendar, then its time, or
+// its days if it runs over several.
+function listMeta(inst: Instance) {
+  let when;
+  if (inst.dayKeys.length > 1) {
+    when = `${formatShortDate(dateFromKey(inst.dayKeys[0]))} – ${formatShortDate(dateFromKey(inst.dayKeys[inst.dayKeys.length - 1]))}`;
+  } else if (inst.allDay) {
+    when = "All day";
+  } else {
+    when = `${LONDON_TIME_FMT.format(inst.startJs)}–${LONDON_TIME_FMT.format(inst.endJs)}`;
+  }
+  return `${inst.calendarLabel} · ${when}`;
+}
+
+// The List view: the coming weeks' events, by day, from today. An event over
+// several days is listed once, on its first day still to come. Tapping one
+// opens that day, as in the grid.
+function renderList() {
+  el.list.innerHTML = "";
+  const todayKey = londonDateKey(TODAY);
+  const endKey = londonDateKey(addDays(TODAY, listWeeks * 7));
+  const keys = [...dayIndex.keys()].filter((k) => k >= todayKey && k < endKey).sort();
+  const listed = new Set<Instance>();
+  let shown = 0;
+
+  for (const key of keys) {
+    const dayEvents = (dayIndex.get(key) || []).filter((inst) => toggleState[inst.code]);
+    const fresh = dayEvents.filter((inst) => !listed.has(inst));
+    if (fresh.length === 0) continue;
+    fresh.forEach((inst) => listed.add(inst));
+    const date = dateFromKey(key);
+
+    const day = document.createElement("div");
+    day.className = "cal-list-day";
+    const when = document.createElement("div");
+    when.className = "cal-list-date";
+    when.append(
+      Object.assign(document.createElement("span"), { className: "cal-list-weekday", textContent: WEEKDAYS_SHORT[date.getDay()] }),
+      Object.assign(document.createElement("span"), { className: "cal-list-daynum", textContent: String(date.getDate()) }),
+      Object.assign(document.createElement("span"), { className: "cal-list-month", textContent: MONTHS_SHORT[date.getMonth()] })
+    );
+    if (key === todayKey) when.append(Object.assign(document.createElement("span"), { className: "cal-list-today", textContent: "Today" }));
+
+    const items = document.createElement("div");
+    items.className = "cal-list-items";
+    for (const inst of fresh) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "cal-list-item";
+      button.style.setProperty("--dot-color", chipBackground(inst.colorVar));
+      const text = document.createElement("span");
+      text.className = "cal-list-text";
+      text.append(
+        Object.assign(document.createElement("span"), { className: "cal-list-title", textContent: inst.title }),
+        Object.assign(document.createElement("span"), { className: "cal-list-meta", textContent: listMeta(inst) })
+      );
+      button.append(Object.assign(document.createElement("span"), { className: "cal-list-dot" }), text);
+      button.addEventListener("click", () => openDayDialog(date, dayEvents));
+      items.appendChild(button);
+    }
+    day.append(when, items);
+    el.list.appendChild(day);
+    shown++;
+  }
+
+  if (shown === 0) {
+    const empty = document.createElement("p");
+    empty.className = "howto";
+    empty.textContent = selectedCalendars().length
+      ? `Nothing in the next ${listWeeks} weeks for the calendars you've picked.`
+      : "Tick a calendar above to see its events.";
+    el.list.appendChild(empty);
+  }
+  if (londonDateKey(addDays(TODAY, listWeeks * 7)) < icalDateKey(WINDOW_END)) {
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "cal-list-more";
+    more.textContent = "Show more";
+    more.addEventListener("click", () => {
+      listWeeks += LIST_WEEKS;
+      render();
+    });
+    el.list.appendChild(more);
+  }
+}
+
+// What the previous/next buttons step by, for their labels.
+const VIEW_UNIT: Record<View, string> = { list: "", month: "month", week: "week", day: "day" };
+
 function render() {
-  if (currentView === "month") {
+  el.grid.hidden = currentView === "list" || currentView === "day";
+  el.dayAgenda.hidden = currentView !== "day";
+  el.list.hidden = currentView !== "list";
+  // The List view always starts today, so there's nothing to step through.
+  el.navDates.hidden = currentView === "list";
+  el.prevButton.setAttribute("aria-label", `Previous ${VIEW_UNIT[currentView]}`);
+  el.nextButton.setAttribute("aria-label", `Next ${VIEW_UNIT[currentView]}`);
+  if (currentView === "list") {
+    el.monthLabel.textContent = "Coming up";
+    renderList();
+  } else if (currentView === "month") {
     el.monthLabel.textContent = MONTH_LABEL_FMT.format(viewedDate);
-    el.grid.hidden = false;
-    el.dayAgenda.hidden = true;
     renderMonthGrid();
   } else if (currentView === "week") {
     el.monthLabel.textContent = formatWeekLabel(viewedDate);
-    el.grid.hidden = false;
-    el.dayAgenda.hidden = true;
     renderWeekGrid();
   } else {
     el.monthLabel.textContent = formatDayLabel(viewedDate);
-    el.grid.hidden = true;
-    el.dayAgenda.hidden = false;
     renderDayAgenda();
   }
+  renderLegend();
 }
 
 // One event: time column, then title / calendar / location / description / link, with
@@ -800,7 +1033,7 @@ function render() {
 function renderEventRow(inst: Instance) {
   const row = document.createElement("article");
   row.className = "day-event";
-  row.style.setProperty("--event-color", `var(${inst.colorVar})`);
+  row.style.setProperty("--event-color", chipBackground(inst.colorVar));
 
   const time = document.createElement("div");
   time.className = "day-event-time";
@@ -881,6 +1114,7 @@ function updateViewButtonStyles() {
 // from the current anchor (which would land on the week containing the
 // 1st of the month instead).
 function isTodayInView() {
+  if (currentView === "list") return true;
   if (currentView === "month") {
     return TODAY.getFullYear() === viewedDate.getFullYear() && TODAY.getMonth() === viewedDate.getMonth();
   }
@@ -888,6 +1122,32 @@ function isTodayInView() {
     return TODAY >= viewedDate && TODAY < addDays(viewedDate, 7);
   }
   return londonDateKey(TODAY) === londonDateKey(viewedDate);
+}
+
+function switchView(newView: View) {
+  if (newView === currentView) return;
+  const referenceDate = isTodayInView() ? TODAY : viewedDate;
+  viewedDate = normalizeAnchor(referenceDate, newView === "list" ? "day" : newView);
+  currentView = newView;
+  saveView(currentView);
+  updateViewButtonStyles();
+  render();
+}
+
+// "How to show them" and other links to a Help question open its answer.
+function openHelpFromLinks() {
+  const open = () => {
+    const target = window.location.hash && document.getElementById(window.location.hash.slice(1));
+    if (target instanceof HTMLDetailsElement) target.open = true;
+  };
+  window.addEventListener("hashchange", open);
+  // The same link tapped twice changes no hash, so open on the tap too.
+  document.addEventListener("click", (e) => {
+    const link = (e.target as Element).closest<HTMLAnchorElement>('a[href^="#"]');
+    const target = link && document.getElementById(link.hash.slice(1));
+    if (target instanceof HTMLDetailsElement) target.open = true;
+  });
+  open();
 }
 
 function shiftAnchor(delta: number) {
@@ -923,14 +1183,15 @@ async function loadAllCalendarData() {
 
 async function handleRefresh() {
   el.refreshButton.disabled = true;
-  const originalText = el.refreshButton.textContent;
-  el.refreshButton.textContent = "Refreshing…";
+  el.refreshButton.classList.add("is-busy");
+  el.refreshButton.setAttribute("aria-label", "Refreshing events");
   el.error.hidden = true;
 
   const { failures } = await loadAllCalendarData();
 
   el.refreshButton.disabled = false;
-  el.refreshButton.textContent = originalText;
+  el.refreshButton.classList.remove("is-busy");
+  el.refreshButton.setAttribute("aria-label", "Refresh events");
 
   if (failures === ALL_CALENDARS.length) {
     el.error.textContent = "Couldn't refresh - try again.";
@@ -946,10 +1207,13 @@ async function handleRefresh() {
 
 async function init() {
   renderTiles();
+  renderPickHint();
   renderComingSoon();
+  renderPlatformChoice();
   renderAddActions();
   renderIcsLinks();
   updateViewButtonStyles();
+  openHelpFromLinks();
 
   el.prevButton.addEventListener("click", () => shiftAnchor(-1));
   el.nextButton.addEventListener("click", () => shiftAnchor(1));
@@ -959,20 +1223,16 @@ async function init() {
   });
   el.refreshButton.addEventListener("click", handleRefresh);
   // Delegated, since renderAddActions() rebuilds these links on every tick.
-  for (const container of [el.addButtons, el.addList, el.icsLinks]) {
-    container?.addEventListener("click", countClick);
+  for (const container of [el.addList, el.icsLinks]) {
+    container.addEventListener("click", countClick);
   }
+  // A phone turned to landscape, or a window narrowed, past the point where
+  // Week makes sense: go to List.
+  NARROW.addEventListener("change", () => {
+    if (NARROW.matches && currentView === "week") switchView("list");
+  });
   for (const btn of el.viewButtons) {
-    btn.addEventListener("click", () => {
-      const newView = btn.dataset.view as View;
-      if (newView === currentView) return;
-      const referenceDate = isTodayInView() ? TODAY : viewedDate;
-      viewedDate = normalizeAnchor(referenceDate, newView);
-      currentView = newView;
-      saveView(currentView);
-      updateViewButtonStyles();
-      render();
-    });
+    btn.addEventListener("click", () => switchView(btn.dataset.view as View));
   }
   el.dialogClose.addEventListener("click", () => el.dialog.close());
   // A click on the backdrop lands on the <dialog> itself, not on its

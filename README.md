@@ -50,14 +50,15 @@ since a parent only ever gets them from the one whole-school calendar.
 
 **All 16 calendars are always generated and published**, regardless of
 what's launched on the landing page. `docs/index.html` has no per-calendar
-markup: `docs/assets/calendar.ts` renders one rail row per code in
-`LAUNCHED_CALENDARS` (a preview checkbox), three platform buttons (Apple
-Calendar / Google Calendar / Outlook) that add whichever calendars are
-ticked - one feed per click, so several ticked fan out to a list - plus
-plain feed links in the facts strip, all with URLs derived from wherever
-the page is served, and names the rest in a one-line "coming soon" note.
-Currently launched:
-Whole School, FOSPS and Reception (`rec-a`/`rec-b`). To launch a calendar, add its `code`
+markup: `docs/assets/calendar.ts` renders, for each code in
+`LAUNCHED_CALENDARS`, a row to tick in step 1 (which also shows its events
+in the preview) and, once ticked, a row in step 2's checklist with an "Add
+to <app>" link for the app picked there (Apple Calendar / Google Calendar /
+Outlook - one feed per link, since an app only takes one subscription per
+tap). Help lists each feed's plain address with a Copy button, for other
+apps. All URLs are derived from wherever the page is served, and anything
+not launched is named in a one-line "coming soon" note. All 16 calendars
+are launched now. To launch a calendar, add its `code`
 to `LAUNCHED_CALENDARS` - no other change needed, the `.ics` file has been
 there the whole time.
 

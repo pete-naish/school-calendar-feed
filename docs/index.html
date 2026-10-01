@@ -30,6 +30,7 @@
       --button-bg-hover: #383838;
       --button-fg: #ffffff;
       --focus: #0070f3;
+      --success: #1a7a3c;
       --page-max: 1120px;
       --gutter: clamp(1rem, 4vw, 2.5rem);
       --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -49,6 +50,7 @@
         --button-bg-hover: #cccccc;
         --button-fg: #0a0a0a;
         --focus: #52a8ff;
+        --success: #6bd48f;
       }
     }
     :root[data-theme="dark"] {
@@ -62,6 +64,7 @@
         --button-bg-hover: #cccccc;
         --button-fg: #0a0a0a;
         --focus: #52a8ff;
+        --success: #6bd48f;
       }
 
     :root[data-theme="light"] { color-scheme: light; }
@@ -118,12 +121,11 @@
 
     /* --- Opening: the claim, then the live calendar beneath. --- */
     .hero { padding: clamp(3rem, 6vw, 4.5rem) 0 0; }
-    .hero-copy > * + * { margin-top: var(--s6); }
     .hero-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); }
     .eyebrow { font-size: 0.9375rem; font-weight: 500; color: var(--muted); }
     .theme-toggle {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 2rem; height: 2rem; border: 0; border-radius: 6px;
+      width: 2.75rem; height: 2.75rem; margin-right: -0.6rem; border: 0; border-radius: 8px;
       background: transparent; color: var(--muted); cursor: pointer;
       transition: background-color 150ms ease, color 150ms ease;
     }
@@ -137,22 +139,41 @@
       :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: block; }
       :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: none; }
     }
-    .eyebrow img { width: auto; height: 1.75rem; }
-    .hero-copy .hero-top + h1 { margin-top: var(--s4); }
-    .hero-copy .lede { margin-top: var(--s5); }
+    .hero-top + h1 { margin-top: var(--s4); }
+    .hero .lede { margin-top: var(--s5); }
+    main > section + section, main > dialog + section { margin-top: var(--s16); }
+    main { margin-top: var(--s12); }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-    .facts {
+    /* --- Help: a short intro, then questions that open to their answers. --- */
+    .help {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: var(--s6);
-      margin: var(--s12) 0 0;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      gap: var(--s10);
+      padding-top: var(--s10);
+      border-top: 1px solid var(--border);
     }
-    .facts > div { min-width: 0; }
-    .facts dt { font-size: 0.8125rem; line-height: 1.4; color: var(--muted); margin: 0 0 var(--s1, 0.25rem); }
-    .facts dd { font-size: 0.875rem; line-height: 1.5; margin: 0; text-wrap: pretty; overflow-wrap: break-word; }
-    @media (max-width: 900px) { .facts { grid-template-columns: 1fr; gap: var(--s5); max-width: 40rem; } }
-    @media (max-width: 560px) { .facts { grid-template-columns: 1fr; gap: var(--s5); } }
-    .hero .cal-card { margin-top: var(--s16); }
+    .help-intro { display: grid; gap: var(--s2); align-content: start; }
+    .help-intro h2 { font-size: 1.375rem; letter-spacing: -0.02em; }
+    .help-intro p { color: var(--muted); font-size: 0.9375rem; text-wrap: pretty; }
+    .help-list details { border-bottom: 1px solid var(--border); }
+    .help-list details:first-child { border-top: 1px solid var(--border); }
+    .help-list summary {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--s4);
+      min-height: 3.5rem; padding: var(--s2) 0;
+      font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; list-style: none;
+    }
+    .help-list summary::-webkit-details-marker { display: none; }
+    .help-list summary::after {
+      content: ""; flex: none; width: 0.55rem; height: 0.55rem; margin-right: 0.25rem;
+      border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+      transform: rotate(45deg) translateY(-2px); transition: transform 150ms ease;
+    }
+    .help-list details[open] summary::after { transform: rotate(-135deg) translateY(-2px); }
+    .help-list summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .help-list details > p { margin: 0 0 var(--s4); color: var(--fg); text-wrap: pretty; max-width: 62ch; }
+    .help-list details > ul { margin: 0 0 var(--s5); }
+    @media (max-width: 800px) { .help { grid-template-columns: 1fr; gap: var(--s5); } }
 
     footer { padding: var(--s16) 0 var(--s12); color: var(--muted); font-size: 0.875rem; }
     footer p { max-width: 56ch; text-wrap: pretty; }
@@ -165,79 +186,106 @@
 <body>
   <div class="wrap">
     <header class="hero">
-      <div class="grid">
-        <div class="hero-copy col-12">
-          <div class="hero-top">
-            <p class="eyebrow">St Paul's C of E Primary, Enfield</p>
-            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
-              <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-              <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            </button>
-          </div>
-          <h1>School dates, straight into your family calendar.</h1>
-          <p class="lede">Subscribe to your child's class once and new school dates appear automatically alongside your family plans. No copying, no missed updates.</p>
-        </div>
+      <div class="hero-top">
+        <p class="eyebrow">St Paul's C of E Primary, Enfield</p>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
+          <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
       </div>
-
-      <div class="cal-card" id="calendars" aria-labelledby="calendars-heading" role="region">
-        <aside class="cal-rail">
-          <h2 id="calendars-heading" class="label">1. Pick your calendars</h2>
-          <p class="howto cal-rail-note">Most parents pick <span class="cal-highlight">Whole School</span>, <span class="cal-highlight">FOSPS</span> and their child's class calendar.</p>
-          <div id="calendar-toggles" class="cal-tiles"></div>
-          <p id="calendar-add-label" class="label">2. Choose your calendar app</p>
-          <div class="cal-add-group">
-            <p id="calendar-add-hint" class="howto cal-rail-note"></p>
-            <div id="calendar-add" class="cal-add-buttons" aria-labelledby="calendar-add-label"></div>
-            <ul id="calendar-add-list" class="cal-add-list" hidden></ul>
-            <p id="calendar-add-google" class="howto cal-rail-note" hidden>Using Google Calendar? New calendars can be hidden on your phone at first. <a href="#google-phone">How to show them</a></p>
-          </div>
-          <p id="coming-soon" class="cal-rail-note" hidden></p>
-        </aside>
-
-        <div class="cal-main">
-          <div class="cal-nav">
-            <div class="cal-nav-dates">
-              <button id="cal-prev" aria-label="Previous" type="button">&lsaquo;</button>
-              <span id="cal-month-label" aria-live="polite"></span>
-              <button id="cal-next" aria-label="Next" type="button">&rsaquo;</button>
-              <button id="cal-today" type="button">Today</button>
-            </div>
-            <div class="cal-nav-tools">
-              <div class="cal-view-switch" role="group" aria-label="Calendar view">
-                <button type="button" class="view-button" data-view="month">Month</button>
-                <button type="button" class="view-button" data-view="week">Week</button>
-                <button type="button" class="view-button" data-view="day">Day</button>
-              </div>
-              <button id="cal-refresh" aria-label="Refresh events" type="button">&#8635; Refresh</button>
-            </div>
-          </div>
-
-          <div class="cal-card-body">
-            <p id="calendar-loading" class="howto cal-status">Loading events…</p>
-            <p id="calendar-error" class="howto cal-status" hidden></p>
-            <div id="calendar-grid" class="cal-grid"></div>
-            <div id="calendar-day-agenda" class="cal-day-agenda" hidden></div>
-          </div>
-        </div>
-
-        <dialog id="day-dialog" aria-labelledby="day-dialog-title">
-          <div class="day-dialog-head">
-            <h3 id="day-dialog-title"></h3>
-            <button id="day-dialog-close" type="button" aria-label="Close">&times;</button>
-          </div>
-          <div id="day-dialog-events" class="day-events"></div>
-        </dialog>
-      </div>
+      <h1>School dates, straight into your family calendar.</h1>
+      <p class="lede">Pick your calendars once and new school dates appear in your own calendar app automatically. No copying, no missed updates.</p>
     </header>
 
     <main>
-      <dl class="facts">
-        <div><dt>Source</dt><dd>
-          Whole School events are copied from the school's <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1">public calendar</a> every six hours. Class Reps add the class events. Free to use, and we're only human, so double-check anything important against info sent by the school.</dd></div>
-        <div><dt>Adding a calendar</dt><dd>Tap Apple Calendar, Google Calendar or Outlook above, then confirm when your calendar app asks. After that, new dates appear automatically — no need to check back or repeat this.</dd></div>
-        <div id="google-phone"><dt>Google Calendar on your phone</dt><dd>Calendars added on a computer can be hidden on your phone at first. In the Google Calendar app, open the menu (&#9776;) and tick each St Paul's calendar. On Android, if one still doesn't show, go to Settings, tap the calendar and turn on Sync. Using iPhone's own Calendar app with a Google account? Open <a href="https://calendar.google.com/calendar/syncselect">Google's sync settings</a> and tick the calendars there.</dd></div>
-        <div><dt>Other apps, or nothing happened?</dt><dd>If tapping your app above did nothing on your phone, try opening this page in your phone's default browser (Safari on iPhone, Chrome on Android). Using a different calendar app, or still stuck? Copy one of these addresses and paste it wherever your app offers to "subscribe by URL" or "add calendar from internet": <span id="ics-links"></span></dd></div>
-      </dl>
+      <section class="subscribe" id="calendars" aria-labelledby="subscribe-heading">
+        <h2 id="subscribe-heading" class="visually-hidden">Subscribe to the calendars</h2>
+        <div class="subscribe-pick">
+          <h3 class="step-title">1. Pick your calendars</h3>
+          <p id="pick-hint" class="step-hint">Tick each calendar you want, then add them in step 2.</p>
+          <div id="calendar-toggles" class="cal-tiles"></div>
+          <p id="coming-soon" class="step-hint" hidden></p>
+        </div>
+        <div class="subscribe-add">
+          <h3 class="step-title">2. Add them to your calendar app</h3>
+          <p id="app-question" class="step-hint">Which app do you use?</p>
+          <div id="platform-choice" class="app-choice" role="group" aria-labelledby="app-question"></div>
+          <div id="add-progress" class="add-progress" hidden>
+            <div class="add-progress-text"><span>Add each one</span><span id="add-progress-count" role="status"></span></div>
+            <div class="add-progress-bar" aria-hidden="true"><div id="add-progress-fill"></div></div>
+          </div>
+          <ul id="calendar-add-list" class="add-list"></ul>
+          <p id="calendar-add-hint" class="step-hint"></p>
+          <p id="calendar-add-google" class="step-hint" hidden>Google Calendar on a phone can hide new calendars at first. <a href="#google-phone">How to show them</a></p>
+        </div>
+      </section>
+
+      <section class="preview" aria-labelledby="cal-month-label">
+        <div class="cal-nav">
+          <h2 id="cal-month-label" class="preview-title" aria-live="polite"></h2>
+          <div id="cal-nav-dates" class="cal-nav-dates">
+            <button id="cal-prev" class="icon-button" type="button" aria-label="Previous month">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+            </button>
+            <button id="cal-today" type="button">Today</button>
+            <button id="cal-next" class="icon-button" type="button" aria-label="Next month">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+          </div>
+          <div class="cal-view-switch" role="group" aria-label="Calendar view">
+            <button type="button" class="view-button" data-view="list">List</button>
+            <button type="button" class="view-button" data-view="month">Month</button>
+            <button type="button" class="view-button view-button--wide" data-view="week">Week</button>
+            <button type="button" class="view-button" data-view="day">Day</button>
+          </div>
+          <button id="cal-refresh" class="icon-button cal-refresh" type="button" aria-label="Refresh events" title="Refresh events">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+          </button>
+        </div>
+
+        <div class="cal-card-body">
+          <p id="calendar-loading" class="howto cal-status">Loading events…</p>
+          <p id="calendar-error" class="howto cal-status" hidden></p>
+          <div id="calendar-grid" class="cal-grid"></div>
+          <div id="calendar-day-agenda" class="cal-day-agenda" hidden></div>
+          <div id="calendar-list" class="cal-list" hidden></div>
+        </div>
+        <ul id="calendar-legend" class="cal-legend" aria-label="Colours"></ul>
+      </section>
+
+      <dialog id="day-dialog" aria-labelledby="day-dialog-title">
+        <div class="day-dialog-head">
+          <h3 id="day-dialog-title"></h3>
+          <button id="day-dialog-close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <div id="day-dialog-events" class="day-events"></div>
+      </dialog>
+
+      <section class="help" id="help" aria-labelledby="help-heading">
+        <div class="help-intro">
+          <h2 id="help-heading">Help</h2>
+          <p>Whole School dates are copied from the school's <a href="https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&amp;pid=3&amp;viewid=1">public calendar</a> every six hours, and class reps add class events. It's free to use, and we're only human, so double-check anything important against what the school sends.</p>
+        </div>
+        <div class="help-list">
+          <details id="google-phone">
+            <summary>Google Calendar: the new calendars aren't on my phone</summary>
+            <p>Calendars added on a computer can be hidden on your phone at first. In the Google Calendar app, open the menu (&#9776;) and tick each St Paul's calendar. On Android, if one still doesn't show, go to Settings, tap the calendar and turn on Sync. Using iPhone's own Calendar app with a Google account? Open <a href="https://calendar.google.com/calendar/syncselect">Google's sync settings</a> and tick the calendars there.</p>
+          </details>
+          <details id="nothing-happened">
+            <summary>I tapped my app and nothing happened</summary>
+            <p>Open this page in your phone's own browser (Safari on iPhone, Chrome on Android) and try again. A page opened from inside another app, like WhatsApp, can't always open your calendar app.</p>
+          </details>
+          <details id="other-apps">
+            <summary>I use a different calendar app</summary>
+            <p>Copy a calendar's address and paste it wherever your app offers to "subscribe by URL" or "add calendar from internet". Don't open the address itself: that adds a one-off copy that never updates.</p>
+            <ul id="ics-links" class="copy-list"></ul>
+          </details>
+          <details id="stop-change">
+            <summary>How do I stop or change a calendar?</summary>
+            <p>Remove it from your calendar app's list of calendars (usually called Unsubscribe, Delete or Remove). To switch class, remove the old one, then tick the new class above and add it.</p>
+          </details>
+        </div>
+      </section>
     </main>
 
     <footer>
