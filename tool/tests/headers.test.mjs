@@ -137,3 +137,16 @@ test("the page's scripts and style.css use nothing the CSP would block", () => {
   const css = read("style.css");
   assert.doesNotMatch(css, /@import|url\(\s*["']?(https?:)?\/\//i);
 });
+
+// The same icons as the public page (docs/): favicon.svg (with a dark-mode
+// variant), favicon.ico for browsers that don't take SVG icons, and
+// apple-touch-icon.png for iOS home screens.
+test("every icon index.html links to is in the tool, and they're the public page's", () => {
+  const icons = [...html.matchAll(/<link rel="(?:icon|apple-touch-icon)" href="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(icons.sort(), ["apple-touch-icon.png", "favicon.ico", "favicon.svg"]);
+  for (const icon of icons) {
+    const ours = readFileSync(new URL(`../${icon}`, import.meta.url));
+    const theirs = readFileSync(new URL(`../../docs/${icon}`, import.meta.url));
+    assert.ok(ours.equals(theirs), `${icon} differs from docs/${icon} - copy it across again`);
+  }
+});
