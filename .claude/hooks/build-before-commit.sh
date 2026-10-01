@@ -15,6 +15,29 @@ fi
 cd "$CLAUDE_PROJECT_DIR" || exit 0
 GENERATED=(docs/assets/calendar.js tool/app.js tool/appHelpers.js tool/page/*.js)
 
+# Whether a `git add` in the command itself (which runs after this hook) will
+# stage file $1: it names the file, a folder it's in (tool/page, ./tool/page/),
+# or everything (`.`, or -A/--all with no paths). Other options are skipped.
+added_by_command() {
+  local f=$1 segment arg all paths
+  while read -r segment; do
+    all=0
+    paths=0
+    for arg in $segment; do
+      case $arg in
+        -A | --all) all=1; continue ;;
+        -*) continue ;;
+      esac
+      paths=1
+      arg=${arg#./}
+      arg=${arg%/}
+      [[ $arg == "" || $arg == "." || $f == "$arg" || $f == "$arg"/* ]] && return 0
+    done
+    ((all && !paths)) && return 0
+  done < <(grep -oE '\bgit[[:space:]]+add\b[^;&|]*' <<<"$command" | sed -E 's/^git[[:space:]]+add//')
+  return 1
+}
+
 if ! build_output=$(npm run -s build 2>&1); then
   echo "npm run build failed - fix it before committing or pushing:" >&2
   echo "$build_output" >&2
@@ -29,7 +52,7 @@ if grep -Eq '\bgit\b[^;&|]*[[:space:]]commit\b' <<<"$command"; then
   for f in "${GENERATED[@]}"; do
     # Unchanged and tracked (a new page module's .js must be added too).
     git diff --quiet -- "$f" && [ -z "$(git ls-files --others --exclude-standard -- "$f")" ] && continue
-    grep -Eq "git[[:space:]]+add\b.*(\s|^)(-A|--all|\.|$f)(\s|$|;|&)" <<<"$command" && continue
+    added_by_command "$f" && continue
     stale+=("$f")
   done
   if ((${#stale[@]})); then
