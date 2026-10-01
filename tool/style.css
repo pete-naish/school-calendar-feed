@@ -136,6 +136,21 @@ input::-webkit-date-and-time-value {
   text-align: left;
 }
 
+/* Date and time boxes side by side where there's room, stacked on a phone. */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  column-gap: 0.75rem;
+}
+
+/* The day of the week under a date box (see addWeekdayHints() in app.ts). */
+.weekday {
+  display: block;
+  min-height: 1.3em;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+}
+
 textarea {
   resize: vertical;
   font-family: inherit;
@@ -171,6 +186,11 @@ button.link-button {
   padding: 0;
   margin: 0;
   font-size: 0.85rem;
+}
+
+button.link-button.confirm {
+  color: var(--error);
+  font-weight: 600;
 }
 
 .error {
@@ -220,17 +240,70 @@ button.link-button {
   opacity: 0.85;
 }
 
-.ws-title {
-  margin: 0 0 0.15rem;
-  font-size: 1rem;
+/* A saved event's folded summary: a full-width button over the card, with a
+   triangle that turns when it opens. */
+.card-summary {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  column-gap: 0.3rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
 }
 
-.ws-date {
-  margin: 0 0 0.6rem;
+.card-summary::before {
+  content: "▸";
+  grid-row: 1;
+  color: var(--muted);
 }
 
-.ws-flag {
-  margin: -0.3rem 0 0.6rem;
+.card-summary[aria-expanded="true"]::before {
+  content: "▾";
+}
+
+.card-summary > span {
+  grid-column: 2;
+}
+
+.card-summary-title {
+  font-weight: 600;
+}
+
+.card-summary-when {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.card-summary-tags:empty {
+  display: none;
+}
+
+.card-summary-badges .badge {
+  margin-top: 0.3rem;
+}
+
+.card-summary:not([hidden]) + .card-body {
+  margin-top: 0.4rem;
+}
+
+.ws-shared-note,
+.ws-corrected {
+  margin: 0.4rem 0 0;
+}
+
+.card-unsaved {
+  align-self: center;
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.exceptions-unsaved {
+  margin: 0.4rem 0 0;
+  color: var(--warning);
 }
 
 .badge.badge-warning {

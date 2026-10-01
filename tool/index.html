@@ -80,153 +80,168 @@
 
   <template id="event-card-template">
     <div class="event-card">
-      <label>Title
-        <input type="text" class="field-title" maxlength="200" required>
-      </label>
-      <label class="checkbox-label field-year-group-label" hidden>
-        <input type="checkbox" class="field-year-group">
-        <span class="field-year-group-text"></span>
-      </label>
-      <p class="year-group-note hint" hidden></p>
-      <div class="field-row">
-        <label>Start date
-          <input type="date" class="field-date" required>
+      <button type="button" class="card-summary" aria-expanded="false" hidden>
+        <span class="card-summary-title"></span>
+        <span class="card-summary-when"></span>
+        <span class="card-summary-badges"><span class="card-summary-tags"></span> <span class="badge badge-warning card-summary-unsaved" hidden>Unsaved changes</span></span>
+      </button>
+      <div class="card-body">
+        <label>Title
+          <input type="text" class="field-title" maxlength="200" required>
         </label>
-        <label>End date <span class="optional">(multi-day only)</span>
-          <input type="date" class="field-end-date">
+        <label class="checkbox-label field-year-group-label" hidden>
+          <input type="checkbox" class="field-year-group">
+          <span class="field-year-group-text"></span>
         </label>
-      </div>
-      <div class="field-row">
-        <label>Start time
-          <input type="time" class="field-time">
-        </label>
-        <label>End time
-          <input type="time" class="field-end-time">
-        </label>
-      </div>
-      <div class="field-row">
-        <label>Repeats
-          <select class="field-recurrence">
-            <option value="">Doesn't repeat</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="fortnightly">Every 2 weeks</option>
-            <option value="monthly">Monthly</option>
-          </select>
-        </label>
-        <label class="field-recurrence-until-label" hidden>Repeat until
-          <input type="date" class="field-recurrence-until">
-        </label>
-      </div>
-      <div class="field-exceptions" hidden>
-        <p class="exceptions-label">Exceptions (single-occurrence changes)</p>
-        <div class="exceptions-list"></div>
-        <div class="exception-add-form">
-          <div class="field-row">
-            <label>Occurrence date
-              <input type="date" class="exception-date">
-            </label>
-            <label>Action
-              <select class="exception-action">
-                <option value="cancelled">Cancel this occurrence</option>
-                <option value="moved">Move this occurrence</option>
-              </select>
-            </label>
-          </div>
-          <div class="field-row exception-scope-row" hidden>
-            <label>Applies to
-              <select class="exception-scope"></select>
-            </label>
-          </div>
-          <div class="field-row exception-move-fields" hidden>
-            <label>New date
-              <input type="date" class="exception-new-date">
-            </label>
-            <label>New start time <span class="optional">(optional)</span>
-              <input type="time" class="exception-new-time">
-            </label>
-            <label>New end time <span class="optional">(optional)</span>
-              <input type="time" class="exception-new-end-time">
-            </label>
-          </div>
-          <button type="button" class="secondary-button exception-add-button">+ Add exception</button>
+        <p class="year-group-note hint" hidden></p>
+        <div class="field-row">
+          <label>Start date
+            <input type="date" class="field-date" required>
+          </label>
+          <label>End date <span class="optional">(multi-day only)</span>
+            <input type="date" class="field-end-date">
+          </label>
         </div>
-      </div>
-      <label>Location <span class="optional">(optional)</span>
-        <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
-      </label>
-      <label>Description
-        <textarea class="field-description" rows="2" maxlength="2000"></textarea>
-      </label>
-      <!-- Hidden for now, not removed: readCardFields() still reads it, so saving
-           an event that already has a link keeps that link. -->
-      <label hidden>Link
-        <input type="url" class="field-url" placeholder="https://…">
-      </label>
-      <p class="field-error error" hidden></p>
-      <div class="card-actions">
-        <button type="button" class="card-save-button" hidden>Save changes</button>
-        <button type="button" class="card-remove-button">Remove</button>
+        <div class="field-row">
+          <label>Start time
+            <input type="time" class="field-time">
+          </label>
+          <label>End time
+            <input type="time" class="field-end-time">
+          </label>
+        </div>
+        <div class="field-row">
+          <label>Repeats
+            <select class="field-recurrence">
+              <option value="">Doesn't repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="fortnightly">Every 2 weeks</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </label>
+          <label class="field-recurrence-until-label" hidden>Repeat until
+            <input type="date" class="field-recurrence-until">
+          </label>
+        </div>
+        <div class="field-exceptions" hidden>
+          <p class="exceptions-label">Exceptions (single-occurrence changes)</p>
+          <div class="exceptions-list"></div>
+          <p class="exceptions-unsaved hint" hidden>Not saved yet - press <strong>Save changes</strong> at the bottom of this event.</p>
+          <div class="exception-add-form">
+            <div class="field-row">
+              <label>Occurrence date
+                <input type="date" class="exception-date">
+              </label>
+              <label>Action
+                <select class="exception-action">
+                  <option value="cancelled">Cancel this occurrence</option>
+                  <option value="moved">Move this occurrence</option>
+                </select>
+              </label>
+            </div>
+            <div class="field-row exception-scope-row" hidden>
+              <label>Applies to
+                <select class="exception-scope"></select>
+              </label>
+            </div>
+            <div class="field-row exception-move-fields" hidden>
+              <label>New date
+                <input type="date" class="exception-new-date">
+              </label>
+              <label>New start time <span class="optional">(optional)</span>
+                <input type="time" class="exception-new-time">
+              </label>
+              <label>New end time <span class="optional">(optional)</span>
+                <input type="time" class="exception-new-end-time">
+              </label>
+            </div>
+            <button type="button" class="secondary-button exception-add-button">+ Add exception</button>
+          </div>
+        </div>
+        <label>Location <span class="optional">(optional)</span>
+          <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
+        </label>
+        <label>Description
+          <textarea class="field-description" rows="2" maxlength="2000"></textarea>
+        </label>
+        <!-- Hidden for now, not removed: readCardFields() still reads it, so saving
+             an event that already has a link keeps that link. -->
+        <label hidden>Link
+          <input type="url" class="field-url" placeholder="https://…">
+        </label>
+        <p class="field-error error" hidden></p>
+        <div class="card-actions">
+          <button type="button" class="card-save-button" hidden>Save changes</button>
+          <button type="button" class="card-remove-button">Remove</button>
+          <span class="card-unsaved hint" hidden>Unsaved changes</span>
+        </div>
       </div>
     </div>
   </template>
 
   <template id="whole-school-event-template">
     <div class="event-card whole-school-card">
-      <h4 class="ws-title"></h4>
-      <p class="ws-date hint"></p>
-      <p class="ws-flag hint" hidden><span class="badge">From school calendar</span> <span class="ws-shared-note"></span></p>
-      <p class="ws-corrected hint" hidden><span class="badge badge-warning">Date corrected</span> <span class="ws-corrected-text"></span></p>
-      <label>Location <span class="optional">(optional)</span>
-        <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
-      </label>
-      <label>Description
-        <textarea class="field-description" rows="3" maxlength="2000"></textarea>
-      </label>
-      <p class="field-error error" hidden></p>
-      <div class="card-actions">
-        <button type="button" class="card-save-button">Save changes</button>
-      </div>
-      <!-- Dates are the school's: correcting them is deliberately tucked away,
-           with its own save, so a description edit can never move an event. -->
-      <details class="date-correction" hidden>
-        <summary>School's date or time wrong? Correct it…</summary>
-        <div class="correction-warning">
-          <p><strong>Only use this if the school's calendar is wrong and you're sure of the real date or time.</strong>
-            It changes this event for <span class="correction-audience"></span>. The school's own calendar won't change.</p>
-          <p class="correction-closure" hidden>This is a day school is closed, so recurring class events (PE etc.) will be skipped on the corrected dates instead.</p>
-        </div>
-        <p class="correction-school hint"></p>
-        <div class="field-row correction-all-day" hidden>
-          <label>First day
-            <input type="date" class="correction-start-date">
-          </label>
-          <label>Last day
-            <input type="date" class="correction-end-date">
-          </label>
-        </div>
-        <div class="field-row correction-timed" hidden>
-          <label>Date
-            <input type="date" class="correction-date">
-          </label>
-          <label>Start time
-            <input type="time" class="correction-time">
-          </label>
-          <label>End time
-            <input type="time" class="correction-end-time">
-          </label>
-        </div>
-        <label>How do you know?
-          <input type="text" class="correction-note" maxlength="300" placeholder="e.g. Newsletter 25 Sep says Mon 26 – Fri 30">
+      <button type="button" class="card-summary" aria-expanded="false">
+        <span class="card-summary-title"></span>
+        <span class="card-summary-when"></span>
+        <span class="card-summary-badges"><span class="card-summary-tags"></span> <span class="badge badge-warning card-summary-unsaved" hidden>Unsaved changes</span></span>
+      </button>
+      <div class="card-body">
+        <p class="ws-shared-note hint" hidden></p>
+        <p class="ws-corrected hint" hidden></p>
+        <label>Location <span class="optional">(optional)</span>
+          <input type="text" class="field-location" maxlength="200" placeholder="e.g. School hall">
         </label>
-        <p class="hint">Kept with the change so others can see why. It's public, so no names or contact details.</p>
-        <p class="correction-confirm" hidden></p>
-        <p class="correction-error error" hidden></p>
+        <label>Description
+          <textarea class="field-description" rows="3" maxlength="2000"></textarea>
+        </label>
+        <p class="field-error error" hidden></p>
         <div class="card-actions">
-          <button type="button" class="correction-save-button">Correct date</button>
-          <button type="button" class="secondary-button correction-undo-button" hidden>Go back to the school's date</button>
+          <button type="button" class="card-save-button">Save changes</button>
+          <span class="card-unsaved hint" hidden>Unsaved changes</span>
         </div>
-      </details>
+        <!-- Dates are the school's: correcting them is deliberately tucked away,
+             with its own save, so a description edit can never move an event. -->
+        <details class="date-correction" hidden>
+          <summary>School's date or time wrong? Correct it…</summary>
+          <div class="correction-warning">
+            <p><strong>Only use this if the school's calendar is wrong and you're sure of the real date or time.</strong>
+              It changes this event for <span class="correction-audience"></span>. The school's own calendar won't change.</p>
+            <p class="correction-closure" hidden>This is a day school is closed, so recurring class events (PE etc.) will be skipped on the corrected dates instead.</p>
+          </div>
+          <p class="correction-school hint"></p>
+          <div class="field-row correction-all-day" hidden>
+            <label>First day
+              <input type="date" class="correction-start-date">
+            </label>
+            <label>Last day
+              <input type="date" class="correction-end-date">
+            </label>
+          </div>
+          <div class="field-row correction-timed" hidden>
+            <label>Date
+              <input type="date" class="correction-date">
+            </label>
+            <label>Start time
+              <input type="time" class="correction-time">
+            </label>
+            <label>End time
+              <input type="time" class="correction-end-time">
+            </label>
+          </div>
+          <label>How do you know?
+            <input type="text" class="correction-note" maxlength="300" placeholder="e.g. Newsletter 25 Sep says Mon 26 – Fri 30">
+          </label>
+          <p class="hint">Kept with the change so others can see why. It's public, so no names or contact details.</p>
+          <p class="correction-confirm" hidden></p>
+          <p class="correction-error error" hidden></p>
+          <div class="card-actions">
+            <button type="button" class="correction-save-button">Correct date</button>
+            <button type="button" class="secondary-button correction-undo-button" hidden>Go back to the school's date</button>
+          </div>
+        </details>
+      </div>
     </div>
   </template>
 

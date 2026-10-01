@@ -189,12 +189,29 @@ function init() {
   el.loginButton.addEventListener("click", handleLogin);
   el.switchCalendarButton.addEventListener("click", handleSwitchCalendar);
   el.extractButton.addEventListener("click", handleExtract);
+  el.pasteTextarea.addEventListener("input", updateExtractButtonState);
+  updateExtractButtonState();
   el.addManualCardButton.addEventListener("click", () => addDraftCard(blankEvent()));
   el.saveAllButton.addEventListener("click", handleSaveAll);
   el.weekListButton.addEventListener("click", () => handleWeekList());
   el.weekPrevButton.addEventListener("click", () => handleWeekList(-7));
   el.weekNextButton.addEventListener("click", () => handleWeekList(7));
   el.weekCopyButton.addEventListener("click", handleCopyWeekList);
+  window.addEventListener("beforeunload", (e) => {
+    if (state.calendar && hasUnsavedWork()) e.preventDefault();
+  });
+}
+
+// What switching calendar or leaving the page would lose: pasted text not yet
+// extracted, new events not yet saved, or a saved event with unsaved edits
+// (see setDirty()).
+function hasUnsavedWork() {
+  const text = el.pasteTextarea.value.trim();
+  return (
+    (text !== "" && text !== lastExtractedText) ||
+    el.draftCards.children.length > 0 ||
+    el.appSection.querySelector("[data-dirty]") !== null
+  );
 }
 
 // The year group the signed-in calendar belongs to ({label, classes}), or
@@ -234,9 +251,18 @@ function blankEvent(): DraftEvent {
   return { title: "", date: "", end_date: null, time: null, end_time: null, description: null, location: null, url: null, recurrence: null };
 }
 
+// A same-day end time at or before its start (validate.ts refuses it too). On
+// a multi-day event the end time is on the last day, so anything goes.
+function endsBeforeStart(start: string | null, end: string | null) {
+  return Boolean(start && end && end <= start);
+}
+
 function localValidationError(value: CardValue) {
   if (!value.title || !value.date) return "Title and date are required.";
   if (value.end_date && value.end_date < value.date) return "End date can't be before the start date.";
+  if ((!value.end_date || value.end_date === value.date) && endsBeforeStart(value.time, value.end_time)) {
+    return "The end time must be after the start time.";
+  }
   if (value.recurrence && !value.recurrence.until) return "Repeat until date is required for a repeating event.";
   return null;
 }
@@ -307,11 +333,32 @@ async function handleLogin() {
   }
 }
 
+let switchDisarmTimer: ReturnType<typeof setTimeout> | undefined;
+
+function disarmSwitchCalendar() {
+  clearTimeout(switchDisarmTimer);
+  delete el.switchCalendarButton.dataset.armed;
+  el.switchCalendarButton.classList.remove("confirm");
+  el.switchCalendarButton.textContent = "Switch calendar";
+}
+
+// With unsaved work on the page, the first click says it'll be lost and the
+// second (within a few seconds) switches anyway.
 function handleSwitchCalendar() {
+  if (hasUnsavedWork() && el.switchCalendarButton.dataset.armed !== "1") {
+    el.switchCalendarButton.dataset.armed = "1";
+    el.switchCalendarButton.classList.add("confirm");
+    el.switchCalendarButton.textContent = "Unsaved changes will be lost - click again to switch";
+    switchDisarmTimer = setTimeout(disarmSwitchCalendar, 8000);
+    return;
+  }
+  disarmSwitchCalendar();
   state.calendar = null;
   state.passcode = null;
   el.passcodeInput.value = "";
   el.pasteTextarea.value = "";
+  lastExtractedText = "";
+  updateExtractButtonState();
   el.draftCards.innerHTML = "";
   el.existingCards.innerHTML = "";
   el.pastCards.innerHTML = "";
@@ -330,18 +377,32 @@ function handleSwitchCalendar() {
   updateLoginButtonState();
 }
 
+// The pasted text events were last extracted from (trimmed), and whether an
+// extraction is running. "Extract events" stays disabled until there's text it
+// hasn't already been through, so a second press can't add every event twice.
+let lastExtractedText = "";
+let extracting = false;
+
+function updateExtractButtonState() {
+  const text = el.pasteTextarea.value.trim();
+  el.extractButton.disabled = extracting || !text || text === lastExtractedText;
+}
+
 async function handleExtract() {
   const text = el.pasteTextarea.value;
   if (!text.trim()) return;
 
   el.extractError.hidden = true;
   el.extractLoading.hidden = false;
-  el.extractButton.disabled = true;
+  extracting = true;
+  updateExtractButtonState();
 
   const { ok, data } = await apiCall<ParseResponse>("/api/parse", { calendar: state.calendar, passcode: state.passcode, text });
 
   el.extractLoading.hidden = true;
-  el.extractButton.disabled = false;
+  extracting = false;
+  if (ok && data.events?.length) lastExtractedText = text.trim();
+  updateExtractButtonState();
 
   if (!ok) {
     el.extractError.textContent = (data && data.message) || "Couldn't extract events - try again, or add the event manually below.";
@@ -454,9 +515,12 @@ function getCardExceptions(card: HTMLElement): EventException[] {
   }
 }
 
+// A rep adding or removing one; nothing is stored until "Save changes".
 function setCardExceptions(card: HTMLElement, exceptions: EventException[]) {
   card.dataset.exceptions = JSON.stringify(exceptions);
   renderExceptionsList(card);
+  setDirty(card, true);
+  find(card, ".exceptions-unsaved").hidden = false;
 }
 
 // " (RR only)" for an exception scoped to some of the year's classes; nothing
@@ -471,7 +535,7 @@ function exceptionScopeText(exc: EventException) {
 }
 
 function formatExceptionSummary(exc: EventException) {
-  const fmt = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const fmt = formatDayDate;
   const scope = exceptionScopeText(exc);
   if (exc.action === "cancelled") return `${fmt(exc.date)}: cancelled${scope}`;
   const timeText = exc.new_time ? ` at ${exc.new_time}${exc.new_end_time ? `–${exc.new_end_time}` : ""}` : "";
@@ -554,9 +618,13 @@ function wireExceptionsSection(card: HTMLElement, initialExceptions: EventExcept
   });
 
   find(card, ".exception-add-button").addEventListener("click", () => {
-    if (!dateInput.value) return;
     const errorEl = find(card, ".field-error");
     errorEl.hidden = true;
+    const refuse = (message: string) => {
+      errorEl.textContent = message;
+      errorEl.hidden = false;
+    };
+    if (!dateInput.value) return refuse("Choose the date of the occurrence to change.");
     // Built up field by field; the select only offers "cancelled" and "moved".
     const exception = { date: dateInput.value, action: actionSelect.value } as EventException & {
       new_date?: string;
@@ -565,22 +633,23 @@ function wireExceptionsSection(card: HTMLElement, initialExceptions: EventExcept
     };
     if (!scopeRow.hidden && scopeSelect.value) exception.classes = [scopeSelect.value];
     if (exception.action === "moved") {
-      if (!newDateInput.value) return;
+      if (!newDateInput.value) return refuse("Choose the date to move it to.");
       exception.new_date = newDateInput.value;
       exception.new_time = newTimeInput.value || null;
       exception.new_end_time = newEndTimeInput.value || null;
+      // With no new start it keeps the event's own times (see validate.ts).
+      const start = exception.new_time || find<Field>(card, ".field-time").value || null;
+      const end = exception.new_time ? exception.new_end_time : exception.new_end_time || find<Field>(card, ".field-end-time").value || null;
+      if (endsBeforeStart(start, end)) return refuse("The new end time must be after the start time.");
     }
     const clash = getCardExceptions(card).find((e) => e.date === exception.date && exceptionScopesClash(e, exception));
-    if (clash) {
-      errorEl.textContent = `There's already an exception on that date${exceptionScopeText(clash)} - remove it first to change it.`;
-      errorEl.hidden = false;
-      return;
-    }
+    if (clash) return refuse(`There's already an exception on that date${exceptionScopeText(clash)} - remove it first to change it.`);
     setCardExceptions(card, [...getCardExceptions(card), exception]);
     dateInput.value = "";
     newDateInput.value = "";
     newTimeInput.value = "";
     newEndTimeInput.value = "";
+    refreshWeekdayHints(card);
   });
 }
 
@@ -595,6 +664,120 @@ function wireRecurrenceToggle(card: HTMLElement) {
   sync();
 }
 
+// --- Weekdays under date boxes ----------------------------------------------
+//
+// A date box shows 09/10/2026 but not that it's a Friday, which is how a date
+// that's a day out (easy when "next Thursday" was read from pasted text)
+// gets spotted.
+
+function formatWeekday(iso: string) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long" });
+}
+
+function addWeekdayHints(root: HTMLElement) {
+  for (const input of root.querySelectorAll<HTMLInputElement>('input[type="date"]')) {
+    const hint = document.createElement("span");
+    hint.className = "weekday hint";
+    input.after(hint);
+  }
+  root.addEventListener("input", () => refreshWeekdayHints(root));
+  refreshWeekdayHints(root);
+}
+
+// Also needed after setting a date box's value from code, which fires no event.
+function refreshWeekdayHints(root: HTMLElement) {
+  for (const hint of root.querySelectorAll<HTMLElement>(".weekday")) {
+    const input = hint.previousElementSibling as HTMLInputElement;
+    hint.textContent = input.value ? formatWeekday(input.value) : "";
+  }
+}
+
+// --- Folded saved events ----------------------------------------------------
+//
+// A saved event's card starts folded to a summary line (title, when, badges)
+// so a long list can be scanned; clicking the summary opens the form. Draft
+// cards have no summary and are always open.
+
+function isCardOpen(card: HTMLElement) {
+  return find(card, ".card-summary").getAttribute("aria-expanded") === "true";
+}
+
+function setCardOpen(card: HTMLElement, open: boolean) {
+  find(card, ".card-summary").setAttribute("aria-expanded", String(open));
+  find(card, ".card-body").hidden = !open;
+}
+
+function setupFolding(card: HTMLElement) {
+  const summary = find<HTMLButtonElement>(card, ".card-summary");
+  summary.hidden = false;
+  summary.addEventListener("click", () => setCardOpen(card, !isCardOpen(card)));
+  setCardOpen(card, false);
+}
+
+function setSummary(card: HTMLElement, title: string, when: string, tags: { text: string; warning?: boolean }[]) {
+  find(card, ".card-summary-title").textContent = title || "(No title)";
+  find(card, ".card-summary-when").textContent = when;
+  const container = find(card, ".card-summary-tags");
+  container.innerHTML = "";
+  for (const tag of tags) {
+    const badge = document.createElement("span");
+    badge.className = tag.warning ? "badge badge-warning" : "badge";
+    badge.textContent = tag.text;
+    container.append(badge, " ");
+  }
+}
+
+const RECURRENCE_LABELS: Record<string, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  fortnightly: "Every 2 weeks",
+  monthly: "Monthly",
+};
+
+// "Thu 9 Oct 2026, 15:30–16:30 · Weekly until Thu 17 Dec 2026 · 1 exception"
+function manualEventWhen(event: Omit<CardValue, "year_group">) {
+  let when = event.date ? formatDayDate(event.date) : "No date";
+  if (event.end_date && event.end_date !== event.date) when += ` – ${formatDayDate(event.end_date)}`;
+  if (event.time) when += `, ${event.time}${event.end_time ? `–${event.end_time}` : ""}`;
+  const repeat = RECURRENCE_LABELS[recurrenceToSelectValue(event.recurrence)];
+  if (repeat) when += ` · ${repeat}${event.recurrence?.until ? ` until ${formatDayDate(event.recurrence.until)}` : ""}`;
+  const exceptions = event.exceptions?.length ?? 0;
+  if (exceptions) when += ` · ${exceptions} exception${exceptions === 1 ? "" : "s"}`;
+  return when;
+}
+
+function setManualSummary(card: HTMLElement, event: Omit<CardValue, "year_group">) {
+  const group = currentYearGroup();
+  const tags = card.dataset.shared && group ? [{ text: `All of ${group.label}` }] : [];
+  setSummary(card, event.title, manualEventWhen(event), tags);
+}
+
+// --- Unsaved changes --------------------------------------------------------
+//
+// A saved event's card is marked once a rep edits it, until it's saved: it
+// says so (in the summary too, so it shows while folded), it survives the
+// list reloading after another save, and switching calendar or leaving the
+// page asks first. Typing in the exception or date-correction forms doesn't
+// count - neither changes the event until it's added or saved itself.
+
+function setDirty(card: HTMLElement, dirty: boolean) {
+  if (dirty) card.dataset.dirty = "1";
+  else delete card.dataset.dirty;
+  find(card, ".card-summary-unsaved").hidden = !dirty;
+  find(card, ".card-unsaved").hidden = !dirty;
+  const exceptionsNote = card.querySelector<HTMLElement>(".exceptions-unsaved");
+  if (exceptionsNote && !dirty) exceptionsNote.hidden = true;
+}
+
+function trackChanges(card: HTMLElement) {
+  const onEdit = (e: Event) => {
+    if ((e.target as Element).closest(".exception-add-form, .date-correction")) return;
+    setDirty(card, true);
+  };
+  card.addEventListener("input", onEdit);
+  card.addEventListener("change", onEdit);
+}
+
 function updateDraftControlsVisibility() {
   el.saveAllButton.hidden = el.draftCards.children.length === 0;
 }
@@ -605,6 +788,7 @@ function addDraftCard(event: DraftEvent) {
   wireCardDefaultEndTime(node);
   wireRecurrenceToggle(node);
   setupYearGroupControls(node);
+  addWeekdayHints(node);
   find<HTMLButtonElement>(node, ".card-save-button").hidden = true; // drafts save via "Save all", not individually
   find<HTMLButtonElement>(node, ".card-remove-button").addEventListener("click", () => {
     node.remove();
@@ -666,6 +850,7 @@ async function handleSaveAll() {
   el.saveSuccess.hidden = false;
   el.draftCards.innerHTML = "";
   el.pasteTextarea.value = "";
+  updateExtractButtonState();
   updateDraftControlsVisibility();
 
   const listResult = await apiCall<ListResponse>("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
@@ -737,7 +922,23 @@ function todayIso() {
 // Upcoming events in date order, then past ones newest first in the folded
 // "Past events" section, so the list a rep lands on doesn't fill up with
 // last term's events.
-function renderEventLists<E extends Dated>(events: E[], makeCard: (event: E) => HTMLElement) {
+//
+// On a reload (after saving new events, say) a card with unsaved edits is
+// kept as it is rather than replaced, so the edits aren't lost, and a card
+// that was open stays open.
+function renderEventLists<E extends Dated & { id: string }>(events: E[], makeCard: (event: E) => HTMLElement) {
+  const previous = new Map<string, HTMLElement>();
+  for (const card of [...el.existingCards.children, ...el.pastCards.children] as HTMLElement[]) {
+    if (card.dataset.id) previous.set(card.dataset.id, card);
+  }
+  const cardFor = (event: E) => {
+    const old = previous.get(event.id);
+    if (old?.dataset.dirty) return old;
+    const card = makeCard(event);
+    if (old && isCardOpen(old)) setCardOpen(card, true);
+    return card;
+  };
+
   el.existingLoading.hidden = true;
   el.existingCards.innerHTML = "";
   el.pastCards.innerHTML = "";
@@ -745,9 +946,9 @@ function renderEventLists<E extends Dated>(events: E[], makeCard: (event: E) => 
   const past = [];
   for (const event of events) {
     if (isPastEvent(event, today)) past.push(event);
-    else el.existingCards.appendChild(makeCard(event));
+    else el.existingCards.appendChild(cardFor(event));
   }
-  for (const event of past.reverse()) el.pastCards.appendChild(makeCard(event));
+  for (const event of past.reverse()) el.pastCards.appendChild(cardFor(event));
   updateEventListState();
 }
 
@@ -781,17 +982,22 @@ function renderWholeSchoolEvents(events: SchoolEvent[]) {
 // calendar - and, if the sibling class has it too, as shared with the year.
 function createSchoolEventCard(event: ListedSchoolEvent): HTMLElement {
   const node = el.wholeSchoolCardTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
-  find(node, ".ws-title").textContent = event.title;
-  find(node, ".ws-date").textContent = formatSchoolSpan(event);
+  node.dataset.id = event.id;
   find<Field>(node, ".field-description").value = event.description || "";
   find<Field>(node, ".field-location").value = event.location || "";
 
-  if (event.school_event) {
-    find(node, ".ws-flag").hidden = false;
-    const group = currentYearGroup();
-    if (event.year_group && group) {
-      find(node, ".ws-shared-note").textContent = `Shared with ${yearGroupDescription(group)} - changes apply to every class.`;
-    }
+  const tags = [];
+  if (event.school_event) tags.push({ text: "From school calendar" });
+  if (event.correction) tags.push({ text: "Date corrected", warning: true });
+  setSummary(node, event.title, formatSchoolSpan(event), tags);
+  setupFolding(node);
+  trackChanges(node);
+
+  const group = currentYearGroup();
+  if (event.school_event && event.year_group && group) {
+    const note = find(node, ".ws-shared-note");
+    note.textContent = `Shared with ${yearGroupDescription(group)} - changes apply to every class.`;
+    note.hidden = false;
   }
 
   // What the server last had, to send back only the fields a rep actually
@@ -802,6 +1008,7 @@ function createSchoolEventCard(event: ListedSchoolEvent): HTMLElement {
   const saveButton = find<HTMLButtonElement>(node, ".card-save-button");
   saveButton.addEventListener("click", () => handleUpdateWholeSchoolEvent(node, event.id, saveButton, saved));
   setupDateCorrection(node, event);
+  addWeekdayHints(node);
   return node;
 }
 
@@ -865,10 +1072,11 @@ function setupDateCorrection(card: HTMLElement, event: ListedSchoolEvent) {
 
   const school = event.correction ? event.correction.school : event;
   if (event.correction) {
-    find(card, ".ws-corrected").hidden = false;
-    const was = school ? `School's calendar says ${formatSchoolSpan(school)}.` : "";
+    const was = school ? `Date corrected - the school's calendar says ${formatSchoolSpan(school)}.` : "Date corrected.";
     const why = event.correction.note ? ` Reason: ${event.correction.note}` : "";
-    find(card, ".ws-corrected-text").textContent = `${was}${why}`.trim();
+    const corrected = find(card, ".ws-corrected");
+    corrected.textContent = `${was}${why}`;
+    corrected.hidden = false;
   }
   find(card, ".correction-audience").textContent = correctionAudience(event);
   find(card, ".correction-closure").hidden = !CLOSURE_KEYWORDS.test(event.title);
@@ -997,6 +1205,7 @@ async function submitCorrection(
   status.textContent = "Saved ✓ - the calendars update in a few minutes, and people's calendar apps pick it up on their next refresh.";
   status.hidden = false;
   find<HTMLDetailsElement>(fresh, ".date-correction").open = true;
+  setCardOpen(fresh, true);
   card.replaceWith(fresh);
 }
 
@@ -1024,6 +1233,7 @@ async function handleUpdateWholeSchoolEvent(
 
   const originalText = button.dataset.label || button.textContent;
   if (Object.keys(changes).length === 0) {
+    setDirty(card, false);
     button.textContent = "No changes";
     setTimeout(() => {
       button.textContent = originalText;
@@ -1057,6 +1267,7 @@ async function handleUpdateWholeSchoolEvent(
     return;
   }
   Object.assign(saved, changes);
+  setDirty(card, false);
   button.textContent = "Saved ✓";
   setTimeout(() => {
     button.textContent = originalText;
@@ -1070,11 +1281,17 @@ function renderExistingEvents(events: ClassListedEvent[]) {
 
 function createExistingEventCard(event: ClassListedEvent & { school_event?: undefined }) {
   const node = el.cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
+  node.dataset.id = event.id;
+  if (event.year_group) node.dataset.shared = "1";
   fillCardFields(node, event);
   wireCardDefaultEndTime(node);
   wireRecurrenceToggle(node);
   wireExceptionsSection(node, event.exceptions, { shared: Boolean(event.year_group) });
   setupYearGroupControls(node, { saved: true, shared: Boolean(event.year_group) });
+  addWeekdayHints(node);
+  setManualSummary(node, readCardFields(node));
+  setupFolding(node);
+  trackChanges(node);
 
   const saveButton = find<HTMLButtonElement>(node, ".card-save-button");
   saveButton.hidden = false;
@@ -1122,6 +1339,8 @@ async function handleUpdateExisting(card: HTMLElement, id: string, button: HTMLB
     button.textContent = originalText;
     return;
   }
+  setDirty(card, false);
+  setManualSummary(card, value);
   button.textContent = "Saved ✓";
   setTimeout(() => {
     button.textContent = originalText;

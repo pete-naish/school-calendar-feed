@@ -209,3 +209,35 @@ test("overrideLengthError checks a school event's description and location", () 
   assert.match(overrideLengthError({ description: "x".repeat(LIMITS.description + 1) }), /Description is too long/);
   assert.match(overrideLengthError({ location: "x".repeat(LIMITS.location + 1) }), /Location is too long/);
 });
+
+test("a same-day end time at or before the start time is refused", () => {
+  for (const end_time of ["09:00", "08:30"]) {
+    const result = validateEventInput(event({ time: "09:00", end_time }));
+    assert.equal(result.valid, false, end_time);
+    assert.match(result.error, /end time/);
+  }
+  assert.equal(validateEventInput(event({ time: "09:00", end_time: "10:00" })).valid, true);
+});
+
+test("a multi-day event's end time can be earlier in the day than its start", () => {
+  const result = validateEventInput(event({ end_date: "2026-10-03", time: "15:00", end_time: "11:00" }));
+  assert.equal(result.valid, true);
+});
+
+test("a moved occurrence's end time must be after its start", () => {
+  const recurring = (exc, times = {}) =>
+    event({ ...times, recurrence: { freq: "WEEKLY", interval: 1, until: "2026-12-01" }, exceptions: [exc] });
+  const moved = { date: "2026-10-08", action: "moved", new_date: "2026-10-09" };
+  // A new start and an earlier new end.
+  assert.equal(validateEventInput(recurring({ ...moved, new_time: "14:00", new_end_time: "13:00" })).valid, false);
+  // Only the date and end moved: the end is checked against the event's own start.
+  assert.equal(validateEventInput(recurring({ ...moved, new_end_time: "08:00" }, { time: "09:00", end_time: "10:00" })).valid, false);
+  // A new start with no new end keeps the event's length, so the old end time doesn't count.
+  assert.equal(validateEventInput(recurring({ ...moved, new_time: "14:00" }, { time: "09:00", end_time: "10:00" })).valid, true);
+});
+
+test("an extracted end time before the start time is dropped with a warning", () => {
+  const { events, warnings } = validateExtractedEvents({ events: [event({ time: "15:00", end_time: "09:00" })] });
+  assert.equal(events[0].end_time, null);
+  assert.match(warnings[0], /end time before its start time/);
+});

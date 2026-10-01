@@ -208,6 +208,34 @@ export function overrideLengthError(changes: { description?: string; location?: 
   return lengthError({ description: changes.description, location: changes.location });
 }
 
+// Whether a same-day end time is at or before its start, which the build would
+// publish as an event ending before it begins. On a multi-day event the end
+// time is on the last day, so any time is fine.
+function endsBeforeStart(start: string | null, end: string | null) {
+  return Boolean(start && end && end <= start);
+}
+
+function singleDay(event: { date: string; end_date: string | null }) {
+  return !event.end_date || event.end_date === event.date;
+}
+
+// The first end-before-start time on an event or one of its moved
+// occurrences, as a message, or null. A move with no new start keeps the
+// event's own times (as scripts/build_ics.py does), so its new end is checked
+// against the event's start.
+function timeOrderError(event: EventFields): string | null {
+  if (singleDay(event) && endsBeforeStart(event.time, event.end_time)) {
+    return "The end time must be after the start time";
+  }
+  for (const exc of event.exceptions ?? []) {
+    if (exc.action !== "moved") continue;
+    const start = exc.new_time || event.time;
+    const end = exc.new_time ? exc.new_end_time : exc.new_end_time || event.end_time;
+    if (endsBeforeStart(start, end)) return "A moved occurrence's end time must be after its start time";
+  }
+  return null;
+}
+
 // Validates/repairs the array of events Claude returned from record_events.
 // Drops (rather than fails on) individual bad entries, so a single malformed
 // event doesn't blank out an otherwise-good extraction.
@@ -258,6 +286,10 @@ export function validateExtractedEvents(input: unknown): { events: EventFields[]
       }
     }
     if (event.url && event.url.length > LIMITS.url) event.url = null;
+    if (singleDay(event) && endsBeforeStart(event.time, event.end_time)) {
+      warnings.push(`"${event.title}" had an end time before its start time - ignored`);
+      event.end_time = null;
+    }
     events.push(event);
   }
   return { events, warnings };
@@ -292,5 +324,8 @@ export function validateEventInput(
   const common = commonFields(event, recurrence);
   const tooLong = lengthError({ title, ...common });
   if (tooLong) return { valid: false, error: tooLong };
-  return { valid: true, event: { title, date: event.date, end_date, ...common } };
+  const cleaned: EventFields = { title, date: event.date, end_date, ...common };
+  const timeError = timeOrderError(cleaned);
+  if (timeError) return { valid: false, error: timeError };
+  return { valid: true, event: cleaned };
 }
