@@ -411,6 +411,7 @@ const el = {
   addButtons: document.getElementById("calendar-add"),
   addHint: document.getElementById("calendar-add-hint"),
   addList: byId<HTMLUListElement>("calendar-add-list"),
+  addGoogleNote: document.getElementById("calendar-add-google"),
   icsLinks: document.getElementById("ics-links"),
   grid: byId("calendar-grid"),
   dayAgenda: byId("calendar-day-agenda"),
@@ -634,6 +635,11 @@ function renderAddActions() {
       el.addHint.textContent = "Tap your app below, then subscribe to each calendar separately.";
     }
   }
+
+  // Google Calendar often leaves a calendar added on the web hidden (or, on
+  // Android, unsynced) in its phone app until the parent ticks it there, and
+  // nothing in the cid link can change that. Point at the how-to in the FAQ.
+  if (el.addGoogleNote) el.addGoogleNote.hidden = selected.length === 0;
 }
 
 // Plain https feed addresses for apps not covered by the platform buttons.
