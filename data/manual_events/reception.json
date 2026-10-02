@@ -41,5 +41,57 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "5c759ef54844",
+    "title": "Bring Kitchen Roll Tube for Telescopes",
+    "date": "2026-10-05",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": "Children to bring in a kitchen roll tube to make their own telescopes",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
+  },
+  {
+    "id": "0b24e4954148",
+    "title": "Bring Baby Photo for R.E Lesson",
+    "date": "2026-10-06",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": "Children to bring in a photo of them as a baby for R.E lesson (physical copy to be returned or upload to Tapestry)",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
+  },
+  {
+    "id": "fc8c8a796ce4",
+    "title": "Bring Cut Fruit for Fruit Kebabs",
+    "date": "2026-10-09",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": "Children to bring in cut up fruit (two or three types) in a labelled pot to make fruit kebabs linked to repeating patterns learning",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
+  },
+  {
+    "id": "5fd843e52a43",
+    "title": "World Space Week - Bring Space Themed Items",
+    "date": "2026-10-05",
+    "end_date": "2026-10-09",
+    "time": null,
+    "end_time": null,
+    "description": "Children can bring space themed items (e.g. small world, rockets, books) during the week - items should be labelled with child's name",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
