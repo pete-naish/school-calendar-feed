@@ -2,13 +2,14 @@
 // by hand, and saving the new ("draft") cards together.
 import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic } from "../appHelpers.js";
 import { addWeekdayHints } from "./cardState.js";
+import { formatSchoolSpan } from "./dates.js";
 import { confirmSecondClick, el, find, plural } from "./dom.js";
 import { fillCardFields, localValidationError, readCardFields, setupYearGroupControls, wireCardDefaultEndTime, wireRecurrenceToggle } from "./eventCard.js";
 import { rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
 import { selectTab } from "./tabs.js";
 import { apiCall, state } from "./state.js";
 import type { DraftEvent } from "./state.js";
-import type { ClassListedEvent, ListResponse, ParseResponse, SaveResponse } from "../functions/api/_shared/types.d.ts";
+import type { AlreadyListed, ClassListedEvent, ListResponse, ParseResponse, SaveResponse } from "../functions/api/_shared/types.d.ts";
 
 // "Find events" stays disabled until there's text it hasn't already been
 // through (state.lastExtractedText), so a second press can't add every event
@@ -49,10 +50,18 @@ export async function handleExtract() {
   }
 
   for (const event of data.events || []) {
-    addDraftCard(event, { fromText: true });
+    addDraftCard(event, { fromText: true, alreadyListed: event.already_listed });
   }
   if (data.events?.length) {
-    el.extractStatus.textContent = `Found ${plural(data.events.length, "event")} in this text. Change the text to look again.`;
+    const found = data.events.length;
+    const listed = data.events.filter((e) => e.already_listed).length;
+    const already =
+      listed === 0
+        ? ""
+        : listed === found
+          ? `, ${found === 1 ? "but it's" : `but ${found === 2 ? "both" : "all"} are`} already in the calendar`
+          : ` - ${listed} ${listed === 1 ? "is" : "are"} already in the calendar`;
+    el.extractStatus.textContent = `Found ${plural(found, "event")} in this text${already}. Change the text to look again.`;
     // The new cards are below the paste box - off the screen on a phone - so
     // go to them.
     el.draftsHeading.focus({ preventScroll: true });
@@ -60,23 +69,35 @@ export async function handleExtract() {
   }
 }
 
-// "Save 3 events" - unless it's mid-save or asking "Save anyway".
-function saveAllLabel() {
-  return `Save ${plural(el.draftCards.children.length, "event")}`;
+// The draft cards that will be saved - not ones left out as already in the
+// calendar.
+function savableCards() {
+  return [...el.draftCards.querySelectorAll<HTMLElement>(".event-card:not(.is-already-listed)")];
 }
 
-// The "Check before saving" heading and the save bar show while there are
-// new events to save.
+// "Save 3 events" - unless it's mid-save or asking "Save anyway".
+function saveAllLabel() {
+  return `Save ${plural(savableCards().length, "event")}`;
+}
+
+// The "Check before saving" heading shows while there are draft cards, and
+// the save bar while any of them will be saved.
 export function updateDraftControlsVisibility() {
-  const count = el.draftCards.children.length;
-  el.draftsHeading.hidden = count === 0;
+  const count = savableCards().length;
+  const listed = el.draftCards.children.length - count;
+  el.draftsHeading.hidden = el.draftCards.children.length === 0;
   el.saveBar.hidden = count === 0;
-  el.draftsCount.textContent = `${plural(count, "new event")} to check`;
+  el.draftsCount.textContent = `${plural(count, "new event")} to check${listed ? `, ${listed} already in the calendar` : ""}`;
   if (!el.saveAllButton.disabled && !confirmPublicField(el.saveAllButton).confirm_public) el.saveAllButton.textContent = saveAllLabel();
 }
 
 // `fromText`: read from pasted text, so labelled that way - worth a closer look.
-export function addDraftCard(event: DraftEvent, { fromText = false } = {}) {
+// `alreadyListed`: the event in the calendar it repeats, so it's left out (see
+// markAlreadyListed).
+export function addDraftCard(
+  event: DraftEvent,
+  { fromText = false, alreadyListed }: { fromText?: boolean; alreadyListed?: AlreadyListed } = {}
+) {
   const node = el.cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
   fillCardFields(node, event);
   wireCardDefaultEndTime(node);
@@ -89,21 +110,64 @@ export function addDraftCard(event: DraftEvent, { fromText = false } = {}) {
   find(node, ".card-origin").textContent = fromText ? "New · read from your text" : "New";
   find<HTMLButtonElement>(node, ".card-save-button").hidden = true;
   find<HTMLButtonElement>(node, ".card-remove-button").hidden = true;
-  // A blank card goes straight away; one with something in it (typed, or
-  // read from pasted text) asks first.
+  // A blank card goes straight away, as does one left out as already in the
+  // calendar; one with something in it (typed, or read from pasted text) asks
+  // first.
   const removeButton = find<HTMLButtonElement>(node, ".card-draft-remove");
   removeButton.addEventListener("click", () => {
     const { title, date } = readCardFields(node);
-    if ((title || date) && !confirmSecondClick(removeButton, "Really remove?")) return;
+    const leftOut = node.classList.contains("is-already-listed");
+    if (!leftOut && (title || date) && !confirmSecondClick(removeButton, "Really remove?")) return;
     node.remove();
     updateDraftControlsVisibility();
   });
+  if (alreadyListed) markAlreadyListed(node, alreadyListed);
   el.draftCards.appendChild(node);
   updateDraftControlsVisibility();
 }
 
+// A card for an event the calendar already has (most often a whole-school one
+// a class newsletter repeats - which a rep can't see from their class) is
+// folded away, says what it repeats, and isn't saved unless "Add anyway".
+function markAlreadyListed(node: HTMLElement, listed: AlreadyListed) {
+  const origin = find(node, ".card-origin");
+  const originText = origin.textContent;
+  const body = find(node, ".card-body");
+  node.classList.add("is-already-listed");
+  origin.textContent = "Already in the calendar";
+  origin.classList.add("badge-warning");
+  body.hidden = true;
+
+  const where = listed.source === "whole_school" ? "the Whole School calendar" : "this class's calendar";
+  const note = document.createElement("p");
+  note.className = "card-already-listed";
+  note.append(`This looks like `);
+  const title = document.createElement("strong");
+  title.textContent = listed.title;
+  note.append(title, ` (${formatSchoolSpan(listed)}), already in ${where} - so it won't be saved unless you add it anyway.`);
+
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.className = "secondary-button small-button card-add-anyway";
+  addButton.textContent = "Add anyway";
+  addButton.addEventListener("click", () => {
+    node.classList.remove("is-already-listed");
+    origin.textContent = originText;
+    origin.classList.remove("badge-warning");
+    note.remove();
+    addButton.remove();
+    body.hidden = false;
+    updateDraftControlsVisibility();
+    find<HTMLInputElement>(node, ".field-title").focus();
+  });
+
+  const header = find(node, ".card-draft-header");
+  header.insertBefore(addButton, find(node, ".card-draft-remove"));
+  header.after(note);
+}
+
 export async function handleSaveAll() {
-  const cards = [...el.draftCards.querySelectorAll<HTMLElement>(".event-card")];
+  const cards = savableCards();
   if (cards.length === 0) return;
 
   el.saveError.hidden = true;

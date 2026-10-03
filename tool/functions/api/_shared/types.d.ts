@@ -130,8 +130,21 @@ export interface CalendarsResponse {
   yearGroups: YearGroup[];
 }
 
+// The event already in the calendar that an extracted one repeats (see
+// duplicates.ts). Shown to the rep, never saved.
+export interface AlreadyListed {
+  title: string;
+  date: string;
+  end_date: string;
+  time: string | null;
+  end_time: string | null;
+  source: "whole_school" | "class" | "year_group";
+}
+
+export type ParsedEvent = EventFields & { already_listed?: AlreadyListed };
+
 export interface ParseResponse {
-  events: EventFields[];
+  events: ParsedEvent[];
   warnings: string[];
 }
 

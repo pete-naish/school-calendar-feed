@@ -915,6 +915,20 @@ button:disabled {
   border-bottom: 1px solid var(--border);
 }
 
+/* A draft left out as already in the calendar: folded to its header and a
+   note saying what it repeats. */
+.card-already-listed {
+  margin: 0;
+  padding: 12px 20px;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  font-size: 14px;
+}
+
+.event-card.is-already-listed .card-draft-header {
+  border-bottom: none;
+}
+
 .card-summary:not([hidden]) + .card-draft-header + .card-body,
 .card-summary:not([hidden]) + .card-body {
   border-top: 1px solid var(--border);

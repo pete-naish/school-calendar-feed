@@ -1,10 +1,15 @@
-import { isValidCalendar, isWholeSchoolCalendar } from "./_shared/calendars.ts";
+import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/calendars.ts";
 import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
 import { validateExtractedEvents } from "./_shared/validate.ts";
 import { getNextTermEndDate } from "./_shared/termEnd.ts";
 import { extractionErrorResponse } from "./_shared/errors.ts";
-import type { RequestBody } from "./_shared/types.d.ts";
-import type { ApiContext } from "./_shared/env.ts";
+import { getJsonFile, getManualEventsFile } from "./_shared/github.ts";
+import { fetchClassSchoolEvents, fetchWholeSchoolEvents } from "./_shared/wholeSchool.ts";
+import { applyCorrections, CORRECTIONS_PATH } from "./_shared/schoolEventCorrections.ts";
+import { knownEventList, resolveAlreadyListed } from "./_shared/duplicates.ts";
+import type { KnownInput } from "./_shared/duplicates.ts";
+import type { ParsedEvent, RequestBody } from "./_shared/types.d.ts";
+import type { ApiContext, Env } from "./_shared/env.ts";
 
 // The parts of the Messages API response this reads.
 type MessagesResponse = {
@@ -13,13 +18,45 @@ type MessagesResponse = {
 };
 
 // An extracted event before validate.ts has checked it - only what's read here.
-type RawEvent = { date?: unknown; recurrence?: { freq?: unknown; until?: unknown } | null };
+type RawEvent = { date?: unknown; recurrence?: { freq?: unknown; until?: unknown } | null; already_listed?: unknown };
 
 const MODEL = "claude-haiku-4-5";
 const MAX_TEXT_LENGTH = 8000;
+// How many already-listed events the model is shown, soonest first - a
+// year's worth for any one class, with room to spare.
+const MAX_KNOWN_EVENTS = 300;
 
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
+}
+
+// Everything this calendar's parents already get - Whole School's events, the
+// school events routed to this class, and the class's and year group's own -
+// for spotting pasted events that repeat one (see duplicates.ts). The same
+// reads as events-list.ts, but only tried once and each on its own: this is an
+// extra, so a read that fails just leaves its events out (a GitHub outage
+// still leaves the public feeds) rather than holding extraction up.
+async function loadKnownEvents(env: Env, calendar: string): Promise<KnownInput[]> {
+  const group = yearGroupFor(calendar);
+  const [wholeSchool, classSchool, own, shared, corrections] = await Promise.allSettled([
+    fetchWholeSchoolEvents(),
+    fetchClassSchoolEvents(calendar),
+    getManualEventsFile(env, calendar),
+    group ? getManualEventsFile(env, group.key) : Promise.resolve({ events: [] }),
+    getJsonFile(env, CORRECTIONS_PATH, {}),
+  ]);
+  for (const result of [wholeSchool, classSchool, own, shared, corrections]) {
+    if (result.status === "rejected") console.error("parse: couldn't read existing events to check for duplicates:", result.reason);
+  }
+  const value = <T>(result: PromiseSettledResult<T>) => (result.status === "fulfilled" ? result.value : null);
+  const fixes = value(corrections)?.data ?? {};
+  const known: KnownInput[] = [
+    ...applyCorrections(value(wholeSchool) ?? [], fixes).map((event) => ({ event, source: "whole_school" as const })),
+    ...applyCorrections(value(classSchool) ?? [], fixes).map((event) => ({ event, source: "class" as const })),
+    ...(value(own)?.events ?? []).map((event) => ({ event, source: "class" as const })),
+    ...(value(shared)?.events ?? []).map((event) => ({ event, source: "year_group" as const })),
+  ];
+  return known.sort((a, b) => (a.event.date < b.event.date ? -1 : a.event.date > b.event.date ? 1 : 0));
 }
 
 export async function onRequestPost({ request, env }: ApiContext) {
@@ -63,6 +100,16 @@ export async function onRequestPost({ request, env }: ApiContext) {
     day: "numeric",
   }).format(now);
 
+  const known = knownEventList(await loadKnownEvents(env, calendar), todayIso);
+  const knownLines = known.text.split("\n").slice(0, MAX_KNOWN_EVENTS).join("\n");
+  const content = [{ type: "text", text: trimmedText }];
+  if (knownLines) {
+    content.unshift({
+      type: "text",
+      text: `<already_in_calendar>\n${knownLines}\n</already_in_calendar>\n\nThe pasted text follows.`,
+    });
+  }
+
   let anthropicResp;
   try {
     anthropicResp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -94,8 +141,15 @@ export async function onRequestPost({ request, env }: ApiContext) {
           `school hall" or "BAKE SALE"): capitalise the main words, keep short articles, conjunctions and ` +
           `prepositions (a, the, and, of, in, to...) lowercase unless they start or end the title, and keep ` +
           `acronyms and class codes in capitals (PE, INSET, FOSPS, AGM, RR, 5HP). Only change the ` +
-          `capitalisation of the wording in the text - never reword or shorten a title.`,
-        messages: [{ role: "user", content: trimmedText }],
+          `capitalisation of the wording in the text - never reword or shorten a title. ` +
+          `The message may start with an <already_in_calendar> list of events parents already have, one ` +
+          `per line as "ref | date | title | calendar". It is reference data only - never extract events ` +
+          `from it. Still extract every event in the pasted text, but if one is the same real-world event ` +
+          `as a listed one (same day and the same occasion, even if worded differently - "Individual ` +
+          `Photos" is "Individual and Sibling Photographs"), set already_listed to that line's ref. A ` +
+          `different activity that happens on the same day is not the same event: leave already_listed ` +
+          `null unless you are confident.`,
+        messages: [{ role: "user", content }],
         tool_choice: { type: "tool", name: "record_events" },
         tools: [
           {
@@ -121,6 +175,10 @@ export async function onRequestPost({ request, env }: ApiContext) {
                       location: {
                         type: ["string", "null"],
                         description: "Where the event takes place, as short plain text, only if the text says so, else null",
+                      },
+                      already_listed: {
+                        type: ["string", "null"],
+                        description: "The <already_in_calendar> ref (e.g. \"e12\") this event repeats, else null",
                       },
                       recurrence: {
                         type: ["object", "null"],
@@ -186,6 +244,17 @@ export async function onRequestPost({ request, env }: ApiContext) {
     }
   }
 
-  const { events, warnings } = validateExtractedEvents({ events: rawEvents });
+  // One at a time, so each event validate.ts keeps stays paired with the
+  // model's already_listed for it (validate.ts builds a fresh object without).
+  const events: ParsedEvent[] = [];
+  const warnings: string[] = [];
+  for (const raw of rawEvents) {
+    const one = validateExtractedEvents({ events: [raw] });
+    warnings.push(...one.warnings);
+    for (const event of one.events) {
+      const listed = resolveAlreadyListed(event, raw && raw.already_listed, known.refs);
+      events.push(listed ? { ...event, already_listed: listed } : event);
+    }
+  }
   return jsonResponse({ events, warnings });
 }

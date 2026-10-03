@@ -96,6 +96,14 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
     (keeping acronyms, class codes and anything already capitalised as they
     are - it never lowercases an ALL-CAPS title, since it can't tell a shouted
     heading from an acronym). Titles a rep types or edits are left as written.
+    The model is also given the calendar's upcoming events: Whole School's,
+    the school events routed to this class, and the class's and year
+    group's own. It marks any pasted event that repeats one of them, even if
+    worded differently. A class rep can't see Whole School's events, and
+    class newsletters often repeat them. `_shared/duplicates.ts` keeps a mark
+    only if the two events share a day. A marked draft is folded away with
+    an "Already in the calendar" note and isn't saved unless the rep clicks
+    **Add anyway**. If those reads fail, extraction goes ahead without them.
     Nothing is persisted at this step.
   - `save.ts` - bulk-creates the reviewed events (from `parse.ts`, or typed
     in manually). On a class calendar a draft can be ticked **"Add to all of

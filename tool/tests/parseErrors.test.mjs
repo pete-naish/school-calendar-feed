@@ -68,14 +68,19 @@ test("a response with no events tool call gets the same generic message", async 
 });
 
 test("a good extraction still comes back with its events", async () => {
-  globalThis.fetch = async () =>
-    new Response(
+  // The existing-events reads find nothing (no manual events on GitHub, empty
+  // published feeds), as for a calendar with no events yet.
+  globalThis.fetch = async (url) => {
+    if (String(url).startsWith("https://api.github.com")) return new Response("", { status: 404 });
+    if (String(url).endsWith(".ics")) return new Response("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n");
+    return new Response(
       JSON.stringify({
         stop_reason: "tool_use",
         content: [{ type: "tool_use", name: "record_events", input: { events: [{ title: "bake sale", date: "2026-10-01" }] } }],
       }),
       { status: 200 }
     );
+  };
   const resp = await extract();
   assert.equal(resp.status, 200);
   const { events } = await resp.json();
