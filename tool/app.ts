@@ -19,7 +19,7 @@ import { el } from "./page/dom.js";
 import { addDraftCard, handleExtract, handleSaveAll, updateExtractButtonState } from "./page/drafts.js";
 import { blankEvent, handleUndoDelete } from "./page/eventCard.js";
 import { wireEventFilters, wireSchoolNotice } from "./page/eventList.js";
-import { handleLogin, handleSwitchCalendar, hasUnsavedWork, loadCalendars, restoreSession, updateLoginButtonState } from "./page/login.js";
+import { handleLogin, handleLogout, hasUnsavedWork, loadCalendars, restoreSession, updateLoginButtonState } from "./page/login.js";
 import { state } from "./page/state.js";
 import { wireTabs } from "./page/tabs.js";
 import { handleCopyWeekList, handleWeekList } from "./page/weekList.js";
@@ -34,7 +34,7 @@ function init() {
     if (e.key === "Enter" && !el.loginButton.disabled) handleLogin();
   });
   el.loginButton.addEventListener("click", handleLogin);
-  el.switchCalendarButton.addEventListener("click", handleSwitchCalendar);
+  el.logoutButton.addEventListener("click", handleLogout);
   el.extractButton.addEventListener("click", handleExtract);
   el.pasteTextarea.addEventListener("input", updateExtractButtonState);
   updateExtractButtonState();

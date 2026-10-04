@@ -56,7 +56,7 @@ function fillCalendarPicker() {
 //
 // The calendar and passcode are kept for the tab (sessionStorage), so a
 // refresh doesn't mean looking the passcode up again; closing the tab or
-// "Switch calendar" forgets them. The last calendar picked is remembered
+// "Log out" forgets them. The last calendar picked is remembered
 // (localStorage, no passcode) to preselect it next time. The passcode box also
 // lets a password manager save it, with the calendar as its username. The tab
 // that was open is remembered for the tab too (tabs.ts), so a refresh comes
@@ -164,9 +164,9 @@ export function hasUnsavedWork() {
 }
 
 // With unsaved work on the page, the first click says it'll be lost.
-export function handleSwitchCalendar() {
-  if (hasUnsavedWork() && !confirmSecondClick(el.switchCalendarButton, "Unsaved changes will be lost - click again to switch")) return;
-  resetConfirm(el.switchCalendarButton);
+export function handleLogout() {
+  if (hasUnsavedWork() && !confirmSecondClick(el.logoutButton, "Unsaved changes will be lost - click again to log out")) return;
+  resetConfirm(el.logoutButton);
   storageSet(sessionStorage, SESSION_KEY, null);
   forgetTab();
   state.calendar = null;

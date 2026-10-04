@@ -25,7 +25,7 @@ export const el = {
     tabWeek: byId("tab-week"),
     existingSection: byId("existing-section"),
     weekSection: byId("week-section"),
-    switchCalendarButton: byId("switch-calendar-button"),
+    logoutButton: byId("logout-button"),
     wholeSchoolNotice: byId("whole-school-notice"),
     addSection: byId("add-section"),
     wholeSchoolCardTemplate: byId("whole-school-event-template"),

@@ -31,7 +31,7 @@ export const el = {
   tabWeek: byId<HTMLButtonElement>("tab-week"),
   existingSection: byId("existing-section"),
   weekSection: byId("week-section"),
-  switchCalendarButton: byId<HTMLButtonElement>("switch-calendar-button"),
+  logoutButton: byId<HTMLButtonElement>("logout-button"),
   wholeSchoolNotice: byId("whole-school-notice"),
   addSection: byId("add-section"),
   wholeSchoolCardTemplate: byId<HTMLTemplateElement>("whole-school-event-template"),

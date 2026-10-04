@@ -525,6 +525,24 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.logout-link {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--link);
+  font-weight: 500;
+}
+
+.logout-link:hover {
+  text-decoration: underline;
+}
+
+.logout-link.confirm {
+  color: var(--error);
+}
+
 .calendar-heading-text {
   flex-grow: 1;
   display: flex;
