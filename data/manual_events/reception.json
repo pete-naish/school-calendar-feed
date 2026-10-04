@@ -93,18 +93,5 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
-  },
-  {
-    "id": "f817f9a55e91",
-    "title": "Coffee morning",
-    "date": "2026-10-16",
-    "end_date": null,
-    "time": "09:00",
-    "end_time": "10:00",
-    "description": "Chance for RR parents to meet/catch up, share tips etc.! (Organised by class rep, not a school event.)",
-    "location": "TBC- a cafe near The Green",
-    "url": null,
-    "recurrence": null,
-    "exceptions": []
   }
 ]
