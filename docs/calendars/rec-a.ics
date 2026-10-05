@@ -63,6 +63,7 @@ DTSTART:20260907T080000Z
 DTEND:20260907T105000Z
 DTSTAMP:20261005T124711Z
 UID:stpauls-849@school-calendar-feed
+CREATED:20261005T232351Z
 LAST-MODIFIED:20261005T124711Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=849
@@ -73,6 +74,7 @@ DTSTART:20260910T080000Z
 DTEND:20260910T123000Z
 DTSTAMP:20261005T124711Z
 UID:stpauls-852@school-calendar-feed
+CREATED:20261005T232351Z
 LAST-MODIFIED:20261005T124711Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=852
@@ -83,6 +85,7 @@ DTSTART:20260911T080000Z
 DTEND:20260911T123000Z
 DTSTAMP:20261005T124711Z
 UID:stpauls-853@school-calendar-feed
+CREATED:20261005T232351Z
 LAST-MODIFIED:20261005T124711Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=853
@@ -93,6 +96,7 @@ DTSTART:20260914T080000Z
 DTEND:20260914T123000Z
 DTSTAMP:20261005T124711Z
 UID:stpauls-854@school-calendar-feed
+CREATED:20261005T232351Z
 LAST-MODIFIED:20261005T124711Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=854
@@ -103,6 +107,7 @@ DTSTART:20260917T074500Z
 DTEND:20260917T142000Z
 DTSTAMP:20261005T124711Z
 UID:stpauls-856@school-calendar-feed
+CREATED:20261005T232351Z
 LAST-MODIFIED:20261005T124711Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=856
@@ -113,6 +118,7 @@ DTSTART:20260930T133000Z
 DTEND:20260930T140500Z
 DTSTAMP:20261005T124711Z
 UID:stpauls-861@school-calendar-feed
+CREATED:20261005T232351Z
 DESCRIPTION:Reception will be walking to St Paul’s Church with staff for
   their first church service. Parents/carers invited to attend church.\n\nC
  hildren will be collected directly from the church at the end of the servi
@@ -129,6 +135,7 @@ DTSTART;TZID=Europe/London:20261016T090000
 DTEND;TZID=Europe/London:20261016T100000
 DTSTAMP:20261005T124711Z
 UID:manual-603600bd2475@school-calendar-feed
+CREATED:20261005T232351Z
 DESCRIPTION:Chance for RR parents to meet/catch up\, share tips etc.! (Org
  anised by class rep\, not a school event.)
 LAST-MODIFIED:20261005T124711Z
@@ -142,6 +149,7 @@ DTSTAMP:20261005T124711Z
 UID:manual-972a9f578853@school-calendar-feed
 RRULE:FREQ=WEEKLY;UNTIL=20270128;INTERVAL=1
 EXDATE;VALUE=DATE:20261022,20261029,20261224,20261231
+CREATED:20261005T232351Z
 LAST-MODIFIED:20261005T124711Z
 END:VEVENT
 BEGIN:VEVENT
@@ -150,6 +158,7 @@ DTSTART;TZID=Europe/London:20261002T193000
 DTEND;TZID=Europe/London:20261002T233000
 DTSTAMP:20261005T124711Z
 UID:manual-212eb1c1e278@school-calendar-feed
+CREATED:20261005T232351Z
 LAST-MODIFIED:20261005T124711Z
 LOCATION:The King's Head\, 1 The Green\, N21 1BB
 END:VEVENT
@@ -159,6 +168,7 @@ DTSTART;VALUE=DATE:20260930
 DTEND;VALUE=DATE:20261001
 DTSTAMP:20261005T124711Z
 UID:manual-85b8964dbdd5@school-calendar-feed
+CREATED:20261005T232351Z
 DESCRIPTION:Bring vegetables such as carrots\, cabbages\, broccoli\, small
   pumpkins and leeks for the Harvest learning topic. We will only need a fe
  w of each vegetable for each class.
@@ -170,6 +180,7 @@ DTSTART;VALUE=DATE:20261005
 DTEND;VALUE=DATE:20261006
 DTSTAMP:20261005T124711Z
 UID:manual-5c759ef54844@school-calendar-feed
+CREATED:20261005T232351Z
 DESCRIPTION:Children to bring in a kitchen roll tube to make their own tel
  escopes
 LAST-MODIFIED:20261005T124711Z
@@ -180,6 +191,7 @@ DTSTART;VALUE=DATE:20261006
 DTEND;VALUE=DATE:20261007
 DTSTAMP:20261005T124711Z
 UID:manual-0b24e4954148@school-calendar-feed
+CREATED:20261005T232351Z
 DESCRIPTION:Children to bring in a photo of them as a baby for R.E lesson 
  (physical copy to be returned or upload to Tapestry)
 LAST-MODIFIED:20261005T124711Z
@@ -190,6 +202,7 @@ DTSTART;VALUE=DATE:20261009
 DTEND;VALUE=DATE:20261010
 DTSTAMP:20261005T124711Z
 UID:manual-fc8c8a796ce4@school-calendar-feed
+CREATED:20261005T232351Z
 DESCRIPTION:Children to bring in cut up fruit (two or three types) in a la
  belled pot to make fruit kebabs linked to repeating patterns learning
 LAST-MODIFIED:20261005T124711Z
@@ -200,6 +213,7 @@ DTSTART;VALUE=DATE:20261005
 DTEND;VALUE=DATE:20261010
 DTSTAMP:20261005T124711Z
 UID:manual-5fd843e52a43@school-calendar-feed
+CREATED:20261005T232351Z
 DESCRIPTION:Children can bring space themed items (e.g. small world\, rock
  ets\, books) during the week - items should be labelled with child's name
 LAST-MODIFIED:20261005T124711Z
