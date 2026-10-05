@@ -1226,6 +1226,14 @@ button:disabled {
     padding-top: 20px;
   }
 
+  /* iOS Safari zooms the page into any control under 16px when it's focused,
+     pushing the header off the screen. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
   .calendar-heading h1 {
     font-size: 26px;
   }
