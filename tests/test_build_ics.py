@@ -891,3 +891,156 @@ def test_hand_written_and_unknown_corrections_left_alone():
 def test_load_school_event_corrections_missing_file_returns_empty(tmp_path, monkeypatch):
     monkeypatch.setattr(build_ics, "SCHOOL_EVENT_CORRECTIONS_PATH", tmp_path / "missing.json")
     assert build_ics.load_school_event_corrections() == {}
+
+
+# --------------------------------------------------------------------------
+# Change tracking: stable CREATED / LAST-MODIFIED / DTSTAMP, and the
+# calendars/changes.json log behind the public page's "Recently changed".
+# --------------------------------------------------------------------------
+
+def _school_event(id_, title, start, all_day=True):
+    return {"id": id_, "title": title, "allDay": all_day, "start": start}
+
+
+class _Site:
+    """Runs main() repeatedly against the same output folder, with whatever
+    school feed and manual events each run is given."""
+
+    def __init__(self, tmp_path, monkeypatch):
+        self.dir = tmp_path / "calendars"
+        self.manual = tmp_path / "manual"
+        self.manual.mkdir()
+        overrides = tmp_path / "overrides.json"
+        overrides.write_text("{}")
+        monkeypatch.setattr(build_ics, "WHOLE_SCHOOL_OVERRIDES_PATH", overrides)
+        monkeypatch.setattr(build_ics, "SCHOOL_EVENT_CORRECTIONS_PATH", tmp_path / "corrections.json")
+        monkeypatch.setattr(build_ics, "CALENDARS_DIR", self.dir)
+        monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", self.manual)
+        self.monkeypatch = monkeypatch
+
+    def build(self, school=(), manual=None):
+        self.monkeypatch.setattr(build_ics, "fetch_events", lambda: list(school))
+        for name, events in (manual or {}).items():
+            (self.manual / f"{name}.json").write_text(json.dumps(events))
+        build_ics.main()
+        return {f.name: f.read_bytes() for f in self.dir.glob("*.ics")}
+
+    def changes(self):
+        return json.loads((self.dir / "changes.json").read_text())["changes"]
+
+
+TRIP = {"id": "trip", "title": "Trip", "date": "2030-03-05", "time": "09:00", "end_time": "15:00"}
+PE = {"id": "pe", "title": "PE", "date": "2030-03-04",
+      "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2030-04-29"}}
+
+
+def test_a_build_with_nothing_changed_writes_identical_feeds_and_logs_nothing(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    school = [_school_event(1, "Inset Day", "2030-03-01")]
+    first = site.build(school, {"y5-b": [TRIP]})
+    assert site.build(school) == first
+    assert site.changes() == []
+
+
+def test_the_first_build_is_the_baseline_and_logs_nothing(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    site.build([_school_event(1, "Inset Day", "2030-03-01")], {"y5-b": [TRIP]})
+    assert site.changes() == []
+    event = _events_by_uid(Calendar.from_ical((site.dir / "y5-b.ics").read_bytes()))["manual-trip@school-calendar-feed"]
+    assert event["created"].dt == event["last-modified"].dt == event["dtstamp"].dt
+
+
+def test_an_unchanged_event_keeps_its_timestamps_and_a_changed_one_gets_new_ones(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    site.build(manual={"y5-b": [TRIP, {**PE, "id": "other", "date": "2030-03-06", "recurrence": None}]})
+    stamp = lambda: _events_by_uid(Calendar.from_ical((site.dir / "y5-b.ics").read_bytes()))  # noqa: E731
+    # Back-date what's published, so "now" is visibly later.
+    path = site.dir / "y5-b.ics"
+    path.write_bytes(path.read_bytes().replace(b":2026", b":2020").replace(b":2027", b":2020"))
+    before = stamp()
+    site.build(manual={"y5-b": [{**TRIP, "location": "Museum"}, {**PE, "id": "other", "date": "2030-03-06", "recurrence": None}]})
+    after = stamp()
+    trip, other = "manual-trip@school-calendar-feed", "manual-other@school-calendar-feed"
+    assert after[other]["last-modified"].dt == before[other]["last-modified"].dt
+    assert after[trip]["created"].dt == before[trip]["created"].dt
+    assert after[trip]["last-modified"].dt > before[trip]["last-modified"].dt
+    assert site.changes() == []  # a location edit isn't logged
+
+
+def test_moved_added_and_cancelled_events_are_logged(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    gone = {"id": "gone", "title": "Cake Sale", "date": "2030-03-10"}
+    site.build([_school_event(1, "Inset Day", "2030-03-01")], {"y5-b": [TRIP, gone]})
+    site.build(
+        [_school_event(1, "Inset Day", "2030-03-02"), _school_event(2, "Year 5 Assembly", "2030-03-07")],
+        {"y5-b": [{**TRIP, "date": "2030-03-06"}]},
+    )
+    got = {(c["calendar"], c["kind"], c["title"]): c for c in site.changes()}
+    assert got[("whole-school", "moved", "Inset Day")]["old_start"] == "2030-03-01"
+    assert got[("whole-school", "moved", "Inset Day")]["start"] == "2030-03-02"
+    trip = got[("y5-b", "moved", "Trip")]
+    assert (trip["old_start"], trip["start"], trip["all_day"]) == ("2030-03-05T09:00", "2030-03-06T09:00", False)
+    assert ("y5-a", "added", "Year 5 Assembly") in got and ("y5-b", "added", "Year 5 Assembly") in got
+    assert got[("y5-b", "cancelled", "Cake Sale")]["start"] == "2030-03-10"
+    assert len(got) == 5
+
+
+def test_past_events_coming_and_going_arent_logged(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    site.build(manual={"y5-b": [{**TRIP, "date": "2020-03-05"}]})
+    site.build(manual={"y5-b": [{"id": "old", "title": "Old", "date": "2020-01-01"}]})
+    assert site.changes() == []
+
+
+def test_a_skipped_week_and_a_moved_week_of_a_repeat_are_logged_once_each(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    site.build(manual={"y5-b": [PE]})
+    exceptions = [{"date": "2030-03-11", "action": "cancelled"},
+                  {"date": "2030-03-18", "action": "moved", "new_date": "2030-03-19"}]
+    site.build(manual={"y5-b": [{**PE, "exceptions": exceptions}]})
+    got = sorted((c["kind"], c.get("dates"), c.get("old_start"), c["start"]) for c in site.changes())
+    assert got == [("moved", None, "2030-03-18", "2030-03-19"), ("skipped", ["2030-03-11"], None, "2030-03-04")]
+
+
+def test_a_new_closure_day_shows_as_a_skipped_week(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    site.build(manual={"y5-b": [PE]})
+    site.build([_school_event(1, "Inset Day", "2030-03-25")], {"y5-b": [PE]})
+    assert [(c["kind"], c.get("dates")) for c in site.changes() if c["calendar"] == "y5-b"] == [("skipped", ["2030-03-25"])]
+
+
+def test_undoing_a_move_isnt_a_cancellation(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    moved = [{"date": "2030-03-18", "action": "moved", "new_date": "2030-03-19"}]
+    site.build(manual={"y5-b": [{**PE, "exceptions": moved}]})
+    site.build(manual={"y5-b": [PE]})
+    assert [c["kind"] for c in site.changes()] == []
+
+
+def test_a_relabel_alone_isnt_a_change(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    site.build(manual={"y5-b": [TRIP]})
+    monkeypatch.setitem(build_ics.CLASS_LABEL, "y5-b", "5Z")
+    site.build(manual={"y5-b": [TRIP]})
+    assert site.changes() == []
+
+
+def test_entries_older_than_the_log_window_are_dropped(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    site.build(manual={"y5-b": [TRIP]})
+    old = {"calendar": "y5-b", "uid": "x", "kind": "added", "at": "2000-01-01T00:00:00Z",
+           "title": "Ancient", "start": "2000-01-02", "all_day": True}
+    (site.dir / "changes.json").write_text(json.dumps({"changes": [old]}))
+    site.build(manual={"y5-b": [TRIP]})
+    assert site.changes() == []
+
+
+def test_change_tracking_failing_still_publishes_every_feed(tmp_path, monkeypatch, capsys):
+    site = _Site(tmp_path, monkeypatch)
+    def boom(*args):
+        raise RuntimeError("tracking broke")
+    monkeypatch.setattr(build_ics, "track_changes", boom)
+    feeds = site.build(manual={"y5-b": [TRIP]})
+    assert len(feeds) == 16
+    assert b"DTSTAMP" in feeds["y5-b.ics"]
+    assert "couldn't track changes" in capsys.readouterr().err

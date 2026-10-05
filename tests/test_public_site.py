@@ -232,3 +232,26 @@ def test_every_linked_icon_exists():
         assert (DOCS / icon).is_file(), f"{icon} is missing"
     assert (DOCS / "favicon.ico").read_bytes()[:4] == b"\x00\x00\x01\x00"
     assert (DOCS / "apple-touch-icon.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+# --- the "Next day off" strip uses the build's and the rep tool's patterns ---
+
+def _js_regex(source: str, name: str) -> tuple[str, str]:
+    match = re.search(rf"const {name} = /(.+?)/([a-z]*);", source)
+    assert match, f"{name} isn't a regex literal any more"
+    return match.group(1), match.group(2)
+
+
+def test_next_day_off_matches_the_closure_days_the_build_skips():
+    pattern, flags = _js_regex(JS, "CLOSURE_PATTERN")
+    assert pattern == build_ics._CLOSURE_KEYWORDS.pattern
+    assert flags == "i" and build_ics._CLOSURE_KEYWORDS.flags & re.IGNORECASE
+
+
+def test_end_of_term_matches_the_rep_tools_term_end():
+    term_end = (DOCS.parent / "tool" / "functions" / "api" / "_shared" / "termEnd.ts").read_text()
+    assert _js_regex(JS, "TERM_END_PATTERN") == _js_regex(term_end, "TERM_END_PATTERN")
+
+
+def test_share_links_can_carry_several_calendars():
+    assert 'param.split(",")' in JS

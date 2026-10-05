@@ -430,10 +430,6 @@ def build_event(
         dtstart, dtend = _parse_timed(raw)
     event.add("dtstart", dtstart)
     event.add("dtend", dtend)
-
-    now = datetime.now(tz=UTC)
-    event.add("dtstamp", now)
-    event.add("last-modified", now)
     return event
 
 
@@ -503,10 +499,6 @@ def _build_moved_exception_event(raw: dict, exception: dict, code: str) -> Event
     dtstart, dtend = _single_day_dtstart_dtend(new_date, new_time, new_end_time, _timed_duration(raw))
     event.add("dtstart", dtstart)
     event.add("dtend", dtend)
-
-    now = datetime.now(tz=UTC)
-    event.add("dtstamp", now)
-    event.add("last-modified", now)
     return event
 
 
@@ -648,9 +640,6 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
             if exc.get("action") == "moved":
                 moved_events.append(_build_moved_exception_event(raw, exc, code))
 
-    now = datetime.now(tz=UTC)
-    event.add("dtstamp", now)
-    event.add("last-modified", now)
     return [event, *moved_events]
 
 
@@ -854,6 +843,199 @@ def make_calendar(name: str, events: list[Event]) -> Calendar:
     return cal
 
 
+# --- Change tracking ---------------------------------------------------------
+#
+# Every event carries CREATED (when a build first published it) and
+# LAST-MODIFIED (when its content last changed), with DTSTAMP the same as
+# LAST-MODIFIED - all carried over from the previously published feed while the
+# event is unchanged. So a build where nothing changed writes byte-identical
+# feeds (and the workflow has nothing to commit), and calendar apps only see an
+# event as modified when it really was.
+#
+# Changes that matter to a parent - an event added, moved or cancelled, a
+# repeat's pattern changing ("repeat"), or days newly skipped from one
+# ("skipped", with their `dates`) - are also logged to
+# calendars/changes.json for the public page's "Recently changed" strip. Only
+# events still to come count; edits to a title, location or description just
+# move LAST-MODIFIED.
+
+CHANGES_FILE = "changes.json"
+CHANGE_LOG_DAYS = 30
+# What a parent would notice, minus the class-label prefix on SUMMARY (so a
+# relabel isn't a change).
+_FINGERPRINT_PROPS = ("SUMMARY", "DTSTART", "DTEND", "RRULE", "EXDATE", "LOCATION", "DESCRIPTION", "URL")
+_WHEN_PROPS = ("DTSTART", "DTEND")
+_REPEAT_PROPS = ("RRULE", "EXDATE")
+# A moved occurrence of a repeating manual event (see
+# _build_moved_exception_event): its UID ends with the original date.
+_MOVED_OCCURRENCE_UID = re.compile(r"^manual-.+-(\d{4}-\d{2}-\d{2})@")
+
+
+def _prop_values(event: Event, name: str) -> list[bytes]:
+    value = event.get(name)
+    if value is None:
+        return []
+    values = value if isinstance(value, list) else [value]
+    out = []
+    for v in values:
+        params = sorted((k, str(p)) for k, p in getattr(v, "params", {}).items())
+        out.append(repr(params).encode() + b"|" + v.to_ical())
+    return out
+
+
+def _event_shape(event: Event, prefix: str) -> dict[str, list[bytes]]:
+    shape = {name: _prop_values(event, name) for name in _FINGERPRINT_PROPS}
+    summary = str(event.get("summary", ""))
+    if prefix and summary.startswith(prefix):
+        summary = summary[len(prefix):]
+    shape["SUMMARY"] = [summary.encode()]
+    return shape
+
+
+def _as_date(value) -> date:
+    return value.astimezone(LONDON).date() if isinstance(value, datetime) else value
+
+
+def _last_day(event: Event) -> date:
+    """The last day an event (or, for a repeat, its series) touches."""
+    rule = event.get("rrule")
+    until = rule.get("UNTIL") if rule else None
+    if until:
+        # A list once parsed back from a feed, a bare value as built.
+        return _as_date(until[0] if isinstance(until, list) else until)
+    end = event.get("dtend") or event.get("dtstart")
+    return _as_date(end.dt)
+
+
+def _start_text(event: Event) -> tuple[str, bool]:
+    """DTSTART as the page wants it: "2026-10-09" for an all-day event,
+    "2026-10-09T09:30" (London) for a timed one."""
+    start = event["dtstart"].dt
+    if isinstance(start, datetime):
+        return start.astimezone(LONDON).strftime("%Y-%m-%dT%H:%M"), False
+    return start.isoformat(), True
+
+
+def _exdates(event: Event) -> set[date]:
+    value = event.get("exdate")
+    if value is None:
+        return set()
+    out = set()
+    for group in value if isinstance(value, list) else [value]:
+        out.update(_as_date(d.dt) for d in group.dts)
+    return out
+
+
+def _read_published(path: Path) -> dict[str, Event] | None:
+    """The events in a previously published feed by UID, or None when there's
+    no usable one (first build of that calendar)."""
+    try:
+        cal = Calendar.from_ical(path.read_bytes())
+    except (OSError, ValueError):
+        return None
+    return {str(e["uid"]): e for e in cal.walk("VEVENT") if "uid" in e}
+
+
+def track_changes(code: str, events: list[Event], old: dict[str, Event] | None, now: datetime) -> list[dict]:
+    """Stamps each event's CREATED / LAST-MODIFIED / DTSTAMP, carrying them over
+    from `old` (the published feed) while unchanged, and returns the change
+    log entries for this calendar."""
+    prefix = class_prefix(code) if code != "whole-school" else ""
+    today = now.astimezone(LONDON).date()
+    stamp = now.replace(microsecond=0)
+    # No feed yet, or one published before this tracking existed (events but
+    # no CREATED): take it as the baseline rather than reporting every event
+    # as new. An empty feed is a real "nothing yet", so its first event counts.
+    baseline = old is None or (bool(old) and not any("created" in e for e in old.values()))
+    changes = []
+    current_uids = {str(e["uid"]) for e in events}
+
+    def entry(kind: str, event: Event, **extra) -> dict:
+        start, all_day = _start_text(event)
+        title = _event_shape(event, prefix)["SUMMARY"][0].decode()
+        return {"calendar": code, "uid": str(event["uid"]), "kind": kind, "at": stamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "title": title, "start": start, "all_day": all_day, **extra}
+
+    for event in events:
+        uid = str(event["uid"])
+        before = (old or {}).get(uid)
+        created = last_modified = stamp
+        if before is not None and "created" in before:
+            created = before["created"].dt
+        if before is not None:
+            old_shape, new_shape = _event_shape(before, prefix), _event_shape(event, prefix)
+            if old_shape == new_shape and "last-modified" in before:
+                last_modified = before["last-modified"].dt
+            elif not baseline and _last_day(event) >= today:
+                if any(old_shape[p] != new_shape[p] for p in _WHEN_PROPS):
+                    changes.append(entry("moved", event, old_start=_start_text(before)[0]))
+                elif old_shape["RRULE"] != new_shape["RRULE"]:
+                    changes.append(entry("repeat", event))
+                else:
+                    # Only the skipped days changed: name the newly skipped
+                    # ones still to come, bar those moved elsewhere (each
+                    # moved occurrence has its own "moved" entry).
+                    skipped = sorted(
+                        d.isoformat() for d in _exdates(event) - _exdates(before)
+                        if d >= today and uid.replace("@", f"-{d.isoformat()}@") not in current_uids
+                    )
+                    if skipped:
+                        changes.append(entry("skipped", event, dates=skipped))
+        elif not baseline and _last_day(event) >= today:
+            moved_from = _MOVED_OCCURRENCE_UID.match(uid)
+            if moved_from:
+                changes.append(entry("moved", event, old_start=moved_from.group(1)))
+            else:
+                changes.append(entry("added", event))
+        event.add("created", created)
+        event.add("last-modified", last_modified)
+        event.add("dtstamp", last_modified)
+
+    if not baseline:
+        for uid, before in old.items():
+            # A moved occurrence disappearing means the move was undone, and
+            # that day is back in the series - not a cancellation.
+            if uid in current_uids or _MOVED_OCCURRENCE_UID.match(uid) or _last_day(before) < today:
+                continue
+            changes.append(entry("cancelled", before))
+    return changes
+
+
+def write_calendar(filename: str, code: str, name: str, events: list[Event], changes: list[dict], now: datetime) -> None:
+    """Writes one feed, stamping and logging changes against what's published now."""
+    path = CALENDARS_DIR / filename
+    try:
+        changes.extend(track_changes(code, events, _read_published(path), now))
+    except Exception as exc:  # noqa: BLE001 - tracking must never stop a feed publishing
+        _note_problem("change_tracking_failed", f"couldn't track changes in {filename}: {exc!r}")
+        for event in events:
+            for prop in ("created", "last-modified", "dtstamp"):
+                event.pop(prop, None)
+                event.add(prop, now.replace(microsecond=0))
+    path.write_bytes(make_calendar(name, events).to_ical())
+
+
+def write_change_log(new_changes: list[dict], now: datetime) -> None:
+    """Adds this build's changes to calendars/changes.json, newest first, and
+    drops entries older than CHANGE_LOG_DAYS. Only rewritten when that changes
+    something, so an idle build leaves it alone."""
+    path = CALENDARS_DIR / CHANGES_FILE
+    try:
+        existing = json.loads(path.read_text()).get("changes", [])
+    except (OSError, ValueError, AttributeError):
+        existing = []
+    cutoff = (now - timedelta(days=CHANGE_LOG_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    kept = [c for c in new_changes + existing if isinstance(c, dict) and str(c.get("at", "")) >= cutoff]
+    kept.sort(key=lambda c: c["at"], reverse=True)
+    text = json.dumps({"changes": kept}, indent=1, ensure_ascii=False) + "\n"
+    try:
+        if path.read_text() == text:
+            return
+    except OSError:
+        pass
+    path.write_text(text)
+
+
 def write_build_report(path: str, calendar_counts: dict[str, int]) -> None:
     """Writes BUILD_PROBLEMS and how many events each calendar got as JSON, for
     scripts/build_report.py. Best-effort: a report that can't be written must
@@ -916,8 +1098,9 @@ def main() -> None:
 
     CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
 
-    cal = make_calendar(f"{SCHOOL_NAME} — Whole School", whole_school_events)
-    (CALENDARS_DIR / "whole-school.ics").write_bytes(cal.to_ical())
+    now = datetime.now(tz=UTC)
+    changes: list[dict] = []
+    write_calendar("whole-school.ics", "whole-school", f"{SCHOOL_NAME} — Whole School", whole_school_events, changes, now)
     calendar_counts["whole-school.ics"] = len(whole_school_events)
     print(f"Wrote {len(whole_school_events)} events to whole-school.ics", file=sys.stderr)
 
@@ -927,16 +1110,19 @@ def main() -> None:
             events = class_events[code] + build_manual_events(
                 load_class_manual_events(code, group["key"]), code, closure_dates
             )
-            cal = make_calendar(f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})", events)
-            (CALENDARS_DIR / f"{code.lower()}.ics").write_bytes(cal.to_ical())
+            name = f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})"
+            write_calendar(f"{code.lower()}.ics", code, name, events, changes, now)
             calendar_counts[f"{code.lower()}.ics"] = len(events)
             print(f"Wrote {len(events)} events to {code.lower()}.ics", file=sys.stderr)
 
     fosps_events = build_manual_events(load_manual_events("fosps"), "fosps", closure_dates)
-    cal = make_calendar(f"{SCHOOL_NAME} — Friends of St Paul's (FOSPS)", fosps_events)
-    (CALENDARS_DIR / "fosps.ics").write_bytes(cal.to_ical())
+    write_calendar("fosps.ics", "fosps", f"{SCHOOL_NAME} — Friends of St Paul's (FOSPS)", fosps_events, changes, now)
     calendar_counts["fosps.ics"] = len(fosps_events)
     print(f"Wrote {len(fosps_events)} events to fosps.ics", file=sys.stderr)
+
+    write_change_log(changes, now)
+    if changes:
+        print(f"Logged {len(changes)} change(s) to {CHANGES_FILE}", file=sys.stderr)
 
     report_path = os.environ.get("BUILD_REPORT_PATH")
     if report_path:

@@ -204,6 +204,13 @@
           <h3 class="step-title">1. Pick your calendars</h3>
           <p id="pick-hint" class="step-hint">Tick each calendar you want, then add them in step 2.</p>
           <div id="calendar-toggles" class="cal-tiles"></div>
+          <div class="share-selection">
+            <button id="share-selection" class="share-selection-button" type="button" hidden>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13"/></svg>
+              Share these calendars
+            </button>
+            <span id="share-selection-status" class="step-hint" role="status"></span>
+          </div>
           <p id="coming-soon" class="step-hint" hidden></p>
         </div>
         <div class="subscribe-add">
@@ -241,9 +248,15 @@
           <button id="cal-refresh" class="icon-button cal-refresh" type="button" aria-label="Refresh events" title="Refresh events">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
           </button>
+          <button id="cal-print" class="icon-button cal-print" type="button" aria-label="Print to the end of term" title="Print to the end of term">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z"/></svg>
+          </button>
         </div>
+        <p id="print-heading" class="print-heading"></p>
 
         <div class="cal-card-body">
+          <div id="cal-dayoff" class="cal-strip cal-dayoff" hidden></div>
+          <div id="cal-changes" class="cal-strip cal-changes" hidden></div>
           <p id="calendar-loading" class="howto cal-status">Loading events…</p>
           <p id="calendar-error" class="howto cal-status" hidden></p>
           <div id="calendar-grid" class="cal-grid"></div>

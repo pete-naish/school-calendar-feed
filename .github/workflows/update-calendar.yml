@@ -60,9 +60,9 @@ jobs:
             git push && exit 0
             # Rejected: the class rep tool (or an earlier run) pushed while
             # this one was building, so the data we built from may be stale.
-            # The .ics files can't be merged (every build stamps them with
-            # the current time, so any two builds conflict), so drop this
-            # build and redo it on top of the new tip.
+            # Rather than merge generated files (the .ics timestamps and
+            # calendars/changes.json are worked out against what's already
+            # published), drop this build and redo it on top of the new tip.
             git fetch origin main
             git reset --hard origin/main
             python scripts/build_ics.py

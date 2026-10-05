@@ -62,6 +62,15 @@ are launched now. To launch a calendar, add its `code`
 to `LAUNCHED_CALENDARS` - no other change needed, the `.ics` file has been
 there the whole time.
 
+A link to the page with `?c=<code>` (e.g. `/?c=rec-a`, or several:
+`/?c=rec-a,y5-a`) ticks those calendars on arrival, alongside whatever that
+browser already has ticked, then drops the parameter from the address bar.
+It's what the class rep tool's Share tab hands reps to post in their class
+WhatsApp group (see [tool/README.md](tool/README.md#share-tab)), and what the
+page's own **Share these calendars** button (under step 1, once a class is
+ticked) builds from a parent's ticks - shared with the phone's share sheet
+where there is one, or copied.
+
 ### How classification works
 
 The API gives no structured "which year/class is this for" field, so
@@ -322,16 +331,66 @@ time using the browser's own `Intl` timezone data (`timeZoneOffsetMs()` /
 `londonWallClockToUtc()`) - verified correct regardless of the viewer's own
 device timezone.
 
+Above the grid, two strips (each hidden when it has nothing to say):
+
+- **Next day off / Term ends** - the next whole-school closure day (the same
+  INSET / HALF TERM / HOLIDAY keywords `build_ics.py` uses to skip repeating
+  class events), run together with any closure days straight after it, weekends
+  included, so INSET days running into half term read as one break; and the
+  next "Last Day of ... Term" (the rep tool's `TERM_END_PATTERN`).
+  `tests/test_public_site.py` keeps the patterns in step. Worked out from the
+  whole-school feed, which is always loaded whether ticked or not.
+- **Recently changed** - for the ticked calendars, the last 14 days of
+  `calendars/changes.json` (see "Change tracking" below): events added, moved
+  or cancelled, and days newly skipped from a repeating one. A year group's
+  event is listed once. Tapping an added or moved one opens its day.
+
+**Print** (the printer icon next to Refresh, or the browser's own Print)
+prints the List view from today to the end of term (12 weeks if no end of term
+is published) for the ticked calendars, under a heading naming them - with
+each event's location, which on screen is in the day's dialog. The page goes
+back to its own view afterwards (`beforeprint` / `afterprint`).
+
+### Change tracking
+
+Every published event carries `CREATED` (the build that first published it)
+and `LAST-MODIFIED` (the last build that changed it), with `DTSTAMP` the same
+as `LAST-MODIFIED`. `write_calendar()` in `build_ics.py` carries them over
+from the already-published feed while an event's content is unchanged (title
+without its class prefix, so a relabel doesn't count; dates; repeat and
+skipped days; location; description; link), so a build where nothing changed
+writes byte-identical feeds - and the workflow has nothing to commit - and
+calendar apps only see an event as modified when it was.
+
+Changes a parent would want to know about are logged to
+`docs/calendars/changes.json` (newest first, kept for 30 days), one entry per
+calendar:
+
+| `kind` | When |
+|---|---|
+| `added` | a new event |
+| `moved` | its date or time changed (`old_start` says from when) - including one week of a repeating event moved by a rep |
+| `cancelled` | an event still to come disappeared |
+| `skipped` | days newly skipped from a repeating event (`dates`) - a rep cancelling a week, or a new closure day |
+| `repeat` | a repeating event's pattern changed |
+
+Only events still to come count; title, location and description edits just
+move `LAST-MODIFIED`. The first build against a feed published before this
+existed (events with no `CREATED`) takes it as the baseline and logs nothing.
+If tracking ever fails, the feeds are still written (stamped with the build
+time) and the failure goes to the build problems issue.
+
 ## How it works
 
 - `.github/workflows/update-calendar.yml` runs `scripts/build_ics.py` every 6
   hours via GitHub Actions - and immediately after any change made through
   the class rep tool - and commits `docs/calendars/*.ics` if anything
   changed (plus `data/whole_school_overrides.json` when stale overrides were
-  pruned, see below). If the push is rejected because something else landed
-  on `main` mid-build (another save from the tool, say), the run discards its
-  build and rebuilds on top of the new tip rather than merging - the `.ics`
-  files carry build timestamps, so two builds always conflict.
+  pruned, see below). An idle build changes nothing (see "Change tracking"),
+  so there's nothing to commit. If the push is rejected because something
+  else landed on `main` mid-build (another save from the tool, say), the run
+  discards its build and rebuilds on top of the new tip rather than merging
+  generated files.
 - The workflows pin each GitHub Action to a commit SHA (with its version in a
   comment) rather than a tag, and `.github/workflows/test.yml` runs with
   read-only permissions. `.github/dependabot.yml` opens a weekly pull request

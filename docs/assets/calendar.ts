@@ -31,6 +31,22 @@ interface Instance {
 }
 
 type View = "list" | "month" | "week" | "day";
+
+// One entry in calendars/changes.json, written by scripts/build_ics.py's
+// track_changes(): `start` is "YYYY-MM-DD" (all-day) or "YYYY-MM-DDTHH:MM"
+// (London), `title` has no class prefix, and a "skipped" entry lists the
+// newly skipped `dates` of a repeating event.
+interface Change {
+  calendar: string;
+  uid: string;
+  kind: "added" | "moved" | "cancelled" | "repeat" | "skipped";
+  at: string;
+  title: string;
+  start: string;
+  all_day: boolean;
+  old_start?: string;
+  dates?: string[];
+}
 type ToggleState = Record<string, boolean>;
 
 // The year groups and their classes come from docs/classes.js - the single
@@ -209,6 +225,31 @@ function loadToggleState(): ToggleState {
     for (const cal of ALL_CALENDARS) state[cal.code] = LAUNCHED_CALENDARS.has(cal.code) && DEFAULT_ON.has(cal.code);
     return state;
   }
+}
+
+// A share link - calendar.nai.sh/?c=rec-a from a class rep (the rep tool's
+// Share tab), or ?c=rec-a,y5-a from another parent's "Share these calendars" -
+// ticks those calendars on arrival. It adds to whatever's already ticked
+// rather than replacing it, so a parent following two reps' links (one per
+// child) ends up with both. The parameter is then dropped from the address
+// bar, so a refresh or a bookmark doesn't keep re-ticking them once they've
+// been unticked. Unknown codes are ignored.
+function applyLinkedCalendars(): Calendar[] {
+  let codes: string[];
+  try {
+    const url = new URL(window.location.href);
+    const param = url.searchParams.get("c");
+    if (param === null) return [];
+    codes = param.split(",").map((c) => c.trim());
+    url.searchParams.delete("c");
+    history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+  } catch {
+    return [];
+  }
+  const cals = ALL_CALENDARS.filter((c) => codes.includes(c.code) && LAUNCHED_CALENDARS.has(c.code));
+  for (const cal of cals) toggleState[cal.code] = true;
+  if (cals.length) saveToggleState(toggleState);
+  return cals;
 }
 
 function saveToggleState(state: ToggleState) {
@@ -474,9 +515,16 @@ const el = {
   dialogTitle: byId("day-dialog-title"),
   dialogEvents: byId("day-dialog-events"),
   dialogClose: byId<HTMLButtonElement>("day-dialog-close"),
+  dayOff: byId("cal-dayoff"),
+  changes: byId("cal-changes"),
+  printButton: byId<HTMLButtonElement>("cal-print"),
+  printHeading: byId("print-heading"),
+  shareButton: byId<HTMLButtonElement>("share-selection"),
+  shareStatus: byId("share-selection-status"),
 };
 
 let toggleState = loadToggleState();
+const linkedCalendars = applyLinkedCalendars();
 const clickedLinks = loadClickedLinks();
 let dayIndex = new Map<string, Instance[]>();
 let currentView = loadView();
@@ -610,6 +658,7 @@ function renderTiles() {
       saveToggleState(toggleState);
       render();
       renderAddActions();
+      renderShareSelection();
     });
     label.classList.toggle("is-on", checkbox.checked);
     label.append(checkbox, tileName(cal));
@@ -620,10 +669,21 @@ function renderTiles() {
 // A returning visitor (or one who's changed the defaults) doesn't need telling
 // what we ticked for them.
 function renderPickHint() {
+  const strong = (text: string) => Object.assign(document.createElement("strong"), { textContent: text });
+  const linked = linkedCalendars.filter((cal) => !DEFAULT_ON.has(cal.code));
+  if (linked.length) {
+    el.pickHint.innerHTML = "";
+    el.pickHint.append("We've ticked ");
+    linked.forEach((cal, i) => {
+      if (i > 0) el.pickHint.append(i === linked.length - 1 ? " and " : ", ");
+      el.pickHint.append(strong(cal.groupLabel ? `${cal.groupLabel} ${cal.label}` : cal.label));
+    });
+    el.pickHint.append(" for you. Tick any others you want, then add them in step 2.");
+    return;
+  }
   const onlyDefaults = displayOrder().every((cal) => toggleState[cal.code] === DEFAULT_ON.has(cal.code));
   if (!onlyDefaults) return;
   el.pickHint.innerHTML = "";
-  const strong = (text: string) => Object.assign(document.createElement("strong"), { textContent: text });
   el.pickHint.append("We've ticked ", strong("Whole School"), " and ", strong("FOSPS"), ". Add your child's class.");
 }
 
@@ -970,6 +1030,10 @@ function renderList() {
         Object.assign(document.createElement("span"), { className: "cal-list-title", textContent: inst.title }),
         Object.assign(document.createElement("span"), { className: "cal-list-meta", textContent: listMeta(inst) })
       );
+      // On screen the place is in the day's dialog; a printout has no dialog.
+      if (inst.location) {
+        text.append(Object.assign(document.createElement("span"), { className: "cal-list-location", textContent: inst.location }));
+      }
       button.append(Object.assign(document.createElement("span"), { className: "cal-list-dot" }), text);
       button.addEventListener("click", () => openDayDialog(date, dayEvents));
       items.appendChild(button);
@@ -1000,6 +1064,290 @@ function renderList() {
   }
 }
 
+// --- Next day off, and the end of term ---
+
+// The same keywords scripts/build_ics.py uses for closure days (its
+// _CLOSURE_KEYWORDS - the days a repeating class event skips), and the rep
+// tool's "Last Day of ... Term" match (TERM_END_PATTERN in
+// tool/functions/api/_shared/termEnd.ts). tests/test_public_site.py keeps the
+// three in step.
+const CLOSURE_PATTERN = /\bINSET\b|\bHALF TERM\b|\bHOLIDAY\b/i;
+const TERM_END_PATTERN = /last day of.*term/i;
+
+// The first whole-school event from today whose title matches `pattern`, and
+// the day it starts (or today, for one already under way). Whole School is
+// always loaded, ticked or not.
+function nextWholeSchool(pattern: RegExp): { inst: Instance; firstKey: string } | null {
+  const todayKey = londonDateKey(TODAY);
+  const keys = [...dayIndex.keys()].filter((k) => k >= todayKey).sort();
+  for (const key of keys) {
+    const inst = (dayIndex.get(key) || []).find((i) => i.code === WHOLE_SCHOOL.code && pattern.test(i.title));
+    if (inst) return { inst, firstKey: key };
+  }
+  return null;
+}
+
+function daysFromToday(key: string) {
+  return Math.round((dateFromKey(key).getTime() - dateFromKey(londonDateKey(TODAY)).getTime()) / 86400000);
+}
+
+function inDays(key: string) {
+  const days = daysFromToday(key);
+  if (days <= 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days < 14) return `in ${days} days`;
+  return `in ${Math.round(days / 7)} weeks`;
+}
+
+function termEndKey() {
+  return nextWholeSchool(TERM_END_PATTERN)?.firstKey ?? null;
+}
+
+// The whole-school closure titles on `key`, if it's a day off.
+function closuresOn(key: string) {
+  return (dayIndex.get(key) || []).filter((i) => i.code === WHOLE_SCHOOL.code && CLOSURE_PATTERN.test(i.title));
+}
+
+// The next run of days off: the first closure day from today, extended over
+// any closure days that follow - with a weekend between them - so INSET days
+// running into half term read as one break ("Wed 21 Oct – Fri 30 Oct"), and
+// the day it ends is the last closure day, not the weekend after it.
+function nextDaysOff(): { firstKey: string; lastKey: string; titles: string[] } | null {
+  const first = nextWholeSchool(CLOSURE_PATTERN);
+  if (!first) return null;
+  const titles = new Set<string>();
+  let lastKey = first.firstKey;
+  let day = dateFromKey(first.firstKey);
+  for (let i = 0; i < 60; i++) {
+    const key = londonDateKey(day);
+    const closures = closuresOn(key);
+    if (closures.length) {
+      closures.forEach((c) => titles.add(c.title));
+      lastKey = key;
+    } else if (day.getDay() !== 0 && day.getDay() !== 6) {
+      break; // a school day
+    }
+    day = addDays(day, 1);
+  }
+  return { firstKey: first.firstKey, lastKey, titles: [...titles] };
+}
+
+// "Next day off: Wed 21 – Fri 30 Oct · INSET Day, then Half Term · in 16 days · Term ends Fri 18 Dec"
+function renderDayOff() {
+  el.dayOff.innerHTML = "";
+  const off = nextDaysOff();
+  const termEnd = termEndKey();
+  el.dayOff.hidden = !off && !termEnd;
+  if (off) {
+    const first = dateFromKey(off.firstKey);
+    const when = off.lastKey !== off.firstKey ? `${formatShortDate(first)} – ${formatShortDate(dateFromKey(off.lastKey))}` : formatShortDate(first);
+    const item = Object.assign(document.createElement("p"), { className: "cal-dayoff-item" });
+    item.append(
+      Object.assign(document.createElement("span"), { className: "cal-strip-label", textContent: "Next day off" }),
+      Object.assign(document.createElement("strong"), { textContent: when }),
+      ` · ${off.titles.join(", then ")} · ${inDays(off.firstKey)}`
+    );
+    el.dayOff.append(item);
+  }
+  if (termEnd) {
+    const item = Object.assign(document.createElement("p"), { className: "cal-dayoff-item" });
+    item.append(
+      Object.assign(document.createElement("span"), { className: "cal-strip-label", textContent: "Term ends" }),
+      Object.assign(document.createElement("strong"), { textContent: formatShortDate(dateFromKey(termEnd)) }),
+      ` · ${inDays(termEnd)}`
+    );
+    el.dayOff.append(item);
+  }
+}
+
+// --- Recently changed ---
+
+// What changes.json says, for the ticked calendars - loaded with the feeds.
+let changes: Change[] = [];
+let showAllChanges = false;
+const CHANGES_DAYS = 14;
+const CHANGES_SHOWN = 5;
+
+async function loadChanges() {
+  try {
+    const resp = await fetch("calendars/changes.json", { cache: "no-cache" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    changes = Array.isArray(data?.changes) ? data.changes.filter((c: Change) => c && typeof c.start === "string" && typeof c.at === "string") : [];
+  } catch (err) {
+    // Not there yet, or unreadable: the strip just doesn't show.
+    console.warn("Couldn't load recent changes:", err);
+    changes = [];
+  }
+}
+
+// "Fri 10 Oct" or "Fri 10 Oct, 09:30"
+function formatChangeDate(start: string, allDay: boolean) {
+  const day = formatShortDate(dateFromKey(start.slice(0, 10)));
+  return allDay || start.length < 16 ? day : `${day}, ${start.slice(11, 16)}`;
+}
+
+function changeText(c: Change) {
+  switch (c.kind) {
+    case "added":
+      return `New · ${formatChangeDate(c.start, c.all_day)}`;
+    case "moved":
+      return c.old_start
+        ? `Moved from ${formatChangeDate(c.old_start, c.all_day)} to ${formatChangeDate(c.start, c.all_day)}`
+        : `Moved to ${formatChangeDate(c.start, c.all_day)}`;
+    case "cancelled":
+      return `Cancelled · ${formatChangeDate(c.start, c.all_day)}`;
+    case "skipped":
+      return `Not on ${(c.dates || []).map((d) => formatShortDate(dateFromKey(d))).join(", ")}`;
+    default:
+      return "Repeat changed";
+  }
+}
+
+function changedAgo(at: string) {
+  const days = Math.floor((Date.now() - new Date(at).getTime()) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
+}
+
+function renderChanges() {
+  el.changes.innerHTML = "";
+  const cutoff = Date.now() - CHANGES_DAYS * 86400000;
+  const seen = new Set<string>();
+  const relevant = changes
+    .filter((c) => toggleState[c.calendar] && new Date(c.at).getTime() >= cutoff)
+    .filter((c) => {
+      // A year group's event is logged once per class; show it once.
+      const key = `${c.uid}|${c.kind}|${c.start}|${(c.dates || []).join()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => (a.at < b.at ? 1 : -1));
+  el.changes.hidden = relevant.length === 0;
+  if (!relevant.length) return;
+
+  const head = Object.assign(document.createElement("div"), { className: "cal-changes-head" });
+  head.append(Object.assign(document.createElement("span"), { className: "cal-strip-label", textContent: "Recently changed" }));
+  const list = Object.assign(document.createElement("ul"), { className: "cal-changes-list" });
+  for (const c of showAllChanges ? relevant : relevant.slice(0, CHANGES_SHOWN)) {
+    const cal = ALL_CALENDARS.find((x) => x.code === c.calendar);
+    const key = c.start.slice(0, 10);
+    const dayEvents = (dayIndex.get(key) || []).filter((inst) => toggleState[inst.code]);
+    const canOpen = (c.kind === "added" || c.kind === "moved") && dayEvents.length > 0;
+    const row = document.createElement(canOpen ? "button" : "div");
+    row.className = "cal-change";
+    if (row instanceof HTMLButtonElement) {
+      row.type = "button";
+      row.addEventListener("click", () => openDayDialog(dateFromKey(key), dayEvents));
+    }
+    if (cal) row.style.setProperty("--dot-color", chipBackground(cal.colorVar));
+    const title = Object.assign(document.createElement("span"), { className: "cal-change-title", textContent: c.title });
+    if (c.kind === "cancelled") title.classList.add("is-cancelled");
+    const text = Object.assign(document.createElement("span"), { className: "cal-change-text" });
+    text.append(title, Object.assign(document.createElement("span"), { className: "cal-change-what", textContent: changeText(c) }));
+    row.append(
+      Object.assign(document.createElement("span"), { className: "cal-list-dot" }),
+      text,
+      Object.assign(document.createElement("span"), { className: "cal-change-when", textContent: changedAgo(c.at) })
+    );
+    const li = document.createElement("li");
+    li.append(row);
+    list.append(li);
+  }
+  el.changes.append(head, list);
+
+  const foot = Object.assign(document.createElement("div"), { className: "cal-changes-foot" });
+  foot.append(
+    Object.assign(document.createElement("p"), {
+      className: "cal-changes-note",
+      textContent: "Already in your calendar app if you've subscribed - though Google Calendar can take up to a day to catch up.",
+    })
+  );
+  if (relevant.length > CHANGES_SHOWN) {
+    const toggle = Object.assign(document.createElement("button"), {
+      type: "button",
+      className: "cal-changes-more",
+      textContent: showAllChanges ? "Show fewer" : `Show all ${relevant.length}`,
+    });
+    toggle.addEventListener("click", () => {
+      showAllChanges = !showAllChanges;
+      renderChanges();
+    });
+    foot.append(toggle);
+  }
+  el.changes.append(foot);
+}
+
+// --- Print ---
+
+// On paper (the Print button, or the browser's own Print): the List view from
+// today to the end of term - or 12 weeks, if no end of term is published - for
+// the ticked calendars, under a heading saying which. The page goes back to
+// how it was afterwards.
+let beforePrint: { view: View; weeks: number } | null = null;
+
+function preparePrint() {
+  if (beforePrint) return;
+  beforePrint = { view: currentView, weeks: listWeeks };
+  const end = termEndKey();
+  const days = end ? daysFromToday(end) + 1 : 12 * 7;
+  listWeeks = Math.max(1, Math.ceil(days / 7));
+  currentView = "list";
+  const names = selectedCalendars().map((cal) => cal.label).join(", ");
+  const until = end ? formatShortDate(dateFromKey(end)) : formatShortDate(addDays(TODAY, listWeeks * 7 - 1));
+  el.printHeading.textContent = `St Paul's ${names ? `— ${names} ` : ""}· ${formatShortDate(TODAY)} to ${until}`;
+  render();
+}
+
+function restoreAfterPrint() {
+  if (!beforePrint) return;
+  currentView = beforePrint.view;
+  listWeeks = beforePrint.weeks;
+  beforePrint = null;
+  render();
+}
+
+function handlePrint() {
+  preparePrint();
+  window.print();
+}
+
+// --- Share these calendars ---
+
+// Shown once a parent has ticked something beyond the defaults: a link that
+// ticks the same calendars for whoever opens it (see applyLinkedCalendars).
+function shareSelectionUrl() {
+  const codes = selectedCalendars().filter((cal) => !DEFAULT_ON.has(cal.code)).map((cal) => cal.code);
+  const url = new URL(window.location.pathname, window.location.origin);
+  if (codes.length) url.search = `?c=${codes.join(",")}`;
+  return url.href;
+}
+
+function renderShareSelection() {
+  el.shareButton.hidden = !selectedCalendars().some((cal) => !DEFAULT_ON.has(cal.code));
+  el.shareStatus.textContent = "";
+}
+
+async function handleShareSelection() {
+  const url = shareSelectionUrl();
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "St Paul's calendars", text: "Our school calendars - tap to add them to your phone's calendar:", url });
+      return;
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return; // closed the share sheet
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    el.shareStatus.textContent = "Link copied ✓";
+  } catch {
+    el.shareStatus.textContent = url;
+  }
+}
+
 // What the previous/next buttons step by, for their labels.
 const VIEW_UNIT: Record<View, string> = { list: "", month: "month", week: "week", day: "day" };
 
@@ -1025,6 +1373,8 @@ function render() {
     renderDayAgenda();
   }
   renderLegend();
+  renderDayOff();
+  renderChanges();
 }
 
 // One event: time column, then title / calendar / location / description / link, with
@@ -1187,7 +1537,7 @@ async function handleRefresh() {
   el.refreshButton.setAttribute("aria-label", "Refreshing events");
   el.error.hidden = true;
 
-  const { failures } = await loadAllCalendarData();
+  const [{ failures }] = await Promise.all([loadAllCalendarData(), loadChanges()]);
 
   el.refreshButton.disabled = false;
   el.refreshButton.classList.remove("is-busy");
@@ -1212,6 +1562,7 @@ async function init() {
   renderPlatformChoice();
   renderAddActions();
   renderIcsLinks();
+  renderShareSelection();
   updateViewButtonStyles();
   openHelpFromLinks();
 
@@ -1222,6 +1573,10 @@ async function init() {
     render();
   });
   el.refreshButton.addEventListener("click", handleRefresh);
+  el.printButton.addEventListener("click", handlePrint);
+  window.addEventListener("beforeprint", preparePrint);
+  window.addEventListener("afterprint", restoreAfterPrint);
+  el.shareButton.addEventListener("click", handleShareSelection);
   // Delegated, since renderAddActions() rebuilds these links on every tick.
   for (const container of [el.addList, el.icsLinks]) {
     container.addEventListener("click", countClick);
@@ -1241,7 +1596,7 @@ async function init() {
     if (e.target === el.dialog) el.dialog.close();
   });
 
-  const { failures } = await loadAllCalendarData();
+  const [{ failures }] = await Promise.all([loadAllCalendarData(), loadChanges()]);
   el.loading.hidden = true;
   if (failures === ALL_CALENDARS.length) {
     el.error.textContent = "Couldn't load any calendars - try reloading the page.";
