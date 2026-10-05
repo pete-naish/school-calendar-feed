@@ -10,6 +10,7 @@ import { knownEventList, resolveAlreadyListed } from "./_shared/duplicates.ts";
 import type { KnownInput } from "./_shared/duplicates.ts";
 import type { ParsedEvent, RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext, Env } from "./_shared/env.ts";
+import { recordUsage } from "./_shared/usageStats.ts";
 
 // The parts of the Messages API response this reads.
 type MessagesResponse = {
@@ -59,7 +60,8 @@ async function loadKnownEvents(env: Env, calendar: string): Promise<KnownInput[]
   return known.sort((a, b) => (a.event.date < b.event.date ? -1 : a.event.date > b.event.date ? 1 : 0));
 }
 
-export async function onRequestPost({ request, env }: ApiContext) {
+export async function onRequestPost(ctx: ApiContext) {
+  const { request, env } = ctx;
   let body: RequestBody;
   try {
     body = (await request.json<RequestBody | null>()) || {};
@@ -256,5 +258,10 @@ export async function onRequestPost({ request, env }: ApiContext) {
       events.push(listed ? { ...event, already_listed: listed } : event);
     }
   }
+  await recordUsage(ctx, calendar, {
+    parse: 1,
+    parse_events: events.length,
+    parse_duplicates: events.filter((e) => e.already_listed).length,
+  });
   return jsonResponse({ events, warnings });
 }

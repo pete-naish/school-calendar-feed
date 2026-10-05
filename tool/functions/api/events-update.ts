@@ -8,9 +8,10 @@ import { commitSchoolEventCorrection, schoolSpan, validateCorrection } from "./_
 import { fetchClassSchoolEvents, fetchWholeSchoolEvents } from "./_shared/wholeSchool.ts";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
 import type { EventFields, RequestBody, SchoolEvent } from "./_shared/types.d.ts";
-import type { ApiContext, Env } from "./_shared/env.ts";
+import type { ApiContext } from "./_shared/env.ts";
 import type { Override } from "./_shared/wholeSchoolOverrides.ts";
 import type { Correction } from "./_shared/schoolEventCorrections.ts";
+import { recordUsage } from "./_shared/usageStats.ts";
 
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -53,7 +54,8 @@ function overrideChanges(body: RequestBody): Override {
 // a description save can never carry a date change with it. `published` is
 // the event as the caller's own feed has it, which is what proves the
 // passcode may touch it.
-async function correctSchoolEvent(env: Env, calendar: string, id: string, published: SchoolEvent, input: unknown) {
+async function correctSchoolEvent(ctx: ApiContext, calendar: string, id: string, published: SchoolEvent, input: unknown) {
+  const { env } = ctx;
   let correction: Correction | null = null;
   if (input !== null) {
     const checked = validateCorrection(published, input);
@@ -66,12 +68,14 @@ async function correctSchoolEvent(env: Env, calendar: string, id: string, publis
     label: `"${published.title}"`,
   });
   if (result.error) return jsonResponse(result, resultStatus(result));
+  await recordUsage(ctx, calendar, correction ? { date_correction: 1 } : { date_correction_undo: 1 });
   return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
 }
 
 const wantsDateCorrection = (body: RequestBody) => Object.prototype.hasOwnProperty.call(body, "date_correction");
 
-export async function onRequestPost({ request, env }: ApiContext) {
+export async function onRequestPost(ctx: ApiContext) {
+  const { request, env } = ctx;
   let body: RequestBody;
   try {
     body = (await request.json<RequestBody | null>()) || {};
@@ -108,7 +112,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
         if (!published) {
           return jsonResponse({ error: "not_found", message: "That event isn't in the whole-school calendar." }, 404);
         }
-        return await correctSchoolEvent(env, calendar, id, published, body.date_correction);
+        return await correctSchoolEvent(ctx, calendar, id, published, body.date_correction);
       } catch (err) {
         return jsonResponse(commitErrorResponse(err), 502);
       }
@@ -135,6 +139,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
       }
       const result = await commitWholeSchoolOverride(env, id, changes);
       if (result.error) return jsonResponse(result, resultStatus(result));
+      await recordUsage(ctx, calendar, { school_edit: 1, confirm_public: confirmPublic ? 1 : 0 });
       return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
     } catch (err) {
       return jsonResponse(commitErrorResponse(err), 502);
@@ -152,7 +157,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
         if (!published) {
           return jsonResponse({ error: "not_found", message: "That event isn't in this calendar's school events." }, 404);
         }
-        return await correctSchoolEvent(env, calendar, id, published, body.date_correction);
+        return await correctSchoolEvent(ctx, calendar, id, published, body.date_correction);
       } catch (err) {
         return jsonResponse(commitErrorResponse(err), 502);
       }
@@ -175,6 +180,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
       }
       const result = await commitWholeSchoolOverride(env, id, changes, `school event in ${calendar}`);
       if (result.error) return jsonResponse(result, resultStatus(result));
+      await recordUsage(ctx, calendar, { school_edit: 1, confirm_public: confirmPublic ? 1 : 0 });
       return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
     } catch (err) {
       return jsonResponse(commitErrorResponse(err), 502);
@@ -186,6 +192,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
     return jsonResponse({ error: "validation_failed", message: validated.error }, 400);
   }
 
+  let exceptionsChanged = false;
   try {
     // The event is in this class's own file or its year group's shared one.
     const result = await commitEventById<{}>(
@@ -202,6 +209,8 @@ export async function onRequestPost({ request, env }: ApiContext) {
         }
         const updated = [...current];
         updated[index] = { id, ...scopeExceptions(validated.event, calendar, file) };
+        exceptionsChanged =
+          JSON.stringify(updated[index].exceptions ?? []) !== JSON.stringify(current[index].exceptions ?? []);
         return { events: updated };
       },
       `Update event in ${calendar}`
@@ -209,6 +218,11 @@ export async function onRequestPost({ request, env }: ApiContext) {
     if (result.error) {
       return jsonResponse(result, resultStatus(result));
     }
+    await recordUsage(ctx, calendar, {
+      edit: 1,
+      exception_edit: exceptionsChanged ? 1 : 0,
+      confirm_public: confirmPublic ? 1 : 0,
+    });
     return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
   } catch (err) {
     return jsonResponse(commitErrorResponse(err), 502);

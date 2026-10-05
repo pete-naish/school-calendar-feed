@@ -41,8 +41,8 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
   tabs: **Events** (the calendar's saved events, grouped by month, each
   folded to a summary until opened to edit or delete), **Add events** (paste
   text → "Find events" → check the new events → save; "+ Add a calendar event
-  manually" is always there too - pasting text through Claude is optional) and
-  **What's on this week** (below). The look follows the public page's:
+  manually" is always there too - pasting text through Claude is optional),
+  **What's on this week** and **Share** (both below). The look follows the public page's:
   Geist (self-hosted in `fonts/`), and the year group's colour from its
   palette as the accent (`data-hue` on the page, set by `login.ts`). A
   sun/moon button switches light and dark mode like the public page's
@@ -135,8 +135,9 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
   `data/manual_events/` file at all), `auth.ts` (passcode check, in constant
   time, and the per-calendar rate limit - see "Rate limiting" below),
   `rateLimit.ts` (that limit's policy and its KV key/IP helpers),
-  `clickStats.ts` (the subscribe-click counter's allowed values and KV key -
-  see "Subscribe click counts" below), `github.ts`
+  `clickStats.ts` (the subscribe-click counter's allowed values and KV key, and
+  adding them up for the Share tab - see "Subscribe click counts" below),
+  `usageStats.ts` (the weekly rep usage counts - see "Usage counts" below), `github.ts`
   (GitHub Contents API get/commit for any JSON file in the repo, retrying a
   concurrent-edit conflict, a GitHub 5xx, or a network failure), `validate.ts`
   (sanitizes/validates event data from both the LLM and the frontend form -
@@ -297,6 +298,76 @@ FOSPS events already carry.
 Tests: `npm run test:tool` (from the repo root; also run in CI). Needs Node 22.18
 or later, which runs the `.ts` files the tests import directly.
 
+## Share tab
+
+Every calendar entry has a **Share** tab with what a rep needs to get parents
+subscribed (`page/share.ts`):
+
+- **A link** to the public page with this calendar already ticked:
+  `https://calendar.nai.sh/?c=<code>` (the plain address for Whole School,
+  which every visitor gets ticked anyway). The public page's
+  `applyLinkedCalendar()` (`docs/assets/calendar.ts`) ticks a launched
+  calendar's code on arrival, *adding* to what that browser already has
+  ticked (a parent following two reps' links ends up with both), and then
+  drops `?c=` from the address bar so a refresh doesn't re-tick it.
+- **A message** for the class WhatsApp group with the link in it, editable
+  before **Copy for WhatsApp**.
+- **A QR code** of the link, drawn as an inline SVG (the CSP allows no `data:`
+  images) with **Download QR code** for a PNG, drawn on a canvas and handed
+  over as a `blob:` download. It uses `vendor/qrcode.js`, an unmodified copy
+  of `qrcode-generator` (MIT) - see `vendor/README.md`.
+- **The subscribe count**: how many times parents have tapped a subscribe
+  link for this calendar, all-time and this month, by app - from
+  `POST /api/stats` (`functions/api/stats.ts`), which adds up the monthly
+  counters in "Subscribe click counts" below. Hidden when `STATS` isn't bound.
+
+## Usage counts
+
+To see which parts of the tool reps actually use, the tool keeps weekly
+counters per calendar and action in the same `STATS` KV namespace as the
+subscribe clicks (`functions/api/_shared/usageStats.ts`):
+
+    usage:2026-W41:rec-a:parse = 4
+
+The week is the ISO week (Monday-Sunday) in London time. As with the click
+counts, nothing else is stored - no IP, user agent, passcode or event
+content - and both calendar and action come from fixed lists. It's
+best-effort (no atomic increment in KV), and without `STATS` nothing is
+counted.
+
+Most actions are counted by the endpoint that does them, only after the
+passcode check and once the action has worked, through `recordUsage()` -
+which hands the write to the runtime's `waitUntil`, so it never slows or fails
+a response:
+
+| Action | Counted when |
+|---|---|
+| `open` | the Events list loads (sign-in, or a reload) |
+| `parse` | Find events runs (`parse_events`: + events it found; `parse_duplicates`: + of those marked "Already in the calendar") |
+| `save` | new events are saved (`saved_events`: + events written; `saved_year_shared`, `saved_recurring`: + of those for the whole year, or repeating) |
+| `edit` | a saved event is changed (`exception_edit`: that change touched its exceptions) |
+| `school_edit` | a school event's description or location is edited |
+| `date_correction` / `date_correction_undo` | a school event's date is corrected, or put back |
+| `delete` | an event is deleted |
+| `confirm_public` | a save went ahead after the personal details warning |
+| `week_view` | a "What's on this week" list is built |
+| `share_view` | the Share tab is opened |
+
+The rest happen only in the page, which sends them to `POST /api/track`
+(`functions/api/track.ts`) with the calendar's passcode - it accepts only
+these, and always answers 204:
+
+| Action | Counted when |
+|---|---|
+| `week_copy` | the week's list is copied |
+| `share_message_copy` / `share_link_copy` | the Share tab's message or link is copied |
+| `qr_download` | the QR code is downloaded |
+| `manual_add` | "+ Add a calendar event manually" is pressed |
+| `add_anyway` | a draft marked "Already in the calendar" is kept with Add anyway |
+
+**Reading them**: Cloudflare dashboard → **Storage & databases → KV** → the
+`STATS` namespace; search for a week's prefix, e.g. `usage:2026-W41`.
+
 ## Limits
 
 `_shared/validate.ts` (`LIMITS`) caps what one event can hold, so a single save
@@ -385,8 +456,8 @@ as before. A save where every event was a duplicate doesn't trigger one.
    a KV namespace you create or reuse there - see "Rate limiting" below for
    what this is for. Without it the tool still works, just with no throttling
    on wrong passcode guesses. Add a second binding named `STATS` the same
-   way, pointing at its own namespace - see "Subscribe click counts" below.
-   Without it, clicks just aren't counted.
+   way, pointing at its own namespace - see "Subscribe click counts" and
+   "Usage counts" below. Without it, clicks and usage just aren't counted.
 3. Under the project's **Settings → Environment variables** (as secrets, for
    both Production and Preview), set:
    - `CLASS_PASSWORDS` - a JSON object mapping each of the 16 calendar codes
@@ -516,14 +587,17 @@ a rough indication.
 under **Settings → Functions → KV namespace bindings**, pointing at a new
 namespace. Without it the endpoint is a silent no-op.
 
-**Reading the counts**: Cloudflare dashboard → **Storage & databases → KV** →
-the `STATS` namespace lists every key with its value.
+**Reading the counts**: each rep sees their own calendar's on the tool's
+Share tab (see "Share tab" above). For all of them: Cloudflare dashboard →
+**Storage & databases → KV** → the `STATS` namespace lists every key with its
+value. `STATS_START` in `clickStats.ts` is the first month the Share tab adds
+up from.
 
 ## Local development
 
 ```bash
 cp tool/.dev.vars.example tool/.dev.vars   # then fill in real test values
-cd tool && npx wrangler pages dev . --kv RATE_LIMITS
+cd tool && npx wrangler pages dev . --kv RATE_LIMITS --kv STATS
 ```
 
 This serves the frontend and functions locally (default `http://localhost:8788`).

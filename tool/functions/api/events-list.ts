@@ -8,12 +8,14 @@ import { readErrorResponse } from "./_shared/errors.ts";
 import { getTermEndDates } from "./_shared/termEnd.ts";
 import type { RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext } from "./_shared/env.ts";
+import { recordUsage } from "./_shared/usageStats.ts";
 
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
-export async function onRequestPost({ request, env }: ApiContext) {
+export async function onRequestPost(ctx: ApiContext) {
+  const { request, env } = ctx;
   let body: RequestBody;
   try {
     body = (await request.json<RequestBody | null>()) || {};
@@ -41,6 +43,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
           getJsonFile(env, CORRECTIONS_PATH, {}),
         ])
       );
+      await recordUsage(ctx, calendar, { open: 1 });
       return jsonResponse({ events: applyCorrections(applyOverrides(events, overrides.data), corrections.data) });
     } catch (err) {
       return jsonResponse(readErrorResponse(err), 502);
@@ -80,6 +83,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
     }));
     const events = [...own.events, ...shared.events.map((e) => ({ ...e, year_group: true })), ...school];
     const sorted = events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    await recordUsage(ctx, calendar, { open: 1 });
     return jsonResponse({ events: sorted, term_ends: await termEnds });
   } catch (err) {
     return jsonResponse(readErrorResponse(err), 502);

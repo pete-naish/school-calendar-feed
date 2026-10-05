@@ -80,6 +80,7 @@
         <button type="button" role="tab" id="tab-events" aria-controls="existing-section" aria-selected="true">Events</button>
         <button type="button" role="tab" id="tab-add" aria-controls="add-section" aria-selected="false" tabindex="-1"><span class="tab-long">Add events</span><span class="tab-short">Add</span></button>
         <button type="button" role="tab" id="tab-week" aria-controls="week-section" aria-selected="false" tabindex="-1"><span class="tab-long">What's on this week</span><span class="tab-short">This week</span></button>
+        <button type="button" role="tab" id="tab-share" aria-controls="share-section" aria-selected="false" tabindex="-1">Share</button>
       </div>
 
       <section id="existing-section" class="panel" role="tabpanel" aria-labelledby="tab-events">
@@ -163,6 +164,41 @@
             <span id="week-copy-status" class="hint" role="status"></span>
           </div>
           <p class="hint">Built from the published calendar, so an edit saved just now can take a few minutes to show. You can tweak the text before copying.</p>
+        </div>
+      </section>
+
+      <section id="share-section" class="panel" role="tabpanel" aria-labelledby="tab-share" hidden>
+        <div id="share-count" class="share-count" hidden>
+          <p><strong id="share-count-number" class="share-count-number"></strong> <span id="share-count-detail"></span></p>
+          <p class="hint">A tap isn't proof someone stayed subscribed, and copying a feed address by hand isn't counted, so treat it as a rough guide.</p>
+        </div>
+
+        <div class="share-block">
+          <h2 class="panel-title">Message for the class WhatsApp group</h2>
+          <p class="hint">The link opens the parents' page with this calendar already ticked. Edit the message as you like before copying.</p>
+          <textarea id="share-message" rows="5" aria-label="Message to share"></textarea>
+          <div class="week-copy-row">
+            <button id="share-message-copy-button">Copy for WhatsApp</button>
+            <span id="share-message-copy-status" class="hint" role="status"></span>
+          </div>
+        </div>
+
+        <div class="share-block">
+          <h2 class="panel-title">Just the link</h2>
+          <div class="week-copy-row">
+            <input type="text" id="share-link" class="share-link" readonly aria-label="Link to share">
+            <button id="share-link-copy-button" class="secondary-button">Copy link</button>
+            <span id="share-link-copy-status" class="hint" role="status"></span>
+          </div>
+        </div>
+
+        <div class="share-block">
+          <h2 class="panel-title">QR code</h2>
+          <p class="hint">For the newsletter, a letter home or the classroom door: scanning it opens the same link.</p>
+          <div id="share-qr" class="share-qr"></div>
+          <div class="week-copy-row">
+            <button id="share-qr-download-button" class="secondary-button">Download QR code</button>
+          </div>
         </div>
       </section>
     </section>

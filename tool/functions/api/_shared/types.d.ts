@@ -179,3 +179,17 @@ export interface WeekResponse {
   text: string;
   count: number;
 }
+
+// POST /api/stats: this calendar's subscribe clicks on the public page (see
+// _shared/clickStats.ts). `available` is false when the STATS binding isn't
+// set up, and the counts are then all 0.
+export interface StatsResponse {
+  available: boolean;
+  total: number;
+  this_month: number;
+  by_platform: Record<"apple" | "google" | "outlook" | "link", number>;
+}
+
+// What the page may count through POST /api/track - kept in step with
+// PAGE_ACTIONS in usageStats.ts (the tests check).
+export type PageAction = "week_copy" | "share_link_copy" | "share_message_copy" | "qr_download" | "manual_add" | "add_anyway";

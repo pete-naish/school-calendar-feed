@@ -3,7 +3,7 @@
 
 // The Pages project's secrets and KV bindings (see tool/README.md). Both KV
 // bindings are optional: without RATE_LIMITS the passcode check fails open,
-// and without STATS subscribe clicks aren't counted.
+// and without STATS subscribe clicks and rep usage aren't counted.
 export interface Env {
   CLASS_PASSWORDS: string;
   ANTHROPIC_API_KEY: string;
@@ -13,8 +13,9 @@ export interface Env {
 }
 
 // The part of a Pages Functions context the endpoints use (the tests pass
-// just this).
+// just request and env).
 export interface ApiContext {
   request: Request;
   env: Env;
+  waitUntil?: (promise: Promise<unknown>) => void;
 }

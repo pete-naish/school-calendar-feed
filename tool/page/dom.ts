@@ -29,8 +29,10 @@ export const el = {
   tabEvents: byId<HTMLButtonElement>("tab-events"),
   tabAdd: byId<HTMLButtonElement>("tab-add"),
   tabWeek: byId<HTMLButtonElement>("tab-week"),
+  tabShare: byId<HTMLButtonElement>("tab-share"),
   existingSection: byId("existing-section"),
   weekSection: byId("week-section"),
+  shareSection: byId("share-section"),
   logoutButton: byId<HTMLButtonElement>("logout-button"),
   wholeSchoolNotice: byId("whole-school-notice"),
   addSection: byId("add-section"),
@@ -71,7 +73,32 @@ export const el = {
   weekRefreshButton: byId<HTMLButtonElement>("week-refresh-button"),
   weekCopyButton: byId<HTMLButtonElement>("week-copy-button"),
   weekCopyStatus: byId("week-copy-status"),
+  shareCount: byId("share-count"),
+  shareCountNumber: byId("share-count-number"),
+  shareCountDetail: byId("share-count-detail"),
+  shareLink: byId<HTMLInputElement>("share-link"),
+  shareLinkCopyButton: byId<HTMLButtonElement>("share-link-copy-button"),
+  shareLinkCopyStatus: byId("share-link-copy-status"),
+  shareMessage: byId<HTMLTextAreaElement>("share-message"),
+  shareMessageCopyButton: byId<HTMLButtonElement>("share-message-copy-button"),
+  shareMessageCopyStatus: byId("share-message-copy-status"),
+  shareQr: byId("share-qr"),
+  shareQrDownloadButton: byId<HTMLButtonElement>("share-qr-download-button"),
 };
+
+// Copies `field`'s text to the clipboard. Where the Clipboard API is missing
+// or blocked (e.g. plain http), selects the text and tries the legacy copy
+// command instead - so on a false return, the text is at least selected for
+// Ctrl/Cmd+C.
+export async function copyText(field: HTMLInputElement | HTMLTextAreaElement) {
+  try {
+    await navigator.clipboard.writeText(field.value);
+    return true;
+  } catch {
+    field.select();
+    return document.execCommand("copy");
+  }
+}
 
 // Two clicks for something that loses work: the first relabels `button` with
 // `question` (in red) and returns false; a second click within 8 seconds -

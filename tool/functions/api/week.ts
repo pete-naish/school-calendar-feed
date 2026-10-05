@@ -6,6 +6,7 @@ import { buildWeekText, defaultWeekStart, snapToMonday, weekEnd } from "./_share
 import { readErrorResponse } from "./_shared/errors.ts";
 import type { RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext } from "./_shared/env.ts";
+import { recordUsage } from "./_shared/usageStats.ts";
 
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -20,7 +21,8 @@ function isValidIsoDate(value: unknown): value is string {
 // read from the published .ics files (see _shared/weekList.ts). `week_start`
 // (any date in the wanted week) is optional; the default is this week, or next
 // week on a Sunday.
-export async function onRequestPost({ request, env }: ApiContext) {
+export async function onRequestPost(ctx: ApiContext) {
+  const { request, env } = ctx;
   let body: RequestBody;
   try {
     body = (await request.json<RequestBody | null>()) || {};
@@ -55,6 +57,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
       ])
     );
     const { text, count } = buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs, calendar, weekStart });
+    await recordUsage(ctx, calendar, { week_view: 1 });
     return jsonResponse({ week_start: weekStart, week_end: weekEnd(weekStart), text, count });
   } catch (err) {
     return jsonResponse(readErrorResponse(err), 502);

@@ -8,6 +8,7 @@ import { fillCardFields, localValidationError, readCardFields, setupYearGroupCon
 import { rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
 import { selectTab } from "./tabs.js";
 import { apiCall, state } from "./state.js";
+import { track } from "./track.js";
 // "Find events" stays disabled until there's text it hasn't already been
 // through (state.lastExtractedText), so a second press can't add every event
 // twice. Changing the text clears what the last look found.
@@ -136,6 +137,7 @@ function markAlreadyListed(node, listed) {
     addButton.className = "secondary-button small-button card-add-anyway";
     addButton.textContent = "Add anyway";
     addButton.addEventListener("click", () => {
+        track("add_anyway");
         node.classList.remove("is-already-listed");
         origin.textContent = originText;
         origin.classList.remove("badge-warning");

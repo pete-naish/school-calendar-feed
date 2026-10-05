@@ -1,14 +1,15 @@
-// The signed-in page's three tabs: Events, Add events, and What's on this
-// week. A standard tablist: Left/Right (and Home/End) move between the tabs
+// The signed-in page's four tabs: Events, Add events, What's on this week and
+// Share. A standard tablist: Left/Right (and Home/End) move between the tabs
 // shown, and only the selected one is in the Tab order. The open tab is kept
 // for the browser tab, like the sign-in, so a refresh comes back to it.
 import { el } from "./dom.js";
 import { state, storageGet, storageSet } from "./state.js";
+import { handleShare } from "./share.js";
 import { handleWeekList } from "./weekList.js";
 const TAB_KEY = "rep-tool-tab";
 export function rememberedTab() {
     const tab = storageGet(sessionStorage, TAB_KEY);
-    return tab === "events" || tab === "add" || tab === "week" ? tab : null;
+    return tab === "events" || tab === "add" || tab === "week" || tab === "share" ? tab : null;
 }
 export function forgetTab() {
     storageSet(sessionStorage, TAB_KEY, null);
@@ -18,6 +19,7 @@ function tabs() {
         { name: "events", tab: el.tabEvents, panel: el.existingSection },
         { name: "add", tab: el.tabAdd, panel: el.addSection },
         { name: "week", tab: el.tabWeek, panel: el.weekSection },
+        { name: "share", tab: el.tabShare, panel: el.shareSection },
     ];
 }
 export function selectTab(name, { focus = false } = {}) {
@@ -34,6 +36,8 @@ export function selectTab(name, { focus = false } = {}) {
     // one is showing), so it picks up anything saved since.
     if (name === "week")
         handleWeekList(state.weekStart ? 0 : undefined);
+    if (name === "share")
+        handleShare();
 }
 export function wireTabs() {
     for (const t of tabs()) {

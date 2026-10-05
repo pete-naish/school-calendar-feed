@@ -23,8 +23,10 @@ export const el = {
     tabEvents: byId("tab-events"),
     tabAdd: byId("tab-add"),
     tabWeek: byId("tab-week"),
+    tabShare: byId("tab-share"),
     existingSection: byId("existing-section"),
     weekSection: byId("week-section"),
+    shareSection: byId("share-section"),
     logoutButton: byId("logout-button"),
     wholeSchoolNotice: byId("whole-school-notice"),
     addSection: byId("add-section"),
@@ -65,7 +67,32 @@ export const el = {
     weekRefreshButton: byId("week-refresh-button"),
     weekCopyButton: byId("week-copy-button"),
     weekCopyStatus: byId("week-copy-status"),
+    shareCount: byId("share-count"),
+    shareCountNumber: byId("share-count-number"),
+    shareCountDetail: byId("share-count-detail"),
+    shareLink: byId("share-link"),
+    shareLinkCopyButton: byId("share-link-copy-button"),
+    shareLinkCopyStatus: byId("share-link-copy-status"),
+    shareMessage: byId("share-message"),
+    shareMessageCopyButton: byId("share-message-copy-button"),
+    shareMessageCopyStatus: byId("share-message-copy-status"),
+    shareQr: byId("share-qr"),
+    shareQrDownloadButton: byId("share-qr-download-button"),
 };
+// Copies `field`'s text to the clipboard. Where the Clipboard API is missing
+// or blocked (e.g. plain http), selects the text and tries the legacy copy
+// command instead - so on a false return, the text is at least selected for
+// Ctrl/Cmd+C.
+export async function copyText(field) {
+    try {
+        await navigator.clipboard.writeText(field.value);
+        return true;
+    }
+    catch {
+        field.select();
+        return document.execCommand("copy");
+    }
+}
 // Two clicks for something that loses work: the first relabels `button` with
 // `question` (in red) and returns false; a second click within 8 seconds -
 // long enough to read the question on a phone - returns true. Otherwise the

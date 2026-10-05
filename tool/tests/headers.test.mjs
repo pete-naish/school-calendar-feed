@@ -138,6 +138,18 @@ test("the page's scripts and style.css use nothing the CSP would block", () => {
   assert.doesNotMatch(css, /@import|url\(\s*["']?(https?:)?\/\//i);
 });
 
+// The vendored QR code library runs under the same CSP, so it gets the same
+// check; and it must stay the file recorded in vendor/README.md.
+test("the vendored qrcode.js is the recorded, unmodified file and fits the CSP", async () => {
+  const { createHash } = await import("node:crypto");
+  const js = readFileSync(new URL("../vendor/qrcode.js", import.meta.url));
+  const recorded = read("vendor/README.md").match(/SHA-256 of `qrcode\.js`: `([0-9a-f]{64})`/);
+  assert.ok(recorded, "vendor/README.md must record qrcode.js's SHA-256");
+  assert.equal(createHash("sha256").update(js).digest("hex"), recorded[1], "qrcode.js was edited - if deliberately, update vendor/README.md");
+  assert.doesNotMatch(js.toString(), /\beval\s*\(|new Function\b|\bfetch\(|XMLHttpRequest/);
+  assert.match(read("vendor/qrcode-generator-LICENSE.txt"), /MIT License[\s\S]*Kazuhiko Arase/);
+});
+
 // The same icons as the public page (docs/): favicon.svg (with a dark-mode
 // variant), favicon.ico for browsers that don't take SVG icons, and
 // apple-touch-icon.png for iOS home screens.

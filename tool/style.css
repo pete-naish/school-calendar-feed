@@ -1213,6 +1213,47 @@ button:disabled {
   gap: 8px 12px;
 }
 
+/* --- Share ------------------------------------------------------------------ */
+
+.share-count {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.share-count-number {
+  font-size: 22px;
+  color: var(--fg);
+}
+
+.share-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.share-link {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+/* Always black on white, in dark mode too - scanners need the contrast. */
+.share-qr {
+  width: 100%;
+  max-width: 220px;
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.share-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* --- Phones ----------------------------------------------------------------- */
 
 @media (max-width: 560px) {

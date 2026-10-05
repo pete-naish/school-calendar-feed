@@ -6,12 +6,14 @@ import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "
 import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
 import type { EventFields, ManualEvent, PersonalDetail, RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext, Env } from "./_shared/env.ts";
+import { recordUsage } from "./_shared/usageStats.ts";
 
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
-export async function onRequestPost({ request, env }: ApiContext) {
+export async function onRequestPost(ctx: ApiContext) {
+  const { request, env } = ctx;
   let body: RequestBody;
   try {
     body = (await request.json<RequestBody | null>()) || {};
@@ -114,6 +116,17 @@ export async function onRequestPost({ request, env }: ApiContext) {
     }
   } catch (err) {
     return jsonResponse(commitErrorResponse(err), 502);
+  }
+
+  // Counted as asked for: a save that was all duplicates still saved nothing.
+  if (saved > 0) {
+    await recordUsage(ctx, calendar, {
+      save: 1,
+      saved_events: saved,
+      saved_year_shared: shared.length,
+      saved_recurring: checked.filter(({ event }) => event.recurrence).length,
+      confirm_public: body.confirm_public === true ? 1 : 0,
+    });
   }
 
   // Every event a duplicate -> nothing appended, nothing new to publish.

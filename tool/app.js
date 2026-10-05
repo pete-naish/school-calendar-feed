@@ -9,7 +9,9 @@
 //   schoolCard.ts  an event from the school's calendar, and correcting its date
 //   cardState.ts   per-card state and the parts every card shares
 //   weekList.ts    "What's on this week"
-//   tabs.ts        the Events / Add events / What's on this week tabs
+//   share.ts       "Share": the parents' link, message, QR code and click count
+//   tabs.ts        the Events / Add events / What's on this week / Share tabs
+//   track.ts       counting what reps do, for the weekly usage counts
 //   state.ts, dom.ts, dates.ts   shared state, elements and date helpers
 //
 // Loading a page/ module only defines things (and looks up the page's
@@ -21,7 +23,9 @@ import { blankEvent, handleUndoDelete } from "./page/eventCard.js";
 import { wireEventFilters, wireSchoolNotice } from "./page/eventList.js";
 import { handleLogin, handleLogout, hasUnsavedWork, loadCalendars, restoreSession, updateLoginButtonState } from "./page/login.js";
 import { state } from "./page/state.js";
+import { wireShare } from "./page/share.js";
 import { wireTabs } from "./page/tabs.js";
+import { track } from "./page/track.js";
 import { handleCopyWeekList, handleWeekList } from "./page/weekList.js";
 function init() {
     loadCalendars().then(restoreSession);
@@ -38,13 +42,17 @@ function init() {
     el.extractButton.addEventListener("click", handleExtract);
     el.pasteTextarea.addEventListener("input", updateExtractButtonState);
     updateExtractButtonState();
-    el.addManualCardButton.addEventListener("click", () => addDraftCard(blankEvent()));
+    el.addManualCardButton.addEventListener("click", () => {
+        track("manual_add");
+        addDraftCard(blankEvent());
+    });
     el.saveAllButton.addEventListener("click", handleSaveAll);
     wireTabs();
     el.weekPrevButton.addEventListener("click", () => handleWeekList(-7));
     el.weekNextButton.addEventListener("click", () => handleWeekList(7));
     el.weekRefreshButton.addEventListener("click", () => handleWeekList(0));
     el.weekCopyButton.addEventListener("click", handleCopyWeekList);
+    wireShare();
     wireEventFilters();
     wireSchoolNotice();
     el.undoDeleteButton.addEventListener("click", handleUndoDelete);

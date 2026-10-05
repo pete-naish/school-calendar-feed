@@ -1,7 +1,8 @@
 // The "What's on this week" WhatsApp list.
 import { formatDate, relativeWeek, shiftIsoDate } from "./dates.js";
-import { el } from "./dom.js";
+import { copyText, el } from "./dom.js";
 import { apiCall, state } from "./state.js";
+import { track } from "./track.js";
 import type { WeekResponse } from "../functions/api/_shared/types.d.ts";
 
 // Built each time its tab is opened (selectTab()), and by Refresh. No
@@ -37,16 +38,7 @@ export async function handleWeekList(shiftDays?: number) {
 }
 
 export async function handleCopyWeekList() {
-  const text = el.weekListOutput.value;
-  let copied = false;
-  try {
-    await navigator.clipboard.writeText(text);
-    copied = true;
-  } catch {
-    // Clipboard API unavailable or blocked (e.g. plain http) - fall back to
-    // selecting the text and the legacy copy command.
-    el.weekListOutput.select();
-    copied = document.execCommand("copy");
-  }
+  const copied = await copyText(el.weekListOutput);
+  if (copied) track("week_copy");
   el.weekCopyStatus.textContent = copied ? "Copied ✓ - paste it into WhatsApp." : "Couldn't copy - the text is selected, so press Ctrl/Cmd+C.";
 }

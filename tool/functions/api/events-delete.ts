@@ -4,12 +4,14 @@ import { commitEventById, triggerRebuild } from "./_shared/github.ts";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
 import type { RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext } from "./_shared/env.ts";
+import { recordUsage } from "./_shared/usageStats.ts";
 
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
 }
 
-export async function onRequestPost({ request, env }: ApiContext) {
+export async function onRequestPost(ctx: ApiContext) {
+  const { request, env } = ctx;
   let body: RequestBody;
   try {
     body = (await request.json<RequestBody | null>()) || {};
@@ -56,6 +58,7 @@ export async function onRequestPost({ request, env }: ApiContext) {
     if (result.error) {
       return jsonResponse(result, resultStatus(result));
     }
+    await recordUsage(ctx, calendar, { delete: 1 });
     return jsonResponse({ deleted: true, rebuild_triggered: await triggerRebuild(env) });
   } catch (err) {
     return jsonResponse(commitErrorResponse(err), 502);

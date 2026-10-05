@@ -8,6 +8,7 @@ import { fillCardFields, localValidationError, readCardFields, setupYearGroupCon
 import { rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
 import { selectTab } from "./tabs.js";
 import { apiCall, state } from "./state.js";
+import { track } from "./track.js";
 import type { DraftEvent } from "./state.js";
 import type { AlreadyListed, ClassListedEvent, ListResponse, ParseResponse, SaveResponse } from "../functions/api/_shared/types.d.ts";
 
@@ -151,6 +152,7 @@ function markAlreadyListed(node: HTMLElement, listed: AlreadyListed) {
   addButton.className = "secondary-button small-button card-add-anyway";
   addButton.textContent = "Add anyway";
   addButton.addEventListener("click", () => {
+    track("add_anyway");
     node.classList.remove("is-already-listed");
     origin.textContent = originText;
     origin.classList.remove("badge-warning");
