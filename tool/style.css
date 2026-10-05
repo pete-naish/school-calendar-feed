@@ -44,6 +44,8 @@
   --error-fg: #8f1d17;
   --success-bg: #e7f4ec;
   --success-fg: #14532d;
+  --bubble-bg: #dcf8c6; /* the Share tab's WhatsApp-style message */
+  --bubble-fg: #111b21;
   --warning: #d98a00;
   --warning-bg: #fff1d6;
   --warning-fg: #7a4a00;
@@ -80,6 +82,8 @@
     --error-fg: #ffb4ad;
     --success-bg: #15301f;
     --success-fg: #9be0b2;
+    --bubble-bg: #144d37;
+    --bubble-fg: #e9edef;
     --warning: #f0b35a;
     --warning-bg: #33280f;
     --warning-fg: #f6cd85;
@@ -111,6 +115,8 @@
   --error-fg: #ffb4ad;
   --success-bg: #15301f;
   --success-fg: #9be0b2;
+  --bubble-bg: #144d37;
+  --bubble-fg: #e9edef;
   --warning: #f0b35a;
   --warning-bg: #33280f;
   --warning-fg: #f6cd85;
@@ -1223,34 +1229,154 @@ button:disabled {
 
 /* --- Share ------------------------------------------------------------------ */
 
-.share-count {
-  padding: 14px 16px;
+.share-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* The subscribe count: two numbers and the split by app, as tiles. */
+.share-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 2fr);
+  gap: 1px;
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
+  background: var(--border);
+}
+
+.share-stats[hidden] {
+  display: none;
+}
+
+.share-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 14px 16px;
   background: var(--surface);
 }
 
-.share-count-number {
-  font-size: 22px;
+.share-stat-number {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
   color: var(--fg);
 }
 
-.share-block {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.share-stat-label {
+  font-size: 13px;
+  color: var(--muted);
 }
 
-.share-link {
-  flex: 1 1 260px;
-  min-width: 0;
+.share-stat-apps {
+  gap: 8px;
+}
+
+.share-platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.share-platforms .badge {
+  font-variant-numeric: tabular-nums;
+}
+
+.share-stats-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.share-empty {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* The message and the QR code side by side; stacked on a phone. */
+.share-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 248px;
+  gap: 16px;
+  align-items: start;
+}
+
+.share-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.share-card-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* The message, dressed as the WhatsApp bubble it'll become. */
+.share-bubble {
+  display: block;
+}
+
+.share-bubble textarea {
+  display: block;
+  /* Grows to fit the message, so the link at the end is never cut off on a
+     phone; browsers without field-sizing keep the rows from index.html. */
+  field-sizing: content;
+  min-height: 120px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px 12px 12px 4px;
+  background: var(--bubble-bg);
+  color: var(--bubble-fg);
+  line-height: 1.5;
+}
+
+.share-bubble textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-status {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.share-qr-card {
+  align-items: center;
+  text-align: center;
+}
+
+.share-qr-card .share-card-title {
+  align-self: flex-start;
 }
 
 /* Always black on white, in dark mode too - scanners need the contrast. */
 .share-qr {
   width: 100%;
-  max-width: 220px;
-  padding: 0;
+  max-width: 208px;
   border-radius: 8px;
   overflow: hidden;
   background: #ffffff;
@@ -1260,6 +1386,58 @@ button:disabled {
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* The link the code opens, as plain selectable text. */
+.share-link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+.share-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.share-qr-card button {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .share-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .share-qr-card {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .share-qr-card .share-card-title {
+    flex-basis: 100%;
+    text-align: left;
+  }
+
+  .share-qr {
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 560px) {
+  .share-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .share-stat-apps {
+    grid-column: 1 / -1;
+  }
 }
 
 /* --- Phones ----------------------------------------------------------------- */

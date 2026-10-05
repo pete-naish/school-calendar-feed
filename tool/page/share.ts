@@ -36,11 +36,11 @@ const PLATFORM_NAMES: [keyof StatsResponse["by_platform"], string][] = [
   ["link", "copied link"],
 ];
 
-// "Apple 14 · Google 7" - only the platforms with any taps.
-export function platformBreakdown(byPlatform: StatsResponse["by_platform"]) {
+// [["Apple", 14], ["Google", 7]] - only the apps with any taps, most first.
+export function platformBreakdown(byPlatform: StatsResponse["by_platform"]): [string, number][] {
   return PLATFORM_NAMES.filter(([key]) => byPlatform[key] > 0)
-    .map(([key, name]) => `${name} ${byPlatform[key]}`)
-    .join(" · ");
+    .map(([key, name]): [string, number] => [name, byPlatform[key]])
+    .sort((a, b) => b[1] - a[1]);
 }
 
 function calendarLabel(calendar: string) {
@@ -57,11 +57,12 @@ export async function handleShare() {
   if (filledFor !== calendar) {
     filledFor = calendar;
     const link = shareLink(calendar);
-    el.shareLink.value = link;
+    el.shareCalendarName.textContent = calendar === WHOLE_SCHOOL.code ? "St Paul's" : calendarLabel(calendar);
+    el.shareLink.value = link.replace(/^https:\/\//, "");
     el.shareMessage.value = shareMessage(calendar, calendarLabel(calendar), link);
-    el.shareLinkCopyStatus.textContent = "";
-    el.shareMessageCopyStatus.textContent = "";
+    el.shareCopyStatus.textContent = "";
     el.shareCount.hidden = true;
+    el.shareCountEmpty.hidden = true;
     drawQr(link);
   }
 
@@ -69,16 +70,21 @@ export async function handleShare() {
   if (state.calendar !== calendar) return; // switched calendar while it loaded
   if (!ok || !data.available) {
     el.shareCount.hidden = true;
+    el.shareCountEmpty.hidden = true;
     return;
   }
-  el.shareCountNumber.textContent = String(data.total);
-  const parts = [
-    `${data.total === 1 ? "tap" : "taps"} on a subscribe link for ${calendarLabel(calendar)} so far`,
-  ];
-  const breakdown = platformBreakdown(data.by_platform);
-  el.shareCountDetail.textContent =
-    parts[0] + (breakdown ? ` (${breakdown})` : "") + (data.total > 0 ? `, ${data.this_month} this month.` : ".");
-  el.shareCount.hidden = false;
+  // Nothing to count yet: a nudge rather than a row of zeros.
+  el.shareCountEmpty.hidden = data.total > 0;
+  el.shareCount.hidden = data.total === 0;
+  el.shareCountTotal.textContent = String(data.total);
+  el.shareCountTotalLabel.textContent = `subscribe ${data.total === 1 ? "tap" : "taps"}, all time`;
+  el.shareCountMonthLabel.textContent = `subscribe ${data.this_month === 1 ? "tap" : "taps"}, this month`;
+  el.shareCountMonth.textContent = String(data.this_month);
+  el.shareCountPlatforms.replaceChildren(
+    ...platformBreakdown(data.by_platform).map(([name, count]) =>
+      Object.assign(document.createElement("span"), { className: "badge", textContent: `${name} ${count}` })
+    )
+  );
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -153,14 +159,23 @@ function downloadQr() {
 
 export function wireShare() {
   el.shareLinkCopyButton.addEventListener("click", async () => {
-    const copied = await copyText(el.shareLink);
+    // The field shows the link without "https://", to fit under the code;
+    // the clipboard gets all of it. If the clipboard's blocked, the field is
+    // selected instead - WhatsApp still turns the shorter form into a link.
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(shareLink(state.calendar ?? ""));
+      copied = true;
+    } catch {
+      copied = await copyText(el.shareLink);
+    }
     if (copied) track("share_link_copy");
-    el.shareLinkCopyStatus.textContent = copied ? "Copied ✓" : "Couldn't copy - the link is selected, so press Ctrl/Cmd+C.";
+    el.shareCopyStatus.textContent = copied ? "Link copied ✓" : "Couldn't copy - the link is selected, so press Ctrl/Cmd+C.";
   });
   el.shareMessageCopyButton.addEventListener("click", async () => {
     const copied = await copyText(el.shareMessage);
     if (copied) track("share_message_copy");
-    el.shareMessageCopyStatus.textContent = copied
+    el.shareCopyStatus.textContent = copied
       ? "Copied ✓ - paste it into WhatsApp."
       : "Couldn't copy - the text is selected, so press Ctrl/Cmd+C.";
   });
