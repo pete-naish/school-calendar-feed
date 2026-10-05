@@ -26,7 +26,7 @@ import { state } from "./page/state.js";
 import { wireShare } from "./page/share.js";
 import { wireTabs } from "./page/tabs.js";
 import { track } from "./page/track.js";
-import { handleCopyWeekList, handleWeekList } from "./page/weekList.js";
+import { handleCopyWeekList, handleWeekList, wireWeekEmoji } from "./page/weekList.js";
 
 function init() {
   loadCalendars().then(restoreSession);
@@ -52,6 +52,7 @@ function init() {
   el.weekNextButton.addEventListener("click", () => handleWeekList(7));
   el.weekRefreshButton.addEventListener("click", () => handleWeekList(0));
   el.weekCopyButton.addEventListener("click", handleCopyWeekList);
+  wireWeekEmoji();
   wireShare();
   wireEventFilters();
   wireSchoolNotice();

@@ -9,6 +9,7 @@
 import { parseIcsEvents, isoToDay, dayToIso, weekdayIndex, dayParts, londonDayAndTime } from "./ics.ts";
 import type { IcsEvent } from "./ics.ts";
 import { titlePrefixFor } from "./calendars.ts";
+import { emojiFor } from "./weekEmoji.ts";
 
 // One occurrence of an event, as listed.
 interface WeekItem {
@@ -142,21 +143,25 @@ function collectItems(icsText: string, weekStartDay: number, { titlePrefix = "" 
 // .ics text for a class calendar, else null; those events keep their
 // "FOSPS: " prefix so parents can tell them apart; whole-school ones aren't
 // marked, since which calendar added an event doesn't matter to parents.
-// Returns the WhatsApp text (*bold* day headings, • bullets, > quoted
-// details) and how many events it lists.
+// Returns the WhatsApp text (*bold* day headings, • bullets - or an emoji per
+// event, with `emoji` - and > quoted details) and how many events it lists.
 export function buildWeekText({
   calendarIcs,
   wholeSchoolIcs,
   fospsIcs = null,
   calendar,
   weekStart,
+  emoji = false,
 }: {
   calendarIcs: string | null;
   wholeSchoolIcs: string;
   fospsIcs?: string | null;
   calendar: string;
   weekStart: string;
+  // An emoji for each event in place of its "•", where one fits (weekEmoji.ts).
+  emoji?: boolean;
 }): { text: string; count: number } {
+  const bullet = (title: string) => (emoji && emojiFor(title)) || "•";
   const weekStartDay = isoToDay(weekStart);
   const itemsFor = (startDay: number) => [
     ...(calendarIcs ? collectItems(calendarIcs, startDay, { titlePrefix: titlePrefixFor(calendar) }) : []),
@@ -184,7 +189,7 @@ export function buildWeekText({
     for (const item of dayItems) {
       const time = item.startTime ? `${formatTimeRange(item.startTime, item.endTime)} ` : "";
       const range = item.endDay > item.startDay ? ` (${shortDate(item.startDay)} – ${shortDate(item.endDay)})` : "";
-      lines.push(`• ${time}${item.title}${range}`);
+      lines.push(`${bullet(item.title)} ${time}${item.title}${range}`);
       // Details go in a WhatsApp quote block, which sets them apart from the
       // titles and keeps wrapped lines indented. Blank lines between
       // paragraphs are dropped: WhatsApp shows a bare ">" literally.
@@ -205,7 +210,7 @@ export function buildWeekText({
     for (const item of future) {
       const when = item.endDay > item.startDay ? `${shortDate(item.startDay)} – ${shortDate(item.endDay)}` : shortDate(item.startDay);
       const time = item.startTime ? `${formatTimeRange(item.startTime, item.endTime)} ` : "";
-      lines.push(`• *${when}* ${time}${item.title}`);
+      lines.push(`${bullet(item.title)} *${when}* ${time}${item.title}`);
     }
   }
   return { text: lines.join("\n"), count: items.length };

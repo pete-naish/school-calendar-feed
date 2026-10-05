@@ -288,3 +288,25 @@ test("future dates leave out recurring events and ones already listed this week"
   assert.doesNotMatch(text[0], /Future dates/);
   assert.doesNotMatch(text[1], /Future dates/);
 });
+
+// --- emoji in place of bullets ---
+
+const COFFEE_AND_LUNCH = calendar(
+  ["UID:manual-c@school-calendar-feed", `SUMMARY:${PREFIX}Coffee Morning`, "DTSTART;VALUE=DATE:20261014", "DTEND;VALUE=DATE:20261015"],
+  ["UID:manual-g@school-calendar-feed", `SUMMARY:${PREFIX}Group 3 Reception stay`, "DTSTART;VALUE=DATE:20261015", "DTEND;VALUE=DATE:20261016"],
+  ["UID:manual-h@school-calendar-feed", `SUMMARY:${PREFIX}Half Term Break`, "DTSTART;VALUE=DATE:20261021", "DTEND;VALUE=DATE:20261022"]
+);
+
+test("with emoji, a matching event's bullet is its emoji, in this week and in Future dates", () => {
+  const { text } = buildWeekText({ calendarIcs: COFFEE_AND_LUNCH, wholeSchoolIcs: EMPTY, calendar: "rec-a", weekStart: "2026-10-12", emoji: true });
+  assert.match(text, /^☕ Coffee Morning$/m);
+  assert.match(text, /^• Group 3 Reception stay$/m); // nothing fits
+  assert.match(text, /^🏖️ \*Wed 21 Oct\* Half Term Break$/m);
+});
+
+test("without emoji (the default) every line keeps its bullet", () => {
+  const { text } = buildWeekText({ calendarIcs: COFFEE_AND_LUNCH, wholeSchoolIcs: EMPTY, calendar: "rec-a", weekStart: "2026-10-12" });
+  assert.match(text, /^• Coffee Morning$/m);
+  assert.match(text, /^• \*Wed 21 Oct\* Half Term Break$/m);
+  assert.doesNotMatch(text, /☕|🏖️/);
+});

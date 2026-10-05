@@ -281,6 +281,16 @@ arrows step to other weeks. The default week is this one - or, on a Sunday
 opened, and by its **Refresh** button, so a save made meanwhile shows up once
 it's published.
 
+**Add emoji** (beside Refresh, on unless a rep turns it off - remembered per
+browser) puts a fitting emoji in place of each event's `•`: ☕ for a coffee
+morning, 📸 for photos, 🚫 for an INSET day... An event nothing fits, or whose
+title already has an emoji of its own, keeps its `•`. The emoji come from a
+fixed keyword table, `EMOJI_RULES` in `_shared/weekEmoji.ts` (first match
+wins, so specific rows go before general ones - a zoo trip is 🦁 before it's
+🚌), not from Claude, so the list is free, instant and the same every time it's
+built. When reps start posting a kind of event with no emoji, add a row, and a
+title for it in `tests/weekEmoji.test.mjs`.
+
 `/api/week` (`functions/api/week.ts`, logic in `_shared/weekList.ts`) reads
 the *published* `<calendar>.ics`, `whole-school.ics` and `fosps.ics` rather than the source
 JSON, so it shows what parents' calendar apps show - closure days, cancelled

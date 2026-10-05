@@ -20,7 +20,8 @@ function isValidIsoDate(value: unknown): value is string {
 // events plus whole-school ones (and FOSPS ones, for a class), Monday-Sunday,
 // read from the published .ics files (see _shared/weekList.ts). `week_start`
 // (any date in the wanted week) is optional; the default is this week, or next
-// week on a Sunday.
+// week on a Sunday. `emoji: true` puts an emoji in place of each event's
+// bullet where one fits (_shared/weekEmoji.ts).
 export async function onRequestPost(ctx: ApiContext) {
   const { request, env } = ctx;
   let body: RequestBody;
@@ -31,6 +32,7 @@ export async function onRequestPost(ctx: ApiContext) {
   }
 
   const { calendar, passcode, week_start: requestedWeek } = body;
+  const emoji = body.emoji === true;
 
   if (!isValidCalendar(calendar)) {
     return jsonResponse({ error: "invalid_calendar" }, 400);
@@ -56,7 +58,7 @@ export async function onRequestPost(ctx: ApiContext) {
         isClass ? fetchIcsText(`${FOSPS.code}.ics`) : null,
       ])
     );
-    const { text, count } = buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs, calendar, weekStart });
+    const { text, count } = buildWeekText({ calendarIcs, wholeSchoolIcs, fospsIcs, calendar, weekStart, emoji });
     await recordUsage(ctx, calendar, { week_view: 1 });
     return jsonResponse({ week_start: weekStart, week_end: weekEnd(weekStart), text, count });
   } catch (err) {

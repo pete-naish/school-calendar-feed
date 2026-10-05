@@ -73,6 +73,7 @@ export const el = {
   weekRefreshButton: byId<HTMLButtonElement>("week-refresh-button"),
   weekCopyButton: byId<HTMLButtonElement>("week-copy-button"),
   weekCopyStatus: byId("week-copy-status"),
+  weekEmojiToggle: byId<HTMLInputElement>("week-emoji-toggle"),
   shareCount: byId("share-count"),
   shareCountNumber: byId("share-count-number"),
   shareCountDetail: byId("share-count-detail"),

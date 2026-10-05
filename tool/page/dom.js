@@ -67,6 +67,7 @@ export const el = {
     weekRefreshButton: byId("week-refresh-button"),
     weekCopyButton: byId("week-copy-button"),
     weekCopyStatus: byId("week-copy-status"),
+    weekEmojiToggle: byId("week-emoji-toggle"),
     shareCount: byId("share-count"),
     shareCountNumber: byId("share-count-number"),
     shareCountDetail: byId("share-count-detail"),

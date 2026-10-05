@@ -1,7 +1,7 @@
 // The "What's on this week" WhatsApp list.
 import { formatDate, relativeWeek, shiftIsoDate } from "./dates.js";
 import { copyText, el } from "./dom.js";
-import { apiCall, state } from "./state.js";
+import { apiCall, state, storageGet, storageSet } from "./state.js";
 import { track } from "./track.js";
 import type { WeekResponse } from "../functions/api/_shared/types.d.ts";
 
@@ -14,9 +14,10 @@ export async function handleWeekList(shiftDays?: number) {
   const buttons = [el.weekPrevButton, el.weekNextButton, el.weekRefreshButton];
   buttons.forEach((b) => (b.disabled = true));
 
-  const body: { calendar: string | null; passcode: string | null; week_start?: string } = {
+  const body: { calendar: string | null; passcode: string | null; week_start?: string; emoji: boolean } = {
     calendar: state.calendar,
     passcode: state.passcode,
+    emoji: el.weekEmojiToggle.checked,
   };
   if (shiftDays !== undefined && state.weekStart) body.week_start = shiftIsoDate(state.weekStart, shiftDays);
   const { ok, data } = await apiCall<WeekResponse>("/api/week", body);
@@ -35,6 +36,18 @@ export async function handleWeekList(shiftDays?: number) {
   el.weekListOutput.value = data.text;
   el.weekCopyStatus.textContent = "";
   el.weekListPanel.hidden = false;
+}
+
+// "Add emoji": on unless this browser's rep turned it off. Changing it builds
+// the same week again, with or without.
+const EMOJI_KEY = "rep-tool-week-emoji";
+
+export function wireWeekEmoji() {
+  el.weekEmojiToggle.checked = storageGet(localStorage, EMOJI_KEY) !== "off";
+  el.weekEmojiToggle.addEventListener("change", () => {
+    storageSet(localStorage, EMOJI_KEY, el.weekEmojiToggle.checked ? null : "off");
+    handleWeekList(0);
+  });
 }
 
 export async function handleCopyWeekList() {
