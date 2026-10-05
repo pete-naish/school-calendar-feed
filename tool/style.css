@@ -44,8 +44,6 @@
   --error-fg: #8f1d17;
   --success-bg: #e7f4ec;
   --success-fg: #14532d;
-  --bubble-bg: #dcf8c6; /* the Share tab's WhatsApp-style message */
-  --bubble-fg: #111b21;
   --warning: #d98a00;
   --warning-bg: #fff1d6;
   --warning-fg: #7a4a00;
@@ -82,8 +80,6 @@
     --error-fg: #ffb4ad;
     --success-bg: #15301f;
     --success-fg: #9be0b2;
-    --bubble-bg: #144d37;
-    --bubble-fg: #e9edef;
     --warning: #f0b35a;
     --warning-bg: #33280f;
     --warning-fg: #f6cd85;
@@ -115,8 +111,6 @@
   --error-fg: #ffb4ad;
   --success-bg: #15301f;
   --success-fg: #9be0b2;
-  --bubble-bg: #144d37;
-  --bubble-fg: #e9edef;
   --warning: #f0b35a;
   --warning-bg: #33280f;
   --warning-fg: #f6cd85;
@@ -1328,28 +1322,17 @@ button:disabled {
   font-weight: 600;
 }
 
-/* The message, dressed as the WhatsApp bubble it'll become. */
-.share-bubble {
+.share-message-field {
   display: block;
 }
 
-.share-bubble textarea {
+.share-message-field textarea {
   display: block;
   /* Grows to fit the message, so the link at the end is never cut off on a
      phone; browsers without field-sizing keep the rows from index.html. */
   field-sizing: content;
   min-height: 120px;
-  padding: 12px 14px;
-  border: 0;
-  border-radius: 12px 12px 12px 4px;
-  background: var(--bubble-bg);
-  color: var(--bubble-fg);
   line-height: 1.5;
-}
-
-.share-bubble textarea:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
 }
 
 .share-actions {
