@@ -40,8 +40,8 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
   holds the helpers the tests import. Calendar picker → passcode → three
   tabs: **Events** (the calendar's saved events, grouped by month, each
   folded to a summary until opened to edit or delete), **Add events** (paste
-  text → "Find events" → check the new events → save; "+ Add one by hand"
-  is always there too - pasting text through Claude is optional) and
+  text → "Find events" → check the new events → save; "+ Add a calendar event
+  manually" is always there too - pasting text through Claude is optional) and
   **What's on this week** (below). The look follows the public page's:
   Geist (self-hosted in `fonts/`), and the year group's colour from its
   palette as the accent (`data-hue` on the page, set by `login.ts`). A
