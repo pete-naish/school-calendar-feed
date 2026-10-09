@@ -1,3 +1,14 @@
 {
- "changes": []
+ "changes": [
+  {
+   "calendar": "fosps",
+   "uid": "manual-2057ca168318@school-calendar-feed",
+   "kind": "moved",
+   "at": "2026-10-09T07:03:34Z",
+   "title": "Pre-Loved Uniform & Fancy Dress Sale",
+   "start": "2026-10-16T15:00",
+   "all_day": false,
+   "old_start": "2026-10-09T15:00"
+  }
+ ]
 }
