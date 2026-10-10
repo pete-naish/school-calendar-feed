@@ -1,6 +1,15 @@
 {
  "changes": [
   {
+   "calendar": "rec-a",
+   "uid": "manual-7deb78b595aa@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-10T19:37:34Z",
+   "title": "Return “Xmas4Schools” artwork",
+   "start": "2026-11-02",
+   "all_day": true
+  },
+  {
    "calendar": "fosps",
    "uid": "manual-2057ca168318@school-calendar-feed",
    "kind": "moved",

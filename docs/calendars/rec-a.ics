@@ -131,6 +131,22 @@ LAST-MODIFIED:20261005T124711Z
 LOCATION:TBC: a cafe near The Green
 END:VEVENT
 BEGIN:VEVENT
+SUMMARY:RR: Return “Xmas4Schools” artwork
+DTSTART;VALUE=DATE:20261102
+DTEND;VALUE=DATE:20261103
+DTSTAMP:20261010T193734Z
+UID:manual-7deb78b595aa@school-calendar-feed
+CREATED:20261010T193734Z
+DESCRIPTION:The Christmas artwork sheet will be going into school to be ha
+ nded out by the teachers prior to half term break. We are using a new comp
+ any this year. All is explained on the flier above. (Every year\, we organ
+ ise a Christmas fundraising activity where the children create their own C
+ hristmas artwork. We then send their designs to a company that turns them 
+ into Christmas cards and other festive gifts\, which families can purchase
+  to help raise funds for our school.)
+LAST-MODIFIED:20261010T193734Z
+END:VEVENT
+BEGIN:VEVENT
 SUMMARY:RR: PE Day 👟 – Wear PE Kit
 DTSTART;VALUE=DATE:20260903
 DTEND;VALUE=DATE:20260904
