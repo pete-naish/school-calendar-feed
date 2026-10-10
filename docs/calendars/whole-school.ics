@@ -6,17 +6,6 @@ METHOD:PUBLISH
 X-WR-CALNAME:St Paul's Enfield — Whole School
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:Information meeting for Parents - KS2
-DTSTART:20260909T081500Z
-DTEND:20260909T084500Z
-DTSTAMP:20261005T124711Z
-UID:stpauls-851@school-calendar-feed
-CREATED:20261005T232351Z
-LAST-MODIFIED:20261005T124711Z
-URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
- vent=851
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:Whole School Church Service (not Reception Children)
 DTSTART:20260916T080000Z
 DTEND:20260916T084500Z
