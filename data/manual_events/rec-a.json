@@ -11,5 +11,18 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "7deb78b595aa",
+    "title": "Return “Xmas4Schools” artwork",
+    "date": "2026-11-02",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": "The Christmas artwork sheet will be going into school to be handed out by the teachers prior to half term break. We are using a new company this year. All is explained on the flier above. (Every year, we organise a Christmas fundraising activity where the children create their own Christmas artwork. We then send their designs to a company that turns them into Christmas cards and other festive gifts, which families can purchase to help raise funds for our school.)",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
