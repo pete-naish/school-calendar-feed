@@ -1,6 +1,150 @@
 {
  "changes": [
   {
+   "calendar": "whole-school",
+   "uid": "stpauls-894@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS My Child's Art",
+   "start": "2026-11-02",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-895@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "Donation Day - Non Uniform Day",
+   "start": "2026-11-13",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-896@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "Christmas Fair",
+   "start": "2026-11-28",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-897@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Online Christmas Shop",
+   "start": "2026-11-28",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-898@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Wreath Making",
+   "start": "2026-12-08",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-899@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Wreath Making",
+   "start": "2026-12-09",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-900@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Cinema Night - TBA",
+   "start": "2027-01-15",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-901@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Cinema Night - TBA",
+   "start": "2027-01-23",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-902@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS School Disco",
+   "start": "2027-02-05",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-904@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Mother Day Gift Stall",
+   "start": "2027-03-01",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-903@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Mystery Book Sale",
+   "start": "2027-03-04",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-905@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Mini Marathon",
+   "start": "2027-04-23",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-906@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "Break the Rules Day",
+   "start": "2027-05-22",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-907@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "Young Entrepreneurs",
+   "start": "2027-06-05",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-908@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "Summer Fete",
+   "start": "2027-06-12",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-909@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-12T13:38:20Z",
+   "title": "FOSPS Father's Day Stall",
+   "start": "2027-06-14",
+   "all_day": true
+  },
+  {
    "calendar": "rec-a",
    "uid": "manual-7deb78b595aa@school-calendar-feed",
    "kind": "added",
