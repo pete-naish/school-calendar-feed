@@ -89,13 +89,17 @@ BEGIN:VEVENT
 SUMMARY:RR: Coffee Morning
 DTSTART;TZID=Europe/London:20261016T090000
 DTEND;TZID=Europe/London:20261016T100000
-DTSTAMP:20261005T124711Z
+DTSTAMP:20261016T060311Z
 UID:manual-603600bd2475@school-calendar-feed
 CREATED:20261005T232351Z
 DESCRIPTION:Chance for RR parents to meet/catch up\, share tips etc.! (Org
- anised by class rep\, not a school event.)
-LAST-MODIFIED:20261005T124711Z
-LOCATION:TBC: a cafe near The Green
+ anised by class rep\, not a school event.) Upon arrival\, ask for Amanda
+ ’s tables as they have specific ones for us. If you have a compact/easy 
+ fold buggy might be idea to use that one as 6 people bringing pushchairs (
+ cafe is aware of this).  Cafe serves breakfast as well as coffee/cafe: htt
+ ps://wanasacafe.co.uk
+LAST-MODIFIED:20261016T060311Z
+LOCATION:Wanasa Cafe 869 Green Lanes\, N21 2QS
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:RR: Return “Xmas4Schools” artwork
