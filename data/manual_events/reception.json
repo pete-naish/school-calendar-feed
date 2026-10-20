@@ -119,5 +119,18 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "850c776a2ae5",
+    "title": "Summer Fair",
+    "date": "2027-06-12",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": "Pageant - children participate, volunteers needed",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
