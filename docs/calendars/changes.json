@@ -2,6 +2,24 @@
  "changes": [
   {
    "calendar": "rec-a",
+   "uid": "manual-3ba9d7a10537@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-20T18:17:39Z",
+   "title": "Coat Donation- drop off good quality unwanted costs in school entrance hall",
+   "start": "2026-11-02",
+   "all_day": true
+  },
+  {
+   "calendar": "rec-b",
+   "uid": "manual-3ba9d7a10537@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-20T18:17:39Z",
+   "title": "Coat Donation- drop off good quality unwanted costs in school entrance hall",
+   "start": "2026-11-02",
+   "all_day": true
+  },
+  {
+   "calendar": "rec-a",
    "uid": "manual-0eed970e6971@school-calendar-feed",
    "kind": "added",
    "at": "2026-10-20T18:15:00Z",

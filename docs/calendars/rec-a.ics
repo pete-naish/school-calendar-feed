@@ -193,4 +193,21 @@ CREATED:20261020T181500Z
 LAST-MODIFIED:20261020T181500Z
 LOCATION:The King's Head\, the Snug
 END:VEVENT
+BEGIN:VEVENT
+SUMMARY:RR: Coat Donation- drop off good quality unwanted costs in school 
+ entrance hall
+DTSTART;VALUE=DATE:20261102
+DTEND;VALUE=DATE:20261121
+DTSTAMP:20261020T181739Z
+UID:manual-3ba9d7a10537@school-calendar-feed
+CREATED:20261020T181739Z
+DESCRIPTION:This November\, our school will be supporting Wrap Up London\,
+  which collects warm coats to help people in need. Since 2011\, over 250\,
+ 000 warm coats have been donated.\nThe 2026 collection will run from 2 to 
+ 20 November. If you have any unwanted coats in good condition\, please sen
+ d them in to school by Friday 20 November.\nDonation boxes will be availab
+ le in the entrance hall for you to drop off your coats. Please make sure a
+ ny children's names are removed from coats.
+LAST-MODIFIED:20261020T181739Z
+END:VEVENT
 END:VCALENDAR
