@@ -2,6 +2,24 @@
  "changes": [
   {
    "calendar": "rec-a",
+   "uid": "manual-850c776a2ae5@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-20T18:18:26Z",
+   "title": "Summer Fair",
+   "start": "2027-06-12",
+   "all_day": true
+  },
+  {
+   "calendar": "rec-b",
+   "uid": "manual-850c776a2ae5@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-20T18:18:26Z",
+   "title": "Summer Fair",
+   "start": "2027-06-12",
+   "all_day": true
+  },
+  {
+   "calendar": "rec-a",
    "uid": "manual-3ba9d7a10537@school-calendar-feed",
    "kind": "added",
    "at": "2026-10-20T18:17:39Z",

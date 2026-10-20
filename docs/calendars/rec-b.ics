@@ -178,4 +178,14 @@ DESCRIPTION:This November\, our school will be supporting Wrap Up London\,
  ny children's names are removed from coats.
 LAST-MODIFIED:20261020T181739Z
 END:VEVENT
+BEGIN:VEVENT
+SUMMARY:RGP: Summer Fair
+DTSTART;VALUE=DATE:20270612
+DTEND;VALUE=DATE:20270613
+DTSTAMP:20261020T181826Z
+UID:manual-850c776a2ae5@school-calendar-feed
+CREATED:20261020T181826Z
+DESCRIPTION:Pageant - children participate\, volunteers needed
+LAST-MODIFIED:20261020T181826Z
+END:VEVENT
 END:VCALENDAR
