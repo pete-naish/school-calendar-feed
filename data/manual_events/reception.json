@@ -132,5 +132,18 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "1b98846a0ad5",
+    "title": "Bring in Egg Box",
+    "date": "2026-11-02",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": "Please bring in a 12-egg box; will be using each row of 6 to make a caterpillar",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
