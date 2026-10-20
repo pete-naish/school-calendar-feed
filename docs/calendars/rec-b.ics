@@ -151,4 +151,14 @@ DESCRIPTION:Children can bring space themed items (e.g. small world\, rock
  ets\, books) during the week - items should be labelled with child's name
 LAST-MODIFIED:20261005T124711Z
 END:VEVENT
+BEGIN:VEVENT
+SUMMARY:RGP: Reception Parent/Carer Christmas Drinks
+DTSTART;TZID=Europe/London:20261120T193000
+DTEND;TZID=Europe/London:20261120T223000
+DTSTAMP:20261020T181500Z
+UID:manual-0eed970e6971@school-calendar-feed
+CREATED:20261020T181500Z
+LAST-MODIFIED:20261020T181500Z
+LOCATION:The King's Head\, the Snug
+END:VEVENT
 END:VCALENDAR

@@ -1,6 +1,24 @@
 {
  "changes": [
   {
+   "calendar": "rec-a",
+   "uid": "manual-0eed970e6971@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-20T18:15:00Z",
+   "title": "Reception Parent/Carer Christmas Drinks",
+   "start": "2026-11-20T19:30",
+   "all_day": false
+  },
+  {
+   "calendar": "rec-b",
+   "uid": "manual-0eed970e6971@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-20T18:15:00Z",
+   "title": "Reception Parent/Carer Christmas Drinks",
+   "start": "2026-11-20T19:30",
+   "all_day": false
+  },
+  {
    "calendar": "whole-school",
    "uid": "stpauls-894@school-calendar-feed",
    "kind": "added",
