@@ -93,5 +93,18 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "0eed970e6971",
+    "title": "Reception Parent/Carer Christmas Drinks",
+    "date": "2026-11-20",
+    "end_date": null,
+    "time": "19:30",
+    "end_time": "22:30",
+    "description": null,
+    "location": "The King's Head, the Snug",
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
