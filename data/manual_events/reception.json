@@ -106,5 +106,18 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "3ba9d7a10537",
+    "title": "Coat Donation- drop off good quality unwanted costs in school entrance hall",
+    "date": "2026-11-02",
+    "end_date": "2026-11-20",
+    "time": null,
+    "end_time": null,
+    "description": "This November, our school will be supporting Wrap Up London, which collects warm coats to help people in need. Since 2011, over 250,000 warm coats have been donated.\nThe 2026 collection will run from 2 to 20 November. If you have any unwanted coats in good condition, please send them in to school by Friday 20 November.\nDonation boxes will be available in the entrance hall for you to drop off your coats. Please make sure any children's names are removed from coats.",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
