@@ -1,6 +1,186 @@
 {
  "changes": [
   {
+   "calendar": "whole-school",
+   "uid": "stpauls-894@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS My Child's Art",
+   "start": "2026-11-02",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-897@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Online Christmas Shop",
+   "start": "2026-11-28",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-898@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Wreath Making",
+   "start": "2026-12-08",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-899@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Wreath Making",
+   "start": "2026-12-09",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-900@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Cinema Night - TBA",
+   "start": "2027-01-15",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-901@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Cinema Night - TBA",
+   "start": "2027-01-23",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-902@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS School Disco",
+   "start": "2027-02-05",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-904@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Mother Day Gift Stall",
+   "start": "2027-03-01",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-903@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Mystery Book Sale",
+   "start": "2027-03-04",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-905@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Mini Marathon",
+   "start": "2027-04-23",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-909@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "FOSPS Father's Day Stall",
+   "start": "2027-06-14",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-9e0556c2666e@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "My Child's Art",
+   "start": "2026-11-02",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-844e837f059f@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "Online Christmas Shop",
+   "start": "2026-11-28",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-f73662b73c8b@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "Cinema Night - TBA",
+   "start": "2027-01-15",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-a190a999fc36@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "Cinema Night - TBA",
+   "start": "2027-01-23",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-ebcef6130d40@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "School Disco",
+   "start": "2027-02-05",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-36956c78a5c3@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "Mother's Day Gift Stall",
+   "start": "2027-03-01",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-61c853767104@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "Mystery Book Sale",
+   "start": "2027-03-04",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-578059c58f6c@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "Mini Marathon",
+   "start": "2027-04-23",
+   "all_day": true
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-c12cbc1ce7c2@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-10-24T19:53:01Z",
+   "title": "Father's Day Stall",
+   "start": "2027-06-14",
+   "all_day": true
+  },
+  {
    "calendar": "rec-a",
    "uid": "manual-1b98846a0ad5@school-calendar-feed",
    "kind": "added",
