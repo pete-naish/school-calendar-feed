@@ -557,6 +557,22 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* An invisible bold copy of the label holds each button at its bold width,
+   so making one active doesn't nudge its neighbours sideways. */
+.cal-view-switch .view-button::after {
+  content: attr(data-label);
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 600;
+  user-select: none;
+  pointer-events: none;
 }
 
 .cal-view-switch .view-button:hover {
@@ -575,13 +591,50 @@
 }
 
 @media (max-width: 600px) {
+  /* Fixed rows on a phone: title, then the view switch full width, then
+     dates on the left and refresh/print on the right. Left to wrap freely,
+     the controls reflowed whenever the dates were hidden (List view), so
+     buttons jumped between rows as the view changed. */
   .preview-title {
     flex-basis: 100%;
   }
 
+  .cal-nav {
+    column-gap: 0.5rem;
+  }
+
+  .cal-view-switch {
+    flex-basis: 100%;
+  }
+
+  .cal-view-switch .view-button {
+    flex: 1 1 0;
+  }
+
+  .cal-nav-dates {
+    order: 1;
+  }
+
+  .cal-refresh {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .cal-print {
+    order: 3;
+  }
+
   /* Seven slivers of a week don't help on a phone. */
-  .view-button--wide {
+  .cal-view-switch .view-button--wide {
     display: none;
+  }
+}
+
+/* The longest day title ("Wednesday, 29 September 2027") wraps to a second
+   line on the narrowest phones, pushing the controls down on those days. */
+@media (max-width: 380px) {
+  .preview-title {
+    font-size: 1.125rem;
   }
 }
 
