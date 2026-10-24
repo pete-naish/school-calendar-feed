@@ -23,10 +23,11 @@ each event, and writes out:
                                   (a recurring one's `exceptions` may carry a
                                   `classes` list, limiting that exception to
                                   those classes - e.g. ["rr"] - else all).
-- calendars/fosps.ics          - Friends of St Paul's events. Not published
-                                  by the school API at all; sourced from
+- calendars/fosps.ics          - Friends of St Paul's events. Sourced only from
                                   data/manual_events/fosps.json, maintained by
                                   hand or via the class-rep tool (see tool/).
+                                  School events titled "FOSPS ..." are dropped
+                                  from every feed so they aren't duplicated.
 
 Classification is title-based (the API gives no structured category), using
 the CLASS config below plus a few keyword rules. Unrecognised class-code-shaped
@@ -182,6 +183,10 @@ for group in YEAR_GROUPS:
 _ALIAS_PATTERN = re.compile(
     r"\b(" + "|".join(re.escape(a) for a in sorted(ALIAS_TO_CLASS, key=len, reverse=True)) + r")\b"
 )
+# The school's calendar now lists some FOSPS events too ("FOSPS School
+# Disco"). Those belong in our hand-kept fosps.ics, so school copies are
+# skipped entirely rather than duplicating them in whole-school/class feeds.
+_FOSPS_PATTERN = re.compile(r"\bFOSPS\b|\bFriends\s+of\s+St\.?\s+Paul'?s\b", re.IGNORECASE)
 _WHOLE_SCHOOL_KEYWORDS = re.compile(r"\bwhole\s+school\b|\bKS[12]\b", re.IGNORECASE)
 _YEAR_WORD_PATTERN = re.compile(r"\bYear\s+(\d)\b", re.IGNORECASE)
 _YEAR_COMPOUND_PATTERN = re.compile(r"\bYear\s+\d\s*(?:and|&)\s*(\d)\b", re.IGNORECASE)
@@ -214,6 +219,10 @@ BUILD_PROBLEMS: list[dict[str, str]] = []
 def _note_problem(kind: str, message: str, **details: str) -> None:
     BUILD_PROBLEMS.append({"kind": kind, "message": message, **details})
     print(f"WARNING: {message}", file=sys.stderr)
+
+
+def is_fosps_event(title: str) -> bool:
+    return bool(_FOSPS_PATTERN.search(title))
 
 
 def classify_event(title: str) -> tuple[str, set[str]]:
@@ -1080,7 +1089,12 @@ def main() -> None:
             continue
         seen_ids.add(raw["id"])
 
-        bucket, class_codes = classify_event(_clean(raw.get("title")))
+        title = _clean(raw.get("title"))
+        if is_fosps_event(title):
+            print(f"Skipped school event {raw['id']} {title!r} (FOSPS - kept in fosps.ics instead)", file=sys.stderr)
+            continue
+
+        bucket, class_codes = classify_event(title)
         override = whole_school_overrides.get(str(raw["id"]), {})
         override_kwargs = {
             "description_override": override.get("description"),

@@ -147,6 +147,11 @@ scrapable calendar at all) are entered by hand into
 `data/manual_events/y5-b.json`, `data/manual_events/fosps.json`), merged into
 that calendar's `.ics` alongside anything from the school API.
 
+The school's own calendar sometimes lists FOSPS events too. Any school event
+whose title mentions "FOSPS" or "Friends of St Paul's" is left out of every
+feed, so `fosps.json` is the only source for FOSPS events. If the school
+lists one that isn't in `fosps.json` yet, add it there.
+
 An event for a whole year group (e.g. a Reception trip for both RR and RGP)
 is stored once, in `data/manual_events/<year key>.json` - `reception.json`,
 `year1.json` ... `year6.json` (the `key` of each entry in `YEAR_GROUPS` in

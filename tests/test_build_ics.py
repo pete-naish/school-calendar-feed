@@ -324,6 +324,35 @@ def test_main_class_event_without_override_keeps_school_text(tmp_path, monkeypat
     assert "location" not in event
 
 
+@pytest.mark.parametrize("title,expected", [
+    ("FOSPS School Disco", True),
+    ("FOSPS Year 6 Disco", True),
+    ("fosps cinema night", True),
+    ("Friends of St Paul's Winter Fair", True),
+    ("Friends of St. Pauls AGM", True),
+    ("School Disco", False),
+    ("Eucharist Year 5 and Year 6 - St Paul's Church", False),
+])
+def test_is_fosps_event(title, expected):
+    assert build_ics.is_fosps_event(title) is expected
+
+
+def test_main_skips_school_fosps_events(tmp_path, monkeypatch):
+    # FOSPS events come from fosps.json only; the school's copies would be
+    # duplicates, including ones that name a year group.
+    raws = [
+        {"id": 50, "title": "FOSPS School Disco", "allDay": True, "start": "2027-02-05"},
+        {"id": 51, "title": "FOSPS Year 6 Disco", "allDay": True, "start": "2027-02-06"},
+        {"id": 52, "title": "School Disco", "allDay": True, "start": "2027-02-07"},
+    ]
+    cals = _build_with_overrides(tmp_path, monkeypatch, raws, {})
+
+    all_uids = {uid for cal in cals.values() for uid in _events_by_uid(cal)}
+    assert "stpauls-50@school-calendar-feed" not in all_uids
+    assert "stpauls-51@school-calendar-feed" not in all_uids
+    assert "stpauls-52@school-calendar-feed" in _events_by_uid(cals["whole-school.ics"])
+
+
 # --------------------------------------------------------------------------
 # build_manual_event() - multi-day date math + the recurrence/DST fix
 # --------------------------------------------------------------------------
