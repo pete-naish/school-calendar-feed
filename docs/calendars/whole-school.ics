@@ -6,19 +6,6 @@ METHOD:PUBLISH
 X-WR-CALNAME:St Paul's Enfield — Whole School
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:Nasal Flu Spray
-DTSTART;VALUE=DATE:20260923
-DTEND;VALUE=DATE:20260924
-DTSTAMP:20261005T124711Z
-UID:stpauls-857@school-calendar-feed
-CREATED:20261005T232351Z
-DESCRIPTION:Complete consent form: https://www.manage-vaccinations-in-scho
- ols.nhs.uk/consents/oT3gBr4E4j/flu/start
-LAST-MODIFIED:20261005T124711Z
-URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
- vent=857
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:MacMillan Coffee Morning
 DTSTART:20260925T081500Z
 DTEND:20260925T091500Z
