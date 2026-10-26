@@ -6,27 +6,6 @@ METHOD:PUBLISH
 X-WR-CALNAME:St Paul's Enfield — Whole School
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:MacMillan Coffee Morning
-DTSTART:20260925T081500Z
-DTEND:20260925T091500Z
-DTSTAMP:20261005T124711Z
-UID:stpauls-859@school-calendar-feed
-CREATED:20261005T232351Z
-DESCRIPTION:School are asking for donations of individually wrapped cakes 
- and biscuits (due to allergies) to be sent into school by Thursday 24th Se
- ptember. Use by date to be at least Friday 25th September.\n\nEvery child 
- in the school will be taking part to support this event in their classroom
- \, they will not be coming into the hall.  \n\nSchool are asking for a don
- ation to Macmillan Cancer Relief per child which will include a drink and 
- biscuits or cake\, and per adult as part of the coffee morning.\n\nPlease 
- donate using this link as the event is cashless: https://donate.justgiving
- .com/fundraising/cm26005686/donation-amount
-LAST-MODIFIED:20261005T124711Z
-LOCATION:School Hall
-URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
- vent=859
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:Nasal Flu Vaccination catch up
 DTSTART;VALUE=DATE:20261001
 DTEND;VALUE=DATE:20261002
