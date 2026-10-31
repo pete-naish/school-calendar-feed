@@ -58,23 +58,6 @@ TZOFFSETTO:+0100
 END:DAYLIGHT
 END:VTIMEZONE
 BEGIN:VEVENT
-SUMMARY:RR: Reception Welcome Service - St Paul's Church
-DTSTART:20260930T133000Z
-DTEND:20260930T140500Z
-DTSTAMP:20261005T124711Z
-UID:stpauls-861@school-calendar-feed
-CREATED:20261005T232351Z
-DESCRIPTION:Reception will be walking to St Paul’s Church with staff for
-  their first church service. Parents/carers invited to attend church.\n\nC
- hildren will be collected directly from the church at the end of the servi
- ce. Any children attending Extra Club will be walked back to school by sta
- ff.\n\nPlease be aware that children will not bring their school bags or w
- ater bottles home following the service.
-LAST-MODIFIED:20261005T124711Z
-URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
- vent=861
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:RR: Coffee Morning
 DTSTART;TZID=Europe/London:20261016T090000
 DTEND;TZID=Europe/London:20261016T100000
