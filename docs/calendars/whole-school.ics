@@ -6,19 +6,6 @@ METHOD:PUBLISH
 X-WR-CALNAME:St Paul's Enfield — Whole School
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:Nasal Flu Vaccination catch up
-DTSTART;VALUE=DATE:20261001
-DTEND;VALUE=DATE:20261002
-DTSTAMP:20261005T124711Z
-UID:stpauls-863@school-calendar-feed
-CREATED:20261005T232351Z
-DESCRIPTION:Complete consent form: https://www.manage-vaccinations-in-scho
- ols.nhs.uk/consents/oT3gBr4E4j/flu/start
-LAST-MODIFIED:20261005T124711Z
-URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
- vent=863
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:Individual and Sibling photographs
 DTSTART;VALUE=DATE:20261007
 DTEND;VALUE=DATE:20261008
