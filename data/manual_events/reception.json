@@ -145,5 +145,18 @@
     "url": null,
     "recurrence": null,
     "exceptions": []
+  },
+  {
+    "id": "04b20b626c07",
+    "title": "Comfy for a Cause Pyjama Day",
+    "date": "2026-11-27",
+    "end_date": null,
+    "time": null,
+    "end_time": null,
+    "description": "We will be supporting the Help for Hunger charity this year by taking part in their Comfy for a Cause pyjama day on the 27 November. More info to follow.",
+    "location": null,
+    "url": null,
+    "recurrence": null,
+    "exceptions": []
   }
 ]
