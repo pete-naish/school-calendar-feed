@@ -182,4 +182,16 @@ DESCRIPTION:Please bring in a 12-egg box\; will be using each row of 6 to
  make a caterpillar
 LAST-MODIFIED:20261020T181936Z
 END:VEVENT
+BEGIN:VEVENT
+SUMMARY:RGP: Comfy for a Cause Pyjama Day
+DTSTART;VALUE=DATE:20261127
+DTEND;VALUE=DATE:20261128
+DTSTAMP:20261106T104759Z
+UID:manual-04b20b626c07@school-calendar-feed
+CREATED:20261106T104759Z
+DESCRIPTION:We will be supporting the Help for Hunger charity this year by
+  taking part in their Comfy for a Cause pyjama day on the 27 November. Mor
+ e info to follow.
+LAST-MODIFIED:20261106T104759Z
+END:VEVENT
 END:VCALENDAR

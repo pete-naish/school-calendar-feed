@@ -122,17 +122,6 @@ URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=876
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:Donation Day - Non Uniform Day
-DTSTART;VALUE=DATE:20261113
-DTEND;VALUE=DATE:20261114
-DTSTAMP:20261012T133820Z
-UID:stpauls-895@school-calendar-feed
-CREATED:20261012T133820Z
-LAST-MODIFIED:20261012T133820Z
-URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
- vent=895
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:Anti - Bullying Week
 DTSTART;VALUE=DATE:20261116
 DTEND;VALUE=DATE:20261121
@@ -142,6 +131,17 @@ CREATED:20261005T232351Z
 LAST-MODIFIED:20261005T124711Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=877
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Donation Day - Non Uniform Day
+DTSTART;VALUE=DATE:20261120
+DTEND;VALUE=DATE:20261121
+DTSTAMP:20261106T104759Z
+UID:stpauls-895@school-calendar-feed
+CREATED:20261012T133820Z
+LAST-MODIFIED:20261106T104759Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=895
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:Christmas Fair

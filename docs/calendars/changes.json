@@ -2,6 +2,34 @@
  "changes": [
   {
    "calendar": "whole-school",
+   "uid": "stpauls-895@school-calendar-feed",
+   "kind": "moved",
+   "at": "2026-11-06T10:47:59Z",
+   "title": "Donation Day - Non Uniform Day",
+   "start": "2026-11-20",
+   "all_day": true,
+   "old_start": "2026-11-13"
+  },
+  {
+   "calendar": "rec-a",
+   "uid": "manual-04b20b626c07@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-06T10:47:59Z",
+   "title": "Comfy for a Cause Pyjama Day",
+   "start": "2026-11-27",
+   "all_day": true
+  },
+  {
+   "calendar": "rec-b",
+   "uid": "manual-04b20b626c07@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-06T10:47:59Z",
+   "title": "Comfy for a Cause Pyjama Day",
+   "start": "2026-11-27",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
    "uid": "stpauls-894@school-calendar-feed",
    "kind": "cancelled",
    "at": "2026-10-24T19:53:01Z",
