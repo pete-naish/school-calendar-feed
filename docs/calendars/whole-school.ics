@@ -6,19 +6,6 @@ METHOD:PUBLISH
 X-WR-CALNAME:St Paul's Enfield — Whole School
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:Individual and Sibling photographs
-DTSTART;VALUE=DATE:20261007
-DTEND;VALUE=DATE:20261008
-DTSTAMP:20261005T124711Z
-UID:stpauls-865@school-calendar-feed
-CREATED:20261005T232351Z
-DESCRIPTION:Please make sure children come to school in the correct unifor
- m\, with a cardigan/jumper and tie.
-LAST-MODIFIED:20261005T124711Z
-URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
- vent=865
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:Young Minds - Hello Yellow
 DTSTART;VALUE=DATE:20261009
 DTEND;VALUE=DATE:20261010
