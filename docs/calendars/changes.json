@@ -1,6 +1,24 @@
 {
  "changes": [
   {
+   "calendar": "rec-a",
+   "uid": "manual-de649055fa42@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-08T19:50:42Z",
+   "title": "Bring in small world birds",
+   "start": "2026-11-12",
+   "all_day": true
+  },
+  {
+   "calendar": "rec-b",
+   "uid": "manual-de649055fa42@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-08T19:50:42Z",
+   "title": "Bring in small world birds",
+   "start": "2026-11-12",
+   "all_day": true
+  },
+  {
    "calendar": "whole-school",
    "uid": "stpauls-895@school-calendar-feed",
    "kind": "moved",

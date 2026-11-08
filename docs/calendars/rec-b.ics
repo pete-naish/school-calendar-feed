@@ -194,4 +194,16 @@ DESCRIPTION:We will be supporting the Help for Hunger charity this year by
  e info to follow.
 LAST-MODIFIED:20261106T104759Z
 END:VEVENT
+BEGIN:VEVENT
+SUMMARY:RGP: Bring in small world birds
+DTSTART;VALUE=DATE:20261112
+DTEND;VALUE=DATE:20261113
+DTSTAMP:20261108T195042Z
+UID:manual-de649055fa42@school-calendar-feed
+CREATED:20261108T195042Z
+DESCRIPTION:If children have any small world birds/soft toy birds\, it wou
+ ld be great if they could bring these in. Please can they be labelled with
+  your child's name.
+LAST-MODIFIED:20261108T195042Z
+END:VEVENT
 END:VCALENDAR
