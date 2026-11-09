@@ -6,21 +6,6 @@ METHOD:PUBLISH
 X-WR-CALNAME:St Paul's Enfield — Whole School
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-SUMMARY:Young Minds - Hello Yellow
-DTSTART;VALUE=DATE:20261009
-DTEND;VALUE=DATE:20261010
-DTSTAMP:20261005T124711Z
-UID:stpauls-866@school-calendar-feed
-CREATED:20261005T232351Z
-DESCRIPTION:Children can wear something yellow\, like a ribbon\, bow\, wri
- stband or socks with their uniform. Donations can be made using the follow
- ing link: https://fundraise.youngminds.org.uk/fundraisers/jthomas/hello-ye
- llow
-LAST-MODIFIED:20261005T124711Z
-URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
- vent=866
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:Parent Consultation Meetings
 DTSTART:20261019T144500Z
 DTEND:20261019T173000Z
