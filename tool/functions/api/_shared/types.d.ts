@@ -53,6 +53,12 @@ export interface EventFields {
   // A poster's key in the POSTERS bucket (see posters.ts). Absent on events
   // saved before posters existed.
   image?: string | null;
+  // On a multi-day event with a start time: true when its times apply on each
+  // of its days (19:00-22:00 on Tuesday and on Wednesday), rather than one
+  // stretch from the first day's start to the last day's end. Saved only when
+  // true. From the model: true, false, or null when it couldn't tell (the rep
+  // is asked).
+  each_day?: boolean | null;
 }
 
 // One entry in data/manual_events/<file>.json. `rev` changes on every save

@@ -55,7 +55,14 @@ the build and refuses a commit whose rebuilt `.js` isn't staged.
   every Thursday" auto-detects the repeat pattern and pre-fills the card's
   Repeats dropdown (with a suggested "repeat until" - see `parse.ts` /
   `termEnd.ts` below) - still fully editable before saving, same as a
-  manually-set repeat. These become a standard iCalendar `RRULE` in the
+  manually-set repeat. An event with an end date and a start time also has to say
+  which it is: **on each day** at those times (`each_day: true`, e.g. 19:00–22:00
+  on Tuesday and again on Wednesday) or **one stretch** from the first day's
+  start to the last day's end (a residential trip). `build_ics.py` publishes
+  each-day as a daily RRULE with a COUNT, skipping no days (unlike a repeat,
+  which skips weekends and closures). "Find events" suggests the answer when the
+  text makes it clear and leaves it for the rep otherwise; events saved before
+  the question existed count as one stretch, as they were published. These become a standard iCalendar `RRULE` in the
   published `.ics`. `scripts/build_ics.py` automatically excludes
   occurrences that fall on inset days, half term, or holidays (and
   weekends, for a daily repeat) - no need to account for term dates when
@@ -460,7 +467,7 @@ as before. A save where every event was a duplicate doesn't trigger one.
 
 Any event can have a poster (a FOSPS flyer, say), including a school event
 from the Whole School entry or a class's own list, alongside its description
-and location. On the card, **Add poster** takes any image the browser can open;
+and location. Tapping a card's poster thumbnail shows it full size in a dialog. On the card, **Add poster** takes any image the browser can open;
 `page/poster.ts` shrinks it to a JPEG of at most 1600px on its longest side
 (which also strips EXIF data, such as a phone photo's location) and uploads it
 straight away to `POST /api/poster-upload`. That stores it in the `POSTERS` R2
@@ -514,7 +521,10 @@ fetched first. So every save stamps the event with a new version (`rev`, from
 `generateRev()` in `_shared/github.ts`: on a manual event, or on a school
 event's override), the build puts it in the event's page
 (`<meta name="calendar-rev">`), and after copying, the card asks
-`GET /api/event-ready?key=&rev=` whether the live page has it yet. That
+`GET /api/event-ready?key=&rev=` whether the live page has it yet. Saving
+does the same check: the card says "Saved ✓ - updating the calendar…" until
+the change is live, then "it's live on the calendar now" (for new events from
+**Save all**, the list's message does, once they all are). That
 endpoint fetches the page the way WhatsApp would, through the cache. If it's
 not ready, the card says not to post yet, checks again every 20 seconds, and
 says "Link ready" when it is (giving up after 25 minutes). A school date

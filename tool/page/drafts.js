@@ -1,12 +1,13 @@
 // Adding events: pasting text for Claude to read events from, typing one in
 // by hand, and saving the new ("draft") cards together.
 import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic } from "../appHelpers.js";
-import { addWeekdayHints } from "./cardState.js";
+import { addWeekdayHints, cardState } from "./cardState.js";
 import { formatSchoolSpan } from "./dates.js";
 import { confirmSecondClick, el, find, plural } from "./dom.js";
 import { POSTER_BUSY_MESSAGE, posterBusy } from "./poster.js";
-import { fillCardFields, localValidationError, readCardFields, setupYearGroupControls, wireCardDefaultEndTime, wireRecurrenceToggle } from "./eventCard.js";
-import { rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
+import { fillCardFields, localValidationError, readCardFields, setupYearGroupControls, wireCardDefaultEndTime, wireEachDay, wireRecurrenceToggle, } from "./eventCard.js";
+import { allEventCards, rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
+import { watchNewEvents } from "./eventShare.js";
 import { selectTab } from "./tabs.js";
 import { apiCall, state } from "./state.js";
 import { track } from "./track.js";
@@ -90,6 +91,7 @@ export function addDraftCard(event, { fromText = false, alreadyListed } = {}) {
     fillCardFields(node, event);
     wireCardDefaultEndTime(node);
     wireRecurrenceToggle(node);
+    wireEachDay(node);
     setupYearGroupControls(node);
     addWeekdayHints(node);
     // Drafts save together from the save bar, so they have no buttons of their
@@ -176,6 +178,8 @@ export async function handleSaveAll() {
         return;
     el.saveAllButton.disabled = true;
     el.saveAllButton.textContent = "Saving…";
+    // What's listed already, to tell the new events apart once they're listed.
+    const known = new Set(allEventCards().map((card) => cardState(card).id));
     const resp = await apiCall("/api/save", {
         calendar: state.calendar,
         passcode: state.passcode,
@@ -202,12 +206,20 @@ export async function handleSaveAll() {
     updateExtractButtonState();
     updateDraftControlsVisibility();
     selectTab("events");
-    showListStatus(`${plural(data.saved, "event")} saved${skipped}. ${data.saved === 1 ? "It'll" : "They'll"} appear in the calendar ${rebuildWait(data.rebuild_triggered)}.`);
+    const saved = `${plural(data.saved, "event")} saved${skipped}.`;
+    showListStatus(`${saved} ${data.saved === 1 ? "It'll" : "They'll"} appear in the calendar ${rebuildWait(data.rebuild_triggered)}.`);
     // The save button just disappeared with the bar, so put the focus on what
     // happened (and its Undo) rather than leave it nowhere.
     el.existingStatus.focus({ preventScroll: true });
     el.existingStatus.scrollIntoView({ block: "nearest" });
     const listResult = await apiCall("/api/events-list", { calendar: state.calendar, passcode: state.passcode });
-    if (listResult.ok)
-        renderExistingEvents(listResult.data.events);
+    if (!listResult.ok)
+        return;
+    const listed = listResult.data.events;
+    renderExistingEvents(listed);
+    // Then say when they're live on the calendar.
+    if (data.rebuild_triggered) {
+        const added = listed.flatMap((e) => (!e.school_event && !known.has(e.id) && e.rev ? [{ key: e.id, rev: e.rev }] : []));
+        void watchNewEvents(added, (text) => showListStatus(text), saved);
+    }
 }

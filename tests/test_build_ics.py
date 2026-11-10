@@ -1208,3 +1208,21 @@ def test_load_event_revs(tmp_path, monkeypatch):
         "a1": "11111111",
         "s42": "22222222",
     }
+
+
+def test_each_day_event_is_a_daily_count_with_no_skipped_days():
+    # Fri-Sun: a `recurrence` would skip the weekend; each_day mustn't.
+    raw = {"id": "d1", "title": "Fair", "date": "2026-12-04", "end_date": "2026-12-06", "time": "19:00", "end_time": "22:00", "each_day": True}
+    [event] = build_ics.build_manual_event(raw, "fosps", {date(2026, 12, 5)})
+    assert event["rrule"].to_ical() == b"FREQ=DAILY;COUNT=3"
+    assert "exdate" not in event
+    assert event.decoded("dtend").hour == 22 and event.decoded("dtend").day == 4
+    assert build_ics.event_when_text(event, date(2026, 11, 10)) == "Fri 4 Dec – Sun 6 Dec, 19:00–22:00 each day"
+    assert build_ics._last_day(event) == date(2026, 12, 6)
+
+
+def test_multi_day_event_without_each_day_runs_straight_through():
+    raw = {"id": "d2", "title": "Trip", "date": "2026-12-07", "end_date": "2026-12-09", "time": "09:00", "end_time": "15:00"}
+    [event] = build_ics.build_manual_event(raw, "fosps", set())
+    assert "rrule" not in event
+    assert build_ics.event_when_text(event, date(2026, 11, 10)) == "Mon 7 Dec, 09:00 – Wed 9 Dec, 15:00"

@@ -45,6 +45,25 @@ function show(card, key) {
     find(card, ".poster-pick-button").textContent = key ? "Replace poster" : "Add poster";
     find(card, ".poster-remove-button").hidden = !key;
 }
+// The full-size view: one dialog for the page, opened from any card's
+// thumbnail. A tap outside the poster (on the backdrop) closes it too.
+function openPosterDialog(key) {
+    const dialog = document.getElementById("poster-dialog");
+    if (!dialog) {
+        window.open(posterSrc(key), "_blank", "noopener");
+        return;
+    }
+    if (!dialog.dataset.wired) {
+        dialog.dataset.wired = "1";
+        find(dialog, ".poster-dialog-close").addEventListener("click", () => dialog.close());
+        dialog.addEventListener("click", (e) => {
+            if (e.target === dialog)
+                dialog.close();
+        });
+    }
+    find(dialog, "img").src = posterSrc(key);
+    dialog.showModal();
+}
 // Fills the card's poster field and wires it up. Hidden when posters aren't
 // set up on the server (state.posters).
 export function setupPosterField(card, key) {
@@ -57,6 +76,15 @@ export function setupPosterField(card, key) {
     const pick = find(card, ".poster-pick-button");
     show(card, key || null);
     pick.addEventListener("click", () => input.click());
+    // The thumbnail's a link to the poster (for opening in a new tab), but a
+    // plain click shows it here, full size.
+    find(card, ".poster-thumb").addEventListener("click", (e) => {
+        const key = posterKey(card);
+        if (!key || e.metaKey || e.ctrlKey || e.shiftKey)
+            return;
+        e.preventDefault();
+        openPosterDialog(key);
+    });
     input.addEventListener("input", (e) => e.stopPropagation());
     find(card, ".poster-remove-button").addEventListener("click", () => {
         show(card, null);

@@ -7,7 +7,7 @@ import { daysInclusive, endsBeforeStart, formatDate, shiftIsoDate, todayIso } fr
 import { confirmSecondClick, el, find, plural } from "./dom.js";
 import { listDate, placeCard, rebuildWait, reloadEventList, showListStatus, updateEventListState } from "./eventList.js";
 import { getCardExceptions, wireExceptionsSection } from "./exceptions.js";
-import { setupEventShare } from "./eventShare.js";
+import { setupEventShare, watchSaved } from "./eventShare.js";
 import { eventPageKey } from "../appHelpers.js";
 import { POSTER_BUSY_MESSAGE, posterBusy, posterKey, setupPosterField } from "./poster.js";
 import { apiCall, currentYearGroup, state, yearGroupDescription } from "./state.js";
@@ -39,12 +39,21 @@ function recurrenceToSelectValue(recurrence) {
 export function blankEvent() {
     return { title: "", date: "", end_date: null, time: null, end_time: null, description: null, location: null, url: null, recurrence: null };
 }
+// A multi-day event with a start time could be those times on each day, or
+// one stretch from the first day's start to the last day's end - the card
+// asks which (see wireEachDay()).
+function eachDayApplies(value) {
+    return Boolean(value.end_date && value.end_date > value.date && value.time && !value.recurrence);
+}
 export function localValidationError(value) {
     if (!value.title || !value.date)
         return "Title and date are required.";
     if (value.end_date && value.end_date < value.date)
         return "End date can't be before the start date.";
-    if ((!value.end_date || value.end_date === value.date) && endsBeforeStart(value.time, value.end_time)) {
+    if (eachDayApplies(value) && typeof value.each_day !== "boolean") {
+        return "Say whether it's on at those times each day, or runs straight through from the first day to the last.";
+    }
+    if ((!value.end_date || value.end_date === value.date || value.each_day) && endsBeforeStart(value.time, value.end_time)) {
         return "The end time must be after the start time.";
     }
     if (value.recurrence && !value.recurrence.until)
@@ -96,7 +105,40 @@ export function fillCardFields(card, event) {
     find(card, ".field-url").value = event.url || "";
     find(card, ".field-recurrence").value = recurrenceToSelectValue(event.recurrence);
     find(card, ".field-recurrence-until").value = (event.recurrence && event.recurrence.until) || "";
+    find(card, ".field-each-day").value = event.each_day === true ? "each" : event.each_day === false ? "through" : "";
     setupPosterField(card, event.image);
+}
+// The card's answer to wireEachDay()'s question: true (each day), false
+// (straight through), null (not answered yet) - or nothing, when it doesn't apply.
+function eachDayField(card) {
+    if (find(card, ".field-each-day-label").hidden)
+        return {};
+    const answer = find(card, ".field-each-day").value;
+    return { each_day: answer === "each" ? true : answer === "through" ? false : null };
+}
+// Shows the each-day question when the card's an event over several days
+// with a start time and no repeat, its answers spelt out with the card's own
+// days and times ("19:00–22:00 on each day", "One stretch, Tue 8 Dec 19:00 to
+// Wed 9 Dec 22:00").
+export function wireEachDay(card) {
+    const label = find(card, ".field-each-day-label");
+    const select = find(card, ".field-each-day");
+    const sync = () => {
+        const date = find(card, ".field-date").value;
+        const endDate = find(card, ".field-end-date").value || null;
+        const time = find(card, ".field-time").value || null;
+        const endTime = find(card, ".field-end-time").value || null;
+        const recurrence = find(card, ".field-recurrence").value || null;
+        label.hidden = !eachDayApplies({ date, end_date: endDate, time, recurrence });
+        if (label.hidden)
+            return;
+        const times = `${time}${endTime ? `–${endTime}` : ""}`;
+        select.options[1].textContent = `On each day, ${times}`;
+        select.options[2].textContent = `One stretch, ${formatDate(date)} ${time} to ${formatDate(endDate)}${endTime ? ` ${endTime}` : ""}`;
+    };
+    card.addEventListener("input", sync);
+    card.addEventListener("change", sync);
+    sync();
 }
 export function readCardFields(card) {
     const recurSelectValue = find(card, ".field-recurrence").value;
@@ -112,6 +154,7 @@ export function readCardFields(card) {
         location: find(card, ".field-location").value.trim() || null,
         url: find(card, ".field-url").value.trim() || null,
         image: posterKey(card),
+        ...eachDayField(card),
         year_group: find(card, ".field-year-group").checked,
         recurrence,
         exceptions: [...getCardExceptions(card)],
@@ -148,7 +191,9 @@ function manualEventWhen(event) {
     const parts = [];
     if (event.end_date && event.end_date !== event.date) {
         parts.push(`${formatDate(event.date)} – ${formatDate(event.end_date)}`, `${daysInclusive(event.date, event.end_date)} days`);
-        if (event.time)
+        if (event.time && event.each_day)
+            parts.push(`${event.time}${event.end_time ? `–${event.end_time}` : ""} each day`);
+        else if (event.time)
             parts.push(`from ${event.time}`);
     }
     else {
@@ -189,6 +234,12 @@ export function createExistingEventCard(event) {
     fillCardFields(node, event);
     wireCardDefaultEndTime(node);
     wireRecurrenceToggle(node);
+    wireEachDay(node);
+    // Saved before the question existed (or answered "straight through"):
+    // that's how it's been published.
+    const eachDay = find(node, ".field-each-day");
+    if (!find(node, ".field-each-day-label").hidden && !eachDay.value)
+        eachDay.value = "through";
     wireExceptionsSection(node, event.exceptions, { shared: card.shared });
     setupYearGroupControls(node, { saved: true, shared: card.shared });
     addWeekdayHints(node);
@@ -208,6 +259,7 @@ export function createExistingEventCard(event) {
             // A repeating event's next day, as its date tile shows.
             date: cardState(node).date ?? saved.date,
             end_date: saved.recurrence ? null : saved.end_date,
+            each_day: saved.each_day === true,
             time: saved.time,
             end_time: saved.end_time,
             location: saved.location,
@@ -258,7 +310,10 @@ async function handleUpdateExisting(card, id, button) {
     cardState(card).rev = data.rev;
     setDirty(card, false);
     setManualSummary(card, value);
-    showCardStatus(card, `Saved ✓ - calendars update ${rebuildWait(data.rebuild_triggered)}.`);
+    if (data.rebuild_triggered)
+        watchSaved(card);
+    else
+        showCardStatus(card, `Saved ✓ - calendars update ${rebuildWait(false)}.`);
     placeCard(card, value);
 }
 async function handleDeleteExisting(card, id, button) {

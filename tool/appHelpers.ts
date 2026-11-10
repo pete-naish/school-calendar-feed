@@ -189,14 +189,25 @@ export interface SharedEvent {
   location: string | null;
   // "weekly", "every 2 weeks"... for a repeating event.
   repeats: string | null;
+  // Several days with the same times on each (see EventFields.each_day).
+  each_day?: boolean;
 }
 
 // "Sat 5 Dec, 12:00–15:00 · School Hall", like the link preview's line.
 export function sharedEventWhen(event: SharedEvent, today: string) {
   const multiDay = Boolean(event.end_date && event.end_date !== event.date);
+  const times = event.time ? `${event.time}${event.end_time ? `–${event.end_time}` : ""}` : "";
   let when = shareDay(event.date, today);
-  if (multiDay) when += ` – ${shareDay(event.end_date as string, today)}`;
-  if (event.time) when += `, ${event.time}${event.end_time && !multiDay ? `–${event.end_time}` : ""}`;
+  if (!multiDay) {
+    if (times) when += `, ${times}`;
+  } else if (event.each_day && times) {
+    when += ` – ${shareDay(event.end_date as string, today)}, ${times} each day`;
+  } else if (event.time) {
+    // One stretch: "Mon 9 Mar, 09:00 – Wed 11 Mar, 15:00".
+    when += `, ${event.time} – ${shareDay(event.end_date as string, today)}${event.end_time ? `, ${event.end_time}` : ""}`;
+  } else {
+    when += ` – ${shareDay(event.end_date as string, today)}`;
+  }
   if (event.repeats) when += ` (${event.repeats})`;
   return event.location ? `${when} · ${event.location}` : when;
 }

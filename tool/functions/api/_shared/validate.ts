@@ -225,7 +225,7 @@ function singleDay(event: { date: string; end_date: string | null }) {
 // event's own times (as scripts/build_ics.py does), so its new end is checked
 // against the event's start.
 function timeOrderError(event: EventFields): string | null {
-  if (singleDay(event) && endsBeforeStart(event.time, event.end_time)) {
+  if ((singleDay(event) || event.each_day) && endsBeforeStart(event.time, event.end_time)) {
     return "The end time must be after the start time";
   }
   for (const exc of event.exceptions ?? []) {
@@ -244,6 +244,12 @@ function timeOrderError(event: EventFields): string | null {
 // on any other day would never apply. Closure days aren't counted out - a
 // cancelled PE on an inset day is harmless. Keep in step with isOccurrence()
 // in tool/appHelpers.ts.
+// Whether `each_day` means anything for an event: several days, a start time,
+// and no repeat (which has its own days).
+export function eachDayApplies(event: { date: string; end_date: string | null; time: string | null; recurrence: unknown }) {
+  return !singleDay(event) && Boolean(event.time) && !event.recurrence;
+}
+
 export function isOccurrence(date: string, start: string, recurrence: Recurrence) {
   if (date < start || date > recurrence.until) return false;
   if (recurrence.freq === "MONTHLY") {
@@ -304,6 +310,8 @@ export function validateExtractedEvents(input: unknown): { events: EventFields[]
       }
     }
     if (event.url && event.url.length > LIMITS.url) event.url = null;
+    // Kept as the model gave it (null: unsure) - the rep confirms it.
+    if (eachDayApplies(event) && typeof item.each_day === "boolean") event.each_day = item.each_day;
     if (singleDay(event) && endsBeforeStart(event.time, event.end_time)) {
       warnings.push(`"${event.title}" had an end time before its start time - ignored`);
       event.end_time = null;
@@ -348,6 +356,7 @@ export function validateEventInput(
     return { valid: false, error: "That poster isn't one uploaded here - remove it and add it again" };
   }
   const cleaned: EventFields = { title, date: event.date, end_date, ...common, image: cleanPosterKey(event.image) };
+  if (event.each_day === true && eachDayApplies(cleaned)) cleaned.each_day = true;
   const timeError = timeOrderError(cleaned);
   if (timeError) return { valid: false, error: timeError };
   const stray = recurrence && cleaned.exceptions.find((exc) => !isOccurrence(exc.date, cleaned.date, recurrence));

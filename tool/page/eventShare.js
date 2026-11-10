@@ -5,13 +5,14 @@
 // share sheet, sends the same message with the poster attached as an image.
 //
 // Both use the event as last saved, since that's what the link shows. The
-// event's page (and so its preview) only catches up a few minutes after a
-// save, and WhatsApp keeps the first preview it fetches - so after copying,
-// the card asks GET /api/event-ready whether the page has this save's version
-// stamp yet, and if not keeps asking, and says when it's safe to post.
+// event's page (and so its preview, and the calendar) only catches up a few
+// minutes after a save, and WhatsApp keeps the first preview it fetches - so
+// after a save, and after copying, the card asks GET /api/event-ready whether
+// the page has the save's version stamp yet, keeps asking until it does, and
+// says when it's live and safe to post.
 import { whatsAppEventMessage } from "../appHelpers.js";
 import { todayIso } from "./dates.js";
-import { find } from "./dom.js";
+import { el, find } from "./dom.js";
 import { cardState } from "./cardState.js";
 import { posterSrc } from "./poster.js";
 import { track } from "./track.js";
@@ -30,47 +31,106 @@ async function isReady(key, rev) {
         return false;
     }
 }
-// Cards with a check under way, so a second copy doesn't start another.
-const watching = new WeakMap();
-// `done` (what was just done, if anything) then `text`.
-const say = (done, text) => (done ? `${done} ${text}` : text);
-// Says on the card whether the link's ready to post, checking until it is.
-async function reportReadiness(card, event, done) {
-    const status = find(card, ".card-status");
-    const stamp = `${event.key}|${event.rev ?? ""}`;
-    if (watching.get(card) === stamp)
-        return;
-    watching.set(card, stamp);
-    const unsaved = cardState(card).dirty ? " It's the saved version - save your changes first if they should be in it." : "";
-    status.textContent = say(done, "Checking the link's ready…");
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Asks event-ready about `events` until every one's page is up to date,
+// calling `onWaiting` once if the first answer is "not yet". `still` says
+// whether anyone still wants to know (the card hasn't been saved again, say).
+async function pollUntilLive(events, still, onWaiting) {
     const started = Date.now();
     let waited = false;
-    // Stops when another copy takes over, or the event's saved again (its
-    // stamp changes, and a copy after that starts afresh).
-    const current = () => watching.get(card) === stamp && cardState(card).rev === event.rev;
-    while (current()) {
-        const ready = await isReady(event.key, event.rev);
-        if (!current())
-            break;
-        if (ready) {
-            status.textContent = waited
-                ? "Link ready ✓ - go ahead and post it."
-                : say(done, `The link's ready - paste it into WhatsApp.${unsaved}`);
-            break;
-        }
-        if (Date.now() - started > GIVE_UP_MS) {
-            status.textContent =
-                "The link still isn't up to date after 25 minutes - something may be stuck. Try again later, or ask whoever looks after the calendar.";
-            break;
-        }
+    let pending = events;
+    for (;;) {
+        const answers = await Promise.all(pending.map((e) => isReady(e.key, e.rev)));
+        if (!still())
+            return { outcome: "cancelled", waited };
+        pending = pending.filter((_, i) => !answers[i]);
+        if (pending.length === 0)
+            return { outcome: "ready", waited };
+        if (Date.now() - started > GIVE_UP_MS)
+            return { outcome: "stuck", waited };
         if (!waited) {
             waited = true;
-            status.textContent = say(done, "Don't post it yet: the event's page is still updating after the last save (usually a few minutes). This will say when it's ready.");
+            onWaiting();
         }
-        await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+        await sleep(POLL_MS);
     }
-    if (watching.get(card) === stamp)
-        watching.delete(card);
+}
+const watches = new WeakMap();
+const STUCK = "The calendar still isn't up to date after 25 minutes - something may be stuck. Try again later, or ask whoever looks after the calendar.";
+function message(w) {
+    if (w.phase === "stuck")
+        return STUCK;
+    if (w.context === "save") {
+        if (w.phase === "checking")
+            return "Saved ✓ - updating the calendar…";
+        if (w.phase === "waiting")
+            return "Saved ✓ - updating the calendar (usually a few minutes)…";
+        return "Saved ✓ - it's live on the calendar now.";
+    }
+    if (w.phase === "checking")
+        return "Copied ✓. Checking the link's ready…";
+    if (w.phase === "waiting") {
+        return "Copied ✓. Don't post it yet: the event's page is still updating after the last save (usually a few minutes). This will say when it's ready.";
+    }
+    if (w.waited)
+        return "Link ready ✓ - go ahead and post it.";
+    const unsaved = w.unsaved ? " It's the saved version - save your changes first if they should be in it." : "";
+    return `Copied ✓. The link's ready - paste it into WhatsApp.${unsaved}`;
+}
+// Shows on the card whether its saved event is live on the public site,
+// checking until it is.
+async function watchCard(card, event, context) {
+    const status = find(card, ".card-status");
+    const stamp = `${event.key}|${event.rev ?? ""}`;
+    const existing = watches.get(card);
+    if (existing && existing.stamp === stamp && (existing.phase === "checking" || existing.phase === "waiting")) {
+        existing.context = context;
+        existing.unsaved = cardState(card).dirty;
+        status.textContent = message(existing);
+        return;
+    }
+    const watch = { stamp, context, phase: "checking", waited: false, unsaved: cardState(card).dirty };
+    watches.set(card, watch);
+    status.textContent = message(watch);
+    // Stops when another check takes over, or the event's saved again (its
+    // stamp changes, and that save starts its own).
+    const still = () => watches.get(card) === watch && cardState(card).rev === event.rev;
+    const result = await pollUntilLive([event], still, () => {
+        watch.phase = "waiting";
+        watch.waited = true;
+        status.textContent = message(watch);
+    });
+    if (result.outcome === "cancelled")
+        return;
+    watch.phase = result.outcome;
+    status.textContent = message(watch);
+}
+// Each card's `read` (see setupEventShare), for watchSaved().
+const readers = new WeakMap();
+// After a card's saved: says when the change is live on the calendar.
+export function watchSaved(card) {
+    const read = readers.get(card);
+    if (read)
+        void watchCard(card, read(), "save");
+}
+// After saving new events (which come back as new cards, folded away): one
+// message for them all, through `show`.
+export async function watchNewEvents(events, show, saved) {
+    if (events.length === 0)
+        return;
+    let last = `${saved} Updating the calendar…`;
+    show(last);
+    // Stops once the list's message is about something else (a delete, say).
+    const still = () => el.existingStatusText.textContent === last;
+    const say = (text) => {
+        last = text;
+        show(text);
+    };
+    const result = await pollUntilLive(events, still, () => say(`${saved} Updating the calendar (usually a few minutes)…`));
+    if (result.outcome === "cancelled")
+        return;
+    const live = events.length === 1 ? "It's live on the calendar now ✓" : "They're live on the calendar now ✓";
+    say(result.outcome === "ready" ? `${saved} ${live}` : `${saved} ${STUCK}`);
 }
 async function copy(text) {
     try {
@@ -106,6 +166,7 @@ async function posterFile(image) {
 }
 // `read` gives the event as last saved, with its poster and version stamp.
 export function setupEventShare(card, read) {
+    readers.set(card, read);
     const copyButton = find(card, ".card-copy-button");
     const shareButton = find(card, ".card-share-button");
     copyButton.hidden = false;
@@ -117,7 +178,7 @@ export function setupEventShare(card, read) {
             return;
         }
         track("event_copy");
-        await reportReadiness(card, event, "Copied ✓.");
+        await watchCard(card, event, "copy");
     });
     if (typeof navigator.share !== "function")
         return;
@@ -139,7 +200,7 @@ export function setupEventShare(card, read) {
         const text = whatsAppEventMessage(event, todayIso());
         const withFile = file && navigator.canShare && navigator.canShare({ files: [file] });
         // Not awaited: the check runs while the share sheet is open.
-        void reportReadiness(card, event, "");
+        void watchCard(card, event, "copy");
         try {
             await navigator.share(withFile ? { files: [file], text } : { text });
             track("event_share");

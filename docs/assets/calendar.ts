@@ -145,6 +145,10 @@ const LIST_WEEKS = 4;
 const LONDON_DATE_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" });
 const LONDON_TIME_FMT = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
 const MONTH_LABEL_FMT = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" });
+// "Tue 8 Dec", for an event's span (eventSpanText()). A timed event's instants
+// are read in London time; an all-day event's dates are local midnights.
+const SPAN_DAY_FMT = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
+const SPAN_LOCAL_DAY_FMT = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function addDays(date: Date, days: number) {
@@ -1471,6 +1475,48 @@ function render() {
   renderChanges();
 }
 
+// For an event over more than one day, its whole span - "Mon 2 Nov – Fri 20
+// Nov", "Tue 8 Dec, 19:00 – Wed 9 Dec, 22:00" - since a day's dialog (or one
+// opened from a link) otherwise only shows the times, under one day's heading.
+function eventSpanText(inst: Instance): string | null {
+  if (inst.dayKeys.length < 2) return null;
+  if (inst.allDay) {
+    const lastDay = addDays(inst.endJs, -1); // an all-day end is the day after
+    return `${SPAN_LOCAL_DAY_FMT.format(inst.startJs)} – ${SPAN_LOCAL_DAY_FMT.format(lastDay)}`;
+  }
+  const at = (d: Date) => `${SPAN_DAY_FMT.format(d)}, ${LONDON_TIME_FMT.format(d)}`;
+  return `${at(inst.startJs)} – ${at(inst.endJs)}`;
+}
+
+// Web addresses in a description ("https://…", "www.…"), made into links.
+// Only text nodes and <a> elements are created - never HTML from the
+// description - and only http(s) links.
+const URL_IN_TEXT = /\b(?:https?:\/\/|www\.)[^\s<>"]+/gi;
+
+function appendLinkified(parent: HTMLElement, text: string) {
+  let at = 0;
+  for (const match of text.matchAll(URL_IN_TEXT)) {
+    let url = match[0];
+    // Punctuation that ends the sentence, not the link ("see example.com.").
+    // A closing bracket only counts as the link's when it has an opening one.
+    for (;;) {
+      const last = url.slice(-1);
+      if (/[.,;:!?'"]/.test(last)) url = url.slice(0, -1);
+      else if (last === ")" && (url.match(/\(/g) || []).length < (url.match(/\)/g) || []).length) url = url.slice(0, -1);
+      else break;
+    }
+    const start = match.index ?? 0;
+    const href = /^www\./i.test(url) ? `https://${url}` : url;
+    if (!isSafeUrl(href)) continue;
+    parent.append(text.slice(at, start));
+    const link = Object.assign(document.createElement("a"), { href, textContent: url, rel: "noopener", target: "_blank" });
+    link.className = "day-event-desc-link";
+    parent.append(link);
+    at = start + url.length;
+  }
+  parent.append(text.slice(at));
+}
+
 // One event: time column, then title / calendar / location / description / link, with
 // a bar in the calendar's colour down the left. Shared by the day dialog and
 // the Day view agenda.
@@ -1505,6 +1551,14 @@ function renderEventRow(inst: Instance) {
   meta.textContent = inst.calendarLabel;
   body.appendChild(meta);
 
+  const span = eventSpanText(inst);
+  if (span) {
+    const when = document.createElement("div");
+    when.className = "day-event-span";
+    when.textContent = span;
+    body.appendChild(when);
+  }
+
   if (inst.location) {
     const place = document.createElement("div");
     place.className = "day-event-location";
@@ -1515,7 +1569,7 @@ function renderEventRow(inst: Instance) {
   if (inst.description) {
     const desc = document.createElement("p");
     desc.className = "day-event-desc";
-    desc.textContent = inst.description;
+    appendLinkified(desc, inst.description);
     body.appendChild(desc);
   }
   if (inst.image) {

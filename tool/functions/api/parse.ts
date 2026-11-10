@@ -132,6 +132,10 @@ export async function onRequestPost(ctx: ApiContext) {
           `that event rather than guessing. Extract every distinct event mentioned, even if several ` +
           `appear in one message. If an event clearly spans more than one day (e.g. "Monday to ` +
           `Wednesday", a residential trip), set end_date to its last day; otherwise leave end_date null. ` +
+          `For an event over several days with a start time, set each_day to true if those times apply on ` +
+          `each of the days ("7-10pm on Tuesday and Wednesday"), false if it runs straight through from ` +
+          `the first day's start to the last day's end (a residential trip leaving Monday 9am, back ` +
+          `Wednesday 3pm), or null if the text doesn't make it clear - the rep is asked when it's null. ` +
           `If the text explicitly states a repeating pattern (e.g. "every Thursday", "weekly", "every ` +
           `other Monday"), set recurrence.freq (DAILY/WEEKLY/MONTHLY) and recurrence.interval (2 for ` +
           `"every other/fortnightly", otherwise 1). Never set recurrence unless the text explicitly says ` +
@@ -173,6 +177,11 @@ export async function onRequestPost(ctx: ApiContext) {
                       },
                       time: { type: ["string", "null"], description: "24h HH:MM, or null if all-day/unspecified" },
                       end_time: { type: ["string", "null"] },
+                      each_day: {
+                        type: ["boolean", "null"],
+                        description:
+                          "Only for an event over several days with a start time: true if its times apply on each day, false if it runs straight through, null if unclear",
+                      },
                       description: { type: ["string", "null"] },
                       location: {
                         type: ["string", "null"],

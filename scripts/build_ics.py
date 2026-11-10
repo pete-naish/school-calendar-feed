@@ -583,10 +583,23 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
     end_date = max(date.fromisoformat(end_date_raw), start_date) if end_date_raw else start_date
 
     time_str = raw.get("time")
+    # `each_day`: a multi-day event with the same times on each of its days
+    # (a 19:00-22:00 event on Tuesday and Wednesday) rather than one stretch
+    # from the first day's start to the last day's end. Published as a daily
+    # RRULE with a COUNT - no closure-day or weekend skipping, unlike a
+    # `recurrence`, since every one of the days was asked for - which is also
+    # how event_when_text() and _last_day() recognise it.
+    each_day_count = (
+        (end_date - start_date).days + 1
+        if raw.get("each_day") and time_str and end_date > start_date and not (raw.get("recurrence") or {}).get("freq")
+        else 0
+    )
     if time_str:
         start_dt = datetime.combine(start_date, datetime.strptime(time_str, "%H:%M").time()).replace(tzinfo=LONDON)
         end_time_str = raw.get("end_time")
-        if end_time_str:
+        if each_day_count:
+            _, end_dt = _single_day_dtstart_dtend(start_date, time_str, end_time_str)
+        elif end_time_str:
             end_dt = datetime.combine(end_date, datetime.strptime(end_time_str, "%H:%M").time()).replace(
                 tzinfo=LONDON
             )
@@ -606,6 +619,8 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
         # don't recognise IANA ids directly.
         event.add("dtstart", start_dt)
         event.add("dtend", end_dt)
+        if each_day_count:
+            event.add("rrule", {"freq": "DAILY", "count": each_day_count})
     else:
         event.add("dtstart", start_date)
         # DTEND is exclusive in iCalendar, so a single all-day event still
@@ -947,8 +962,24 @@ def _last_day(event: Event) -> date:
     if until:
         # A list once parsed back from a feed, a bare value as built.
         return _as_date(until[0] if isinstance(until, list) else until)
+    count = _each_day_count(event)
+    if count:
+        return _as_date(event["dtstart"].dt) + timedelta(days=count - 1)
     end = event.get("dtend") or event.get("dtstart")
     return _as_date(end.dt)
+
+
+def _each_day_count(event: Event) -> int:
+    """How many days an `each_day` event runs on (see build_manual_event()):
+    a daily RRULE with a COUNT. 0 for anything else."""
+    rule = event.get("rrule")
+    if not rule:
+        return 0
+    first = lambda value: value[0] if isinstance(value, list) else value  # noqa: E731
+    if str(first(rule.get("FREQ", ""))).upper() != "DAILY" or rule.get("UNTIL"):
+        return 0
+    count = rule.get("COUNT")
+    return int(first(count)) if count else 0
 
 
 def _start_text(event: Event) -> tuple[str, bool]:
@@ -1130,6 +1161,16 @@ def event_when_text(event: Event, today: date) -> str:
     """"Sat 5 Dec, 12:00–15:00 · School Hall" - one line, for a link preview.
     A repeating event shows its next occurrence and how often it repeats."""
     first = _london(event.decoded("dtstart"))
+    each_day = _each_day_count(event)
+    if each_day and isinstance(first, datetime):
+        # The same times on each of several days: "Tue 8 Dec – Wed 9 Dec,
+        # 19:00–22:00 each day".
+        last_day = first.date() + timedelta(days=each_day - 1)
+        end = _london(event.decoded("dtend")) if "dtend" in event else None
+        times = f"{first:%H:%M}" + (f"–{end:%H:%M}" if isinstance(end, datetime) and end > first else "")
+        text = f"{_day_text(first.date(), today)} – {_day_text(last_day, today)}, {times} each day"
+        location = str(event.get("location") or "").strip()
+        return f"{text} · {location}" if location else text
     start = _next_start(event, today)
     end = _london(event.decoded("dtend")) if "dtend" in event else None
     # A later occurrence lasts as long as the first one.
@@ -1139,7 +1180,7 @@ def event_when_text(event: Event, today: date) -> str:
         text = f"{_day_text(start.date(), today)}, {start:%H:%M}"
         if isinstance(end, datetime) and end > start:
             same_day = end.date() == start.date()
-            text += f"–{end:%H:%M}" if same_day else f" – {_day_text(end.date(), today)} {end:%H:%M}"
+            text += f"–{end:%H:%M}" if same_day else f" – {_day_text(end.date(), today)}, {end:%H:%M}"
     else:
         text = _day_text(start, today)
         last_day = end - timedelta(days=1) if end is not None else start

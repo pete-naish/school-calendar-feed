@@ -138,11 +138,22 @@ function shareDay(iso, today) {
 // "Sat 5 Dec, 12:00–15:00 · School Hall", like the link preview's line.
 export function sharedEventWhen(event, today) {
     const multiDay = Boolean(event.end_date && event.end_date !== event.date);
+    const times = event.time ? `${event.time}${event.end_time ? `–${event.end_time}` : ""}` : "";
     let when = shareDay(event.date, today);
-    if (multiDay)
+    if (!multiDay) {
+        if (times)
+            when += `, ${times}`;
+    }
+    else if (event.each_day && times) {
+        when += ` – ${shareDay(event.end_date, today)}, ${times} each day`;
+    }
+    else if (event.time) {
+        // One stretch: "Mon 9 Mar, 09:00 – Wed 11 Mar, 15:00".
+        when += `, ${event.time} – ${shareDay(event.end_date, today)}${event.end_time ? `, ${event.end_time}` : ""}`;
+    }
+    else {
         when += ` – ${shareDay(event.end_date, today)}`;
-    if (event.time)
-        when += `, ${event.time}${event.end_time && !multiDay ? `–${event.end_time}` : ""}`;
+    }
     if (event.repeats)
         when += ` (${event.repeats})`;
     return event.location ? `${when} · ${event.location}` : when;

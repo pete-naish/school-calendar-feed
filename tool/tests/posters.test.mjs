@@ -143,3 +143,21 @@ test("an override's version stamp is kept only alongside real fields", () => {
   assert.deepEqual(normalizeOverride({ image: KEY, rev: "0a1b2c3d" }), { image: KEY, rev: "0a1b2c3d" });
   assert.deepEqual(normalizeOverride({ rev: "0a1b2c3d" }), {});
 });
+
+test("each_day is kept only for a multi-day event with a start time and no repeat", () => {
+  const base = { title: "Wreath Making", date: "2026-12-08", end_date: "2026-12-09", time: "19:00", end_time: "22:00" };
+  assert.equal(validateEventInput({ ...base, each_day: true }).event.each_day, true);
+  assert.equal("each_day" in validateEventInput({ ...base, each_day: false }).event, false);
+  assert.equal("each_day" in validateEventInput({ ...base, end_date: null, each_day: true }).event, false);
+  assert.equal("each_day" in validateEventInput({ ...base, time: null, end_time: null, each_day: true }).event, false);
+  // Each day 22:00-19:00 makes no sense; straight through it's fine.
+  assert.equal(validateEventInput({ ...base, time: "22:00", end_time: "19:00", each_day: true }).valid, false);
+  assert.equal(validateEventInput({ ...base, time: "22:00", end_time: "19:00" }).valid, true);
+});
+
+test("a multi-day event's WhatsApp line says each day, or the whole stretch", async () => {
+  const { sharedEventWhen } = await import("../appHelpers.ts");
+  const base = { key: "k", title: "Wreath Making", date: "2026-12-08", end_date: "2026-12-09", time: "19:00", end_time: "22:00", location: null, repeats: null };
+  assert.equal(sharedEventWhen({ ...base, each_day: true }, "2026-11-10"), "Tue 8 Dec – Wed 9 Dec, 19:00–22:00 each day");
+  assert.equal(sharedEventWhen(base, "2026-11-10"), "Tue 8 Dec, 19:00 – Wed 9 Dec, 22:00");
+});

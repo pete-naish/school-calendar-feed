@@ -255,6 +255,13 @@
           <label class="field">End time
             <input type="time" class="field-end-time">
           </label>
+          <label class="field span-2 field-each-day-label" hidden>Over those days, is it…
+            <select class="field-each-day">
+              <option value="">Choose…</option>
+              <option value="each"></option>
+              <option value="through"></option>
+            </select>
+          </label>
           <label class="field">Repeats
             <select class="field-recurrence">
               <option value="">Doesn't repeat</option>
@@ -429,6 +436,12 @@
       </div>
     </div>
   </template>
+
+  <!-- A poster at full size, from a card's thumbnail (page/poster.ts). -->
+  <dialog id="poster-dialog" class="poster-dialog" aria-label="Poster">
+    <button type="button" class="poster-dialog-close" aria-label="Close">&times;</button>
+    <img alt="The event's poster, full size">
+  </dialog>
 
   <script type="module" src="app.js"></script>
 </body>

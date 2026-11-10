@@ -71,13 +71,14 @@
     "end_date": "2026-12-09",
     "time": "19:00",
     "end_time": "22:00",
+    "each_day": true,
     "description": "Tickets are on sale now, be sure to secure yours soon as this is a very popular event \n\nhttps://the-friends-of-st-pauls-school-winchmore-hill.sumupstore.com/products?category=85D7E167-5B13-4911-B096-ADC09213A2B5",
     "location": null,
     "url": null,
     "recurrence": null,
     "exceptions": [],
     "image": "befe5ceca089e947e2260184.jpg",
-    "rev": "b02a0911"
+    "rev": "62cb896d"
   },
   {
     "id": "f73662b73c8b",

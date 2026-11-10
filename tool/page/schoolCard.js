@@ -6,7 +6,7 @@ import { addWeekdayHints, cardState, setCardOpen, setDirty, setSummary, setupFol
 import { daysInclusive, eventMinutes, formatDate, formatSchoolSpan, todayIso } from "./dates.js";
 import { el, find } from "./dom.js";
 import { placeCard, rebuildWait, reloadEventList } from "./eventList.js";
-import { setupEventShare } from "./eventShare.js";
+import { setupEventShare, watchSaved } from "./eventShare.js";
 import { eventPageKey } from "../appHelpers.js";
 import { POSTER_BUSY_MESSAGE, posterBusy, posterKey, setupPosterField } from "./poster.js";
 import { apiCall, calendarLabelFor, currentYearGroup, state, WHOLE_SCHOOL, yearGroupDescription } from "./state.js";
@@ -134,7 +134,10 @@ async function handleUpdateWholeSchoolEvent(card, id, button, saved) {
     cardState(card).rev = data.rev;
     setDirty(card, false);
     button.textContent = originalText;
-    showCardStatus(card, `Saved ✓ - calendars update ${rebuildWait(data.rebuild_triggered)}.`);
+    if (data.rebuild_triggered)
+        watchSaved(card);
+    else
+        showCardStatus(card, `Saved ✓ - calendars update ${rebuildWait(false)}.`);
 }
 // --- Correcting a school event's date/time -----------------------------------
 //

@@ -1036,6 +1036,14 @@
   text-wrap: pretty;
 }
 
+/* A multi-day event's whole span (eventSpanText()). */
+.day-event-span {
+  margin-top: 0.1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cal-fg);
+}
+
 .day-event-meta,
 .day-event-location {
   margin-top: 0.1rem;
@@ -1050,6 +1058,19 @@
   color: var(--cal-fg);
   text-wrap: pretty;
   white-space: pre-line; /* keep the line breaks typed into descriptions */
+}
+
+/* A web address in a description, made into a link (appendLinkified()). */
+.day-event-desc-link {
+  color: var(--cal-fg);
+  text-decoration: underline;
+  text-decoration-color: var(--cal-border);
+  text-underline-offset: 0.2em;
+  overflow-wrap: anywhere; /* a long address mustn't widen the dialog */
+}
+
+.day-event-desc-link:hover {
+  text-decoration-color: currentColor;
 }
 
 .day-event-link {
