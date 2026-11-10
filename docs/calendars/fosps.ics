@@ -112,12 +112,19 @@ LAST-MODIFIED:20261024T195301Z
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:FOSPS: Wreath Making
-DTSTART;VALUE=DATE:20261208
-DTEND;VALUE=DATE:20261210
-DTSTAMP:20261005T124711Z
+DTSTART;TZID=Europe/London:20261208T190000
+DTEND;TZID=Europe/London:20261209T220000
+DTSTAMP:20261110T075126Z
 UID:manual-9d9324a69303@school-calendar-feed
 CREATED:20261005T232351Z
-LAST-MODIFIED:20261005T124711Z
+DESCRIPTION:Tickets are on sale now\, be sure to secure yours soon as this
+  is a very popular event \n\nhttps://the-friends-of-st-pauls-school-winchm
+ ore-hill.sumupstore.com/products?category=85D7E167-5B13-4911-B096-ADC09213
+ A2B5\n\nPoster: https://calendar-admin.nai.sh/posters/befe5ceca089e947e226
+ 0184.jpg
+IMAGE;DISPLAY=FULLSIZE;FMTTYPE=image/jpeg;VALUE=URI:https://calendar-admin
+ .nai.sh/posters/befe5ceca089e947e2260184.jpg
+LAST-MODIFIED:20261110T075126Z
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:FOSPS: Cinema Night - TBA
