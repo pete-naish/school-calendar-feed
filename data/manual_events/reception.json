@@ -14,7 +14,15 @@
       "interval": 1,
       "until": "2027-01-28"
     },
-    "exceptions": []
+    "exceptions": [
+      {
+        "date": "2026-11-12",
+        "action": "moved",
+        "new_date": "2026-11-13",
+        "new_time": null,
+        "new_end_time": null
+      }
+    ]
   },
   {
     "id": "212eb1c1e278",
