@@ -113,9 +113,10 @@ END:VEVENT
 BEGIN:VEVENT
 SUMMARY:FOSPS: Wreath Making
 DTSTART;TZID=Europe/London:20261208T190000
-DTEND;TZID=Europe/London:20261209T220000
-DTSTAMP:20261110T075126Z
+DTEND;TZID=Europe/London:20261208T220000
+DTSTAMP:20261110T083144Z
 UID:manual-9d9324a69303@school-calendar-feed
+RRULE:FREQ=DAILY;COUNT=2
 CREATED:20261005T232351Z
 DESCRIPTION:Tickets are on sale now\, be sure to secure yours soon as this
   is a very popular event \n\nhttps://the-friends-of-st-pauls-school-winchm
@@ -124,7 +125,8 @@ DESCRIPTION:Tickets are on sale now\, be sure to secure yours soon as this
  0184.jpg
 IMAGE;DISPLAY=FULLSIZE;FMTTYPE=image/jpeg;VALUE=URI:https://calendar-admin
  .nai.sh/posters/befe5ceca089e947e2260184.jpg
-LAST-MODIFIED:20261110T075126Z
+LAST-MODIFIED:20261110T083144Z
+LOCATION:School Hall
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:FOSPS: Cinema Night - TBA

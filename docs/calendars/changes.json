@@ -4,6 +4,16 @@
    "calendar": "fosps",
    "uid": "manual-9d9324a69303@school-calendar-feed",
    "kind": "moved",
+   "at": "2026-11-10T08:31:44Z",
+   "title": "Wreath Making",
+   "start": "2026-12-08T19:00",
+   "all_day": false,
+   "old_start": "2026-12-08T19:00"
+  },
+  {
+   "calendar": "fosps",
+   "uid": "manual-9d9324a69303@school-calendar-feed",
+   "kind": "moved",
    "at": "2026-11-10T07:51:26Z",
    "title": "Wreath Making",
    "start": "2026-12-08T19:00",
