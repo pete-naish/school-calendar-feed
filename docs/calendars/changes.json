@@ -2,6 +2,26 @@
  "changes": [
   {
    "calendar": "rec-a",
+   "uid": "manual-972a9f578853-2026-11-12@school-calendar-feed",
+   "kind": "moved",
+   "at": "2026-11-10T06:29:08Z",
+   "title": "PE Day 👟 – Wear PE Kit",
+   "start": "2026-11-13",
+   "all_day": true,
+   "old_start": "2026-11-12"
+  },
+  {
+   "calendar": "rec-b",
+   "uid": "manual-972a9f578853-2026-11-12@school-calendar-feed",
+   "kind": "moved",
+   "at": "2026-11-10T06:29:08Z",
+   "title": "PE Day 👟 – Wear PE Kit",
+   "start": "2026-11-13",
+   "all_day": true,
+   "old_start": "2026-11-12"
+  },
+  {
+   "calendar": "rec-a",
    "uid": "manual-de649055fa42@school-calendar-feed",
    "kind": "added",
    "at": "2026-11-08T19:50:42Z",
