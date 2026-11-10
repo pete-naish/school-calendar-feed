@@ -1,5 +1,5 @@
 // An event from the school's own calendar on a card. Its title and dates are
-// the school's, so a rep can only add a description and location - and,
+// the school's, so a rep can only add a description, location and poster - and,
 // tucked away, correct its date or time when the school's calendar is wrong.
 import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPublic, isPastEvent } from "../appHelpers.js";
 import { addWeekdayHints, cardState, setCardOpen, setDirty, setSummary, setupFolding, showCardStatus, trackChanges, wireDefaultEndTime } from "./cardState.js";
@@ -7,6 +7,9 @@ import { daysInclusive, eventMinutes, formatDate, formatSchoolSpan, todayIso } f
 import { el, find } from "./dom.js";
 import type { Field } from "./dom.js";
 import { placeCard, rebuildWait, reloadEventList } from "./eventList.js";
+import { setupEventShare } from "./eventShare.js";
+import { eventPageKey } from "../appHelpers.js";
+import { POSTER_BUSY_MESSAGE, posterBusy, posterKey, setupPosterField } from "./poster.js";
 import { apiCall, calendarLabelFor, currentYearGroup, state, WHOLE_SCHOOL, yearGroupDescription } from "./state.js";
 import type { ListedSchoolEvent } from "./state.js";
 import type { SpanFields, UpdateResponse } from "../functions/api/_shared/types.d.ts";
@@ -16,7 +19,7 @@ import type { SpanFields, UpdateResponse } from "../functions/api/_shared/types.
 // only be corrected, through the date-correction section below), so this is
 // a much simpler read-mostly card (see
 // #whole-school-event-template) instead of the full event-card-template
-// used everywhere else, with only description + location fields and one
+// used everywhere else, with only description, location and poster fields and one
 // save button.
 //
 // The same card also stands in for a school-sourced event in a class's own
@@ -28,8 +31,10 @@ export function createSchoolEventCard(event: ListedSchoolEvent): HTMLElement {
   card.id = event.id;
   card.date = event.date;
   card.kind = "school";
+  card.rev = event.rev;
   find<Field>(node, ".field-description").value = event.description || "";
   find<Field>(node, ".field-location").value = event.location || "";
+  setupPosterField(node, event.image);
 
   const tags = [];
   if (event.school_event) tags.push({ text: "From school calendar" });
@@ -49,9 +54,21 @@ export function createSchoolEventCard(event: ListedSchoolEvent): HTMLElement {
   // changed - saving a location alone must not also store the school's
   // current description as an override (which would then stop following
   // the school's own edits to it).
-  const saved = { description: (event.description || "").trim(), location: event.location || "" };
+  const saved = { description: (event.description || "").trim(), location: event.location || "", image: event.image || "" };
   const saveButton = find<HTMLButtonElement>(node, ".card-save-button");
   saveButton.addEventListener("click", () => handleUpdateWholeSchoolEvent(node, event.id, saveButton, saved));
+  setupEventShare(node, () => ({
+    key: eventPageKey(event.id, true),
+    title: event.title,
+    date: event.date,
+    end_date: event.end_date,
+    time: event.time,
+    end_time: event.end_time,
+    location: saved.location || null,
+    repeats: null,
+    image: saved.image || null,
+    rev: cardState(node).rev,
+  }));
   setupDateCorrection(node, event);
   addWeekdayHints(node);
   return node;
@@ -73,16 +90,24 @@ async function handleUpdateWholeSchoolEvent(
   card: HTMLElement,
   id: string,
   button: HTMLButtonElement,
-  saved: { description: string; location: string }
+  saved: { description: string; location: string; image: string }
 ) {
   const errorEl = find(card, ".field-error");
   errorEl.hidden = true;
+  if (posterBusy(card)) {
+    errorEl.textContent = POSTER_BUSY_MESSAGE;
+    errorEl.hidden = false;
+    return;
+  }
   const description = find<Field>(card, ".field-description").value.trim();
   const location = find<Field>(card, ".field-location").value.replace(/\s+/g, " ").trim();
 
-  const changes: { description?: string; location?: string } = {};
+  const image = posterKey(card) || "";
+
+  const changes: { description?: string; location?: string; image?: string } = {};
   if (description !== saved.description) changes.description = description;
   if (location !== saved.location) changes.location = location;
+  if (image !== saved.image) changes.image = image;
 
   const originalText = button.dataset.label || button.textContent;
   if (Object.keys(changes).length === 0) {
@@ -117,6 +142,7 @@ async function handleUpdateWholeSchoolEvent(
     return;
   }
   Object.assign(saved, changes);
+  cardState(card).rev = data.rev;
   setDirty(card, false);
   button.textContent = originalText;
   showCardStatus(card, `Saved ✓ - calendars update ${rebuildWait(data.rebuild_triggered)}.`);

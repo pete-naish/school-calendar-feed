@@ -2,11 +2,12 @@ import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/
 import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
 import { validateEventInput, cleanOptionalLocation, overrideLengthError } from "./_shared/validate.ts";
 import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.ts";
-import { commitEventById, triggerRebuild, retryable } from "./_shared/github.ts";
+import { commitEventById, generateRev, triggerRebuild, retryable } from "./_shared/github.ts";
 import { commitWholeSchoolOverride } from "./_shared/wholeSchoolOverrides.ts";
 import { commitSchoolEventCorrection, schoolSpan, validateCorrection } from "./_shared/schoolEventCorrections.ts";
 import { fetchClassSchoolEvents, fetchWholeSchoolEvents } from "./_shared/wholeSchool.ts";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
+import { isPosterKey, previewKey } from "./_shared/posters.ts";
 import type { EventFields, RequestBody, SchoolEvent } from "./_shared/types.d.ts";
 import type { ApiContext } from "./_shared/env.ts";
 import type { Override } from "./_shared/wholeSchoolOverrides.ts";
@@ -38,15 +39,33 @@ function scopeExceptions(event: EventFields, calendar: string, file: string): Ev
   return { ...event, exceptions };
 }
 
-// The description/location fields present in the request, cleaned - only the
-// ones a rep edited, so leaving the description alone while adding a location
-// doesn't pin it to the school's current text.
-function overrideChanges(body: RequestBody): Override {
+// The description/location/poster fields present in the request, cleaned -
+// only the ones a rep edited, so leaving the description alone while adding a
+// location doesn't pin it to the school's current text. A poster is a key from
+// poster-upload.ts, or "" to take it off; anything else is refused (null).
+function overrideChanges(body: RequestBody): Override | null {
   const changes: Override = {};
   if (typeof body.description === "string") changes.description = body.description.trim();
   if (typeof body.location === "string") changes.location = cleanOptionalLocation(body.location) ?? "";
+  if (body.image !== undefined) {
+    if (body.image === "" || body.image === null) changes.image = "";
+    else if (isPosterKey(body.image)) changes.image = body.image;
+    else return null;
+  }
   return changes;
 }
+
+// Deletes a poster an edit took off its event. Only once the edit is saved,
+// and best-effort: a poster left behind is just unused.
+async function deletePoster(ctx: ApiContext, key: string | null | undefined) {
+  const bucket = ctx.env.POSTERS;
+  if (!key || !bucket) return;
+  const work = bucket.delete([key, previewKey(key)]).catch((err) => console.error("Couldn't delete poster", key, err));
+  if (ctx.waitUntil) ctx.waitUntil(work);
+  else await work;
+}
+
+const BAD_POSTER = { error: "validation_failed", message: "That poster isn't one uploaded here - remove it and add it again." };
 
 // A date/time correction for a school event (`date_correction` in the body:
 // {start, end, note}, or null to go back to the school's own dates) - kept
@@ -118,8 +137,9 @@ export async function onRequestPost(ctx: ApiContext) {
       }
     }
     const changes = overrideChanges(body);
+    if (!changes) return jsonResponse(BAD_POSTER, 400);
     if (Object.keys(changes).length === 0) {
-      return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description or location given." }, 400);
+      return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description, location or poster given." }, 400);
     }
     const tooLong = overrideLengthError(changes);
     if (tooLong) return jsonResponse({ error: "validation_failed", message: tooLong }, 400);
@@ -139,8 +159,9 @@ export async function onRequestPost(ctx: ApiContext) {
       }
       const result = await commitWholeSchoolOverride(env, id, changes);
       if (result.error) return jsonResponse(result, resultStatus(result));
+      await deletePoster(ctx, result.replacedImage);
       await recordUsage(ctx, calendar, { school_edit: 1, confirm_public: confirmPublic ? 1 : 0 });
-      return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
+      return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env), rev: result.rev ?? undefined });
     } catch (err) {
       return jsonResponse(commitErrorResponse(err), 502);
     }
@@ -163,8 +184,9 @@ export async function onRequestPost(ctx: ApiContext) {
       }
     }
     const changes = overrideChanges(body);
+    if (!changes) return jsonResponse(BAD_POSTER, 400);
     if (Object.keys(changes).length === 0) {
-      return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description or location given." }, 400);
+      return jsonResponse({ error: "nothing_to_update", message: "Nothing to save - no description, location or poster given." }, 400);
     }
     const tooLong = overrideLengthError(changes);
     if (tooLong) return jsonResponse({ error: "validation_failed", message: tooLong }, 400);
@@ -180,8 +202,9 @@ export async function onRequestPost(ctx: ApiContext) {
       }
       const result = await commitWholeSchoolOverride(env, id, changes, `school event in ${calendar}`);
       if (result.error) return jsonResponse(result, resultStatus(result));
+      await deletePoster(ctx, result.replacedImage);
       await recordUsage(ctx, calendar, { school_edit: 1, confirm_public: confirmPublic ? 1 : 0 });
-      return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
+      return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env), rev: result.rev ?? undefined });
     } catch (err) {
       return jsonResponse(commitErrorResponse(err), 502);
     }
@@ -193,6 +216,8 @@ export async function onRequestPost(ctx: ApiContext) {
   }
 
   let exceptionsChanged = false;
+  let replacedImage: string | null = null;
+  const rev = generateRev();
   try {
     // The event is in this class's own file or its year group's shared one.
     const result = await commitEventById<{}>(
@@ -208,9 +233,11 @@ export async function onRequestPost(ctx: ApiContext) {
           if (findings.length > 0) return confirmPublicResponse(findings);
         }
         const updated = [...current];
-        updated[index] = { id, ...scopeExceptions(validated.event, calendar, file) };
+        updated[index] = { id, ...scopeExceptions(validated.event, calendar, file), rev };
         exceptionsChanged =
           JSON.stringify(updated[index].exceptions ?? []) !== JSON.stringify(current[index].exceptions ?? []);
+        const before = current[index].image ?? null;
+        replacedImage = before && before !== updated[index].image ? before : null;
         return { events: updated };
       },
       `Update event in ${calendar}`
@@ -223,7 +250,8 @@ export async function onRequestPost(ctx: ApiContext) {
       exception_edit: exceptionsChanged ? 1 : 0,
       confirm_public: confirmPublic ? 1 : 0,
     });
-    return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env) });
+    await deletePoster(ctx, replacedImage);
+    return jsonResponse({ updated: true, rebuild_triggered: await triggerRebuild(env), rev });
   } catch (err) {
     return jsonResponse(commitErrorResponse(err), 502);
   }

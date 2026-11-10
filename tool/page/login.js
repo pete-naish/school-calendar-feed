@@ -25,6 +25,7 @@ export async function loadCalendars() {
         return;
     }
     setYearGroups(data.yearGroups);
+    state.posters = data.posters === true;
     fillCalendarPicker();
 }
 // Class calendars first - nearly everyone here is a class rep - then FOSPS and

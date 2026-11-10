@@ -4,6 +4,7 @@ import { armPublicConfirm, confirmPublicField, disarmPublicConfirm, isConfirmPub
 import { addWeekdayHints } from "./cardState.js";
 import { formatSchoolSpan } from "./dates.js";
 import { confirmSecondClick, el, find, plural } from "./dom.js";
+import { POSTER_BUSY_MESSAGE, posterBusy } from "./poster.js";
 import { fillCardFields, localValidationError, readCardFields, setupYearGroupControls, wireCardDefaultEndTime, wireRecurrenceToggle } from "./eventCard.js";
 import { rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
 import { selectTab } from "./tabs.js";
@@ -160,7 +161,7 @@ export async function handleSaveAll() {
     const events = cards.map((card) => {
         const errorEl = find(card, ".field-error");
         const value = readCardFields(card);
-        const error = localValidationError(value);
+        const error = posterBusy(card) ? POSTER_BUSY_MESSAGE : localValidationError(value);
         if (error) {
             errorEl.textContent = error;
             errorEl.hidden = false;

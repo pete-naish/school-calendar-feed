@@ -456,6 +456,74 @@ still succeeds, the response carries `rebuild_triggered: false`, the save
 confirmation says to expect up to 6 hours, and the scheduled run publishes it
 as before. A save where every event was a duplicate doesn't trigger one.
 
+## Posters
+
+Any event can have a poster (a FOSPS flyer, say), including a school event
+from the Whole School entry or a class's own list, alongside its description
+and location. On the card, **Add poster** takes any image the browser can open;
+`page/poster.ts` shrinks it to a JPEG of at most 1600px on its longest side
+(which also strips EXIF data, such as a phone photo's location) and uploads it
+straight away to `POST /api/poster-upload`. That stores it in the `POSTERS` R2
+bucket under a random key (`<24 hex>.jpg`) and answers with the key, which the
+card then saves as the event's `image` (a manual event's field, or an `image`
+override in `data/whole_school_overrides.json` for a school event).
+`validate.ts` only accepts a key in that exact form, never a URL.
+
+`functions/posters/[key].ts` serves them publicly at
+`https://calendar-admin.nai.sh/posters/<key>`, cached for good since a key is
+never reused. `scripts/build_ics.py` publishes that URL as an RFC 7986 `IMAGE`
+property, which the parent page shows in the event's details, and as a
+`Poster: <url>` line ending the `DESCRIPTION`, since calendar apps ignore
+`IMAGE` but show a link. Anything that reads a description back from a
+published feed takes that line off again (`splitPosterLine()` in
+`_shared/posters.ts`, and the parent page), so it's never saved as part of a
+description.
+
+Alongside each poster the page uploads a link-preview copy (`<key>-p.jpg`):
+1200x630 with the whole poster fitted in on its own average colour, under
+300KB, which is the shape and size WhatsApp shows as a large preview. The
+event pages (see "Sharing one event") use it as their `og:image`.
+
+Replacing or removing a poster deletes the old one from the bucket once the
+change is saved. Deleting an event leaves its poster, so the list's Undo can put
+the event back with it, and a poster uploaded for a card that's never saved is
+left unused too. Both are harmless: they're small, and no published event links to them any more.
+
+The page only offers posters when `GET /api/calendars` says the bucket is bound
+(`posters: true`).
+
+## Sharing one event
+
+Every saved event's card has **Copy for WhatsApp**: a short message of the
+title (in WhatsApp bold), one line of when and where, and the event's link
+(`whatsAppEventMessage()` in `appHelpers.ts`), e.g.
+
+```
+*Christmas Fair*
+Sat 5 Dec, 12:00–15:00 · School Hall
+https://calendar.nai.sh/e/s123
+```
+
+It's meant to replace pasting whole newsletter paragraphs and posters into
+class groups. WhatsApp's preview of the link shows the poster (its 1200x630
+preview copy, see "Posters"), and tapping it opens the event on the public
+page. The link's page comes from the feed build (`docs/e/`, see the main
+README), so it takes a rebuild, plus up to 10 minutes of GitHub Pages' cache,
+to appear or change after a save - and WhatsApp keeps whatever preview it
+fetched first. So every save stamps the event with a new version (`rev`, from
+`generateRev()` in `_shared/github.ts`: on a manual event, or on a school
+event's override), the build puts it in the event's page
+(`<meta name="calendar-rev">`), and after copying, the card asks
+`GET /api/event-ready?key=&rev=` whether the live page has it yet. That
+endpoint fetches the page the way WhatsApp would, through the cache. If it's
+not ready, the card says not to post yet, checks again every 20 seconds, and
+says "Link ready" when it is (giving up after 25 minutes). A school date
+correction doesn't stamp a version, so the check can't see one coming. Where the device has a share sheet,
+**Share…** sends the same message with the poster attached as an image. That
+works well on Android; on an iPhone, WhatsApp may drop the text and send only
+the image. Both use the event as last saved. Counted as `event_copy` /
+`event_share` in the usage counts.
+
 ## Deploying
 
 1. In the Cloudflare dashboard, create a new **Pages** project connected to
@@ -468,6 +536,9 @@ as before. A save where every event was a duplicate doesn't trigger one.
    on wrong passcode guesses. Add a second binding named `STATS` the same
    way, pointing at its own namespace - see "Subscribe click counts" and
    "Usage counts" below. Without it, clicks and usage just aren't counted.
+   Under **R2 bucket bindings**, add one named `POSTERS`, pointing at an R2
+   bucket you create for it (private - the tool serves it, see "Posters"
+   below). Without it the tool doesn't offer posters.
 3. Under the project's **Settings → Environment variables** (as secrets, for
    both Production and Preview), set:
    - `CLASS_PASSWORDS` - a JSON object mapping each of the 16 calendar codes

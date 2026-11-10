@@ -50,11 +50,16 @@ export interface EventFields {
   url: string | null;
   recurrence: Recurrence | null;
   exceptions: EventException[];
+  // A poster's key in the POSTERS bucket (see posters.ts). Absent on events
+  // saved before posters existed.
+  image?: string | null;
 }
 
-// One entry in data/manual_events/<file>.json.
+// One entry in data/manual_events/<file>.json. `rev` changes on every save
+// (see generateRev() in github.ts); absent on an event that predates it.
 export interface ManualEvent extends EventFields {
   id: string;
+  rev?: string;
 }
 
 // A date correction's dates/times as event fields (see schoolEventCorrections.ts).
@@ -76,6 +81,9 @@ export interface SchoolEvent {
   end_time: string | null;
   description: string;
   location: string;
+  image: string | null;
+  // The version stamp of its description/location/poster override, if any.
+  rev?: string;
   correction?: { note: string; school: SpanFields | null };
 }
 
@@ -116,6 +124,7 @@ export type ApiErrorCode =
   | "missing_id"
   | "nothing_to_update"
   | "invalid_week"
+  | "not_available"
   | "server_error";
 
 // Any endpoint's error body. `message` is shown to the rep when present.
@@ -128,6 +137,12 @@ export interface ApiError {
 
 export interface CalendarsResponse {
   yearGroups: YearGroup[];
+  // Whether events can have posters (the POSTERS bucket is bound).
+  posters: boolean;
+}
+
+export interface PosterUploadResponse {
+  image: string;
 }
 
 // The event already in the calendar that an extracted one repeats (see
@@ -166,6 +181,14 @@ export interface ListResponse {
 export interface UpdateResponse {
   updated: true;
   rebuild_triggered: boolean;
+  // The event's new version stamp (see generateRev() in github.ts).
+  rev?: string;
+}
+
+// GET /api/event-ready: whether an event's page on the public site (and so its
+// link preview) shows its latest save.
+export interface EventReadyResponse {
+  ready: boolean;
 }
 
 export interface DeleteResponse {
@@ -192,4 +215,12 @@ export interface StatsResponse {
 
 // What the page may count through POST /api/track - kept in step with
 // PAGE_ACTIONS in usageStats.ts (the tests check).
-export type PageAction = "week_copy" | "share_link_copy" | "share_message_copy" | "qr_download" | "manual_add" | "add_anyway";
+export type PageAction =
+  | "week_copy"
+  | "share_link_copy"
+  | "share_message_copy"
+  | "qr_download"
+  | "manual_add"
+  | "add_anyway"
+  | "event_copy"
+  | "event_share";

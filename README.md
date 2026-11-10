@@ -71,6 +71,20 @@ page's own **Share these calendars** button (under step 1, once a class is
 ticked) builds from a parent's ticks - shared with the phone's share sheet
 where there is one, or copied.
 
+Every event also has its own link, `/e/<key>` (a manual event's id, or `s` +
+the school's id for a school event). `scripts/build_ics.py` writes a small page
+for each event in the feeds to `docs/e/` (`write_event_pages()`), deleting
+pages for events that have gone. Its Open Graph tags give the title, one line
+of when and where (a repeating event's next date), and the poster's
+link-preview copy, which is what WhatsApp shows for the link. It sends a
+person straight on to `/?e=<key>`, which opens the event on the page as
+clicking its day would, with an invitation underneath for anyone new to the
+site: what it is, and a button that ticks the event's calendar and takes them
+to step 2. Each page also carries the event's version stamp from its last
+save in the tool (`<meta name="calendar-rev">`), which the tool checks before
+saying a link is ready to post. The class rep tool's **Copy for WhatsApp** hands
+these links out (see [tool/README.md](tool/README.md#sharing-one-event)).
+
 ### How classification works
 
 The API gives no structured "which year/class is this for" field, so

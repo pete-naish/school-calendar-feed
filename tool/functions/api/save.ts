@@ -2,7 +2,7 @@ import { isValidCalendar, isWholeSchoolCalendar, yearGroupFor } from "./_shared/
 import { checkPasscode, passcodeErrorResponse } from "./_shared/auth.ts";
 import { validateEventInput, LIMITS } from "./_shared/validate.ts";
 import { newPersonalDetails, confirmPublicResponse } from "./_shared/personalDetails.ts";
-import { commitManualEvents, dedupeKey, generateEventId, triggerRebuild } from "./_shared/github.ts";
+import { commitManualEvents, dedupeKey, generateEventId, generateRev, triggerRebuild } from "./_shared/github.ts";
 import { commitErrorResponse, resultStatus } from "./_shared/errors.ts";
 import type { EventFields, ManualEvent, PersonalDetail, RequestBody } from "./_shared/types.d.ts";
 import type { ApiContext, Env } from "./_shared/env.ts";
@@ -157,7 +157,7 @@ async function appendEvents(env: Env, file: string, validated: EventFields[]) {
           return;
         }
         currentKeys.add(key); // guard against duplicates within the same batch too
-        toAppend.push({ id: generateEventId(), ...event });
+        toAppend.push({ id: generateEventId(), ...event, rev: generateRev() });
       });
       return { events: [...current, ...toAppend], saved: toAppend.length, skippedDuplicates };
     },

@@ -85,7 +85,10 @@ test("the weekly list strips the label prefix, so a code-shaped prefix would be 
 
 test("GET /api/calendars hands the page the same year groups the API uses", async () => {
   const { onRequestGet } = await import("../functions/api/calendars.ts");
-  const resp = onRequestGet();
+  const resp = onRequestGet({ env: {} });
   assert.equal(resp.headers.get("content-type"), "application/json");
-  assert.deepEqual((await resp.json()).yearGroups, YEAR_GROUPS);
+  const body = await resp.json();
+  assert.deepEqual(body.yearGroups, YEAR_GROUPS);
+  assert.equal(body.posters, false); // no POSTERS bucket bound
+  assert.equal((await onRequestGet({ env: { POSTERS: {} } }).json()).posters, true);
 });

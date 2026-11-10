@@ -17,6 +17,8 @@ type YearGroupView = YearGroupConfig & { dot: string; colorVar: string };
 
 // One occurrence of an event, as the grid and the day list show it.
 interface Instance {
+  // The event's id, as its link (/e/<key>, ?e=<key>) has it - see eventKey().
+  key: string | null;
   code: string;
   colorVar: string;
   calendarLabel: string;
@@ -24,6 +26,8 @@ interface Instance {
   description: string | null;
   location: string | null;
   url: string | null;
+  // A poster's full URL (see POSTER_BASE_URL).
+  image: string | null;
   allDay: boolean;
   startJs: Date;
   endJs: Date;
@@ -324,10 +328,18 @@ function saveAddCollapsed(collapsed: boolean) {
 // Step 2 folds away on phones only (the CSS hides it under .is-collapsed
 // inside the narrow media query), so wider screens always show it and the
 // heading button does nothing there.
+// Unfolds step 2 (for a phone where it's folded away) without remembering
+// that - set by setupAddToggle().
+let unfoldAddStep = () => {};
+
 function setupAddToggle() {
   const section = document.querySelector(".subscribe-add") as HTMLElement;
   const toggle = document.getElementById("add-toggle") as HTMLButtonElement;
   let collapsed = loadAddCollapsed();
+  unfoldAddStep = () => {
+    collapsed = false;
+    sync();
+  };
   const sync = () => {
     section.classList.toggle("is-collapsed", collapsed);
     if (NARROW.matches) toggle.setAttribute("aria-expanded", String(!collapsed));
@@ -406,12 +418,45 @@ function displayTitle(summary: string, cal: Calendar) {
   return stripped || summary;
 }
 
+// Event posters, attached in the class rep tool and served from there. The
+// build publishes a poster as an IMAGE property and also as a "Poster: <url>"
+// line ending the description (for calendar apps, which ignore IMAGE). Here
+// the line comes off again, since the poster itself is shown instead. Keep in
+// step with POSTER_BASE_URL in scripts/build_ics.py.
+const POSTER_BASE_URL = "https://calendar-admin.nai.sh/posters/";
+const POSTER_KEY = /^[0-9a-f]{24}\.jpg$/;
+const POSTER_LINE = /(?:^|\n\n)Poster: https:\/\/calendar-admin\.nai\.sh\/posters\/[0-9a-f]{24}\.jpg\s*$/;
+
+// Only ever one of our own posters - never some other image an .ics names.
+function posterUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.startsWith(POSTER_BASE_URL)) return null;
+  return POSTER_KEY.test(value.slice(POSTER_BASE_URL.length)) ? value : null;
+}
+
+function stripPosterLine(description: string) {
+  return description.replace(POSTER_LINE, "").trimEnd();
+}
+
+// An event's id from its UID: a manual event's own id (a moved occurrence's
+// UID adds the date it moved from, and it shares its series' id), or "s" + the
+// school's id. Same as event_page_key() in scripts/build_ics.py, which writes
+// the /e/<key> page a shared link points at.
+const UID_KEY = /^(?:manual-([0-9A-Za-z]+?)(?:-\d{4}-\d{2}-\d{2})?|stpauls-(\d+))@school-calendar-feed$/;
+
+function eventKey(uid: unknown): string | null {
+  const match = typeof uid === "string" ? uid.match(UID_KEY) : null;
+  if (!match) return null;
+  return match[1] || `s${match[2]}`;
+}
+
 function expandInstance(
   cal: Calendar,
+  key: string | null,
   summary: string,
   description: string,
   location: string,
   url: unknown,
+  image: string | null,
   startTime: IcalTime,
   endTime: IcalTime
 ): Instance {
@@ -442,13 +487,15 @@ function expandInstance(
   }
 
   return {
+    key,
     code: cal.code,
     colorVar: cal.colorVar,
     calendarLabel: cal.groupLabel ? `${cal.groupLabel} ${cal.label}` : cal.label,
     title: displayTitle(summary, cal),
-    description: description || null,
+    description: (image ? stripPosterLine(description || "") : description) || null,
     location: location || null,
     url: (url as string) || null,
+    image,
     allDay,
     startJs,
     endJs,
@@ -473,11 +520,13 @@ async function loadCalendarInstances(cal: Calendar): Promise<Instance[]> {
   for (const vevent of comp.getAllSubcomponents("vevent")) {
     const event = new ICAL.Event(vevent);
     const url = vevent.getFirstPropertyValue("url");
+    const image = posterUrl(vevent.getFirstPropertyValue("image"));
+    const key = eventKey(vevent.getFirstPropertyValue("uid"));
 
     if (!event.isRecurring()) {
       if (event.endDate.compare(WINDOW_START) < 0 || event.startDate.compare(WINDOW_END) > 0) continue;
       instances.push(
-        expandInstance(cal, event.summary, event.description, event.location, url, event.startDate, event.endDate)
+        expandInstance(cal, key, event.summary, event.description, event.location, url, image, event.startDate, event.endDate)
       );
       continue;
     }
@@ -493,10 +542,12 @@ async function loadCalendarInstances(cal: Calendar): Promise<Instance[]> {
       instances.push(
         expandInstance(
           cal,
+          key,
           details.item.summary,
           details.item.description,
           details.item.location,
           url,
+          image,
           details.startDate,
           details.endDate
         )
@@ -556,6 +607,7 @@ const el = {
   dialog: byId<HTMLDialogElement>("day-dialog"),
   dialogTitle: byId("day-dialog-title"),
   dialogEvents: byId("day-dialog-events"),
+  dialogInvite: byId("day-dialog-invite"),
   dialogClose: byId<HTMLButtonElement>("day-dialog-close"),
   dayOff: byId("cal-dayoff"),
   changes: byId("cal-changes"),
@@ -1466,6 +1518,23 @@ function renderEventRow(inst: Instance) {
     desc.textContent = inst.description;
     body.appendChild(desc);
   }
+  if (inst.image) {
+    // Tapping the poster opens it full size (posters are often small print).
+    const link = document.createElement("a");
+    link.className = "day-event-poster";
+    link.href = inst.image;
+    link.target = "_blank";
+    link.rel = "noopener";
+    const img = document.createElement("img");
+    img.src = inst.image;
+    img.alt = `Poster for ${inst.title}`;
+    img.loading = "lazy";
+    img.decoding = "async";
+    // A poster that's gone (deleted, or the tool's down) just isn't shown.
+    img.addEventListener("error", () => link.remove());
+    link.appendChild(img);
+    body.appendChild(link);
+  }
   if (inst.url && isSafeUrl(inst.url)) {
     const link = document.createElement("a");
     link.href = inst.url;
@@ -1490,6 +1559,7 @@ function openDayDialog(date: Date, dayEvents: Instance[]) {
   for (const inst of dayEvents) {
     el.dialogEvents.appendChild(renderEventRow(inst));
   }
+  el.dialogInvite.hidden = true;
   el.dialog.showModal();
 }
 
@@ -1557,6 +1627,78 @@ function shiftAnchor(delta: number) {
 // startup and by the Refresh button - the .ics fetches already use
 // cache: "no-cache" (loadCalendarInstances), so a re-run always gets live
 // data with no extra cache-busting needed.
+// Every occurrence of every calendar's events, ticked or not - so an event
+// link (openLinkedEvent()) works whatever this browser has ticked.
+let loadedInstances: Instance[] = [];
+
+// ?e=<key>, from an event link a class rep shared (the tool's "Copy for
+// WhatsApp", via the /e/<key> preview page): goes to the event's next
+// occurrence - or its last, once it's over - and opens it, as clicking its day
+// would. Like ?c=, the parameter is then dropped from the address bar.
+function linkedEventKey(): string | null {
+  try {
+    const url = new URL(window.location.href);
+    const key = url.searchParams.get("e");
+    if (key === null) return null;
+    url.searchParams.delete("e");
+    history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+    return key;
+  } catch {
+    return null;
+  }
+}
+
+function openLinkedEvent(key: string) {
+  const matches = loadedInstances.filter((inst) => inst.key === key).sort((a, b) => a.startJs.getTime() - b.startJs.getTime());
+  if (matches.length === 0) {
+    el.error.textContent = "That event isn't in the calendar any more - it may have been cancelled or moved.";
+    el.error.hidden = false;
+    return;
+  }
+  // A year-wide event is in two class calendars: either copy will do.
+  const now = Date.now();
+  const inst = matches.find((m) => m.endJs.getTime() > now) ?? matches[matches.length - 1];
+  viewedDate = normalizeAnchor(inst.startJs, currentView);
+  render();
+  openDayDialog(inst.startJs, [inst]);
+  showSubscribeInvite(inst);
+}
+
+// Someone arriving from a link in a WhatsApp group may never have seen this
+// site: under the event, say what it is and offer that event's calendar in
+// their own calendar app - ticking it, then taking them to step 2.
+function showSubscribeInvite(inst: Instance) {
+  const cal = ALL_CALENDARS.find((c) => c.code === inst.code);
+  if (!cal || !LAUNCHED_CALENDARS.has(cal.code)) return;
+  const text = document.createElement("p");
+  text.append(
+    "This is from St Paul's school calendars. Get ",
+    Object.assign(document.createElement("strong"), { textContent: inst.calendarLabel }),
+    " dates like this in your own calendar app, kept up to date for you."
+  );
+  const button = Object.assign(document.createElement("button"), {
+    type: "button",
+    className: "day-dialog-invite-button",
+    textContent: `Add ${inst.calendarLabel} to my calendar`,
+  });
+  button.addEventListener("click", () => {
+    if (!toggleState[cal.code]) {
+      toggleState[cal.code] = true;
+      saveToggleState(toggleState);
+      renderTiles();
+      renderPickHint();
+      render();
+      renderAddActions();
+      renderShareSelection();
+    }
+    el.dialog.close();
+    unfoldAddStep();
+    document.querySelector(".subscribe-add")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  el.dialogInvite.replaceChildren(text, button);
+  el.dialogInvite.hidden = false;
+}
+
 async function loadAllCalendarData() {
   const results = await Promise.allSettled(ALL_CALENDARS.map((cal) => loadCalendarInstances(cal)));
   const allInstances: Instance[] = [];
@@ -1570,6 +1712,7 @@ async function loadAllCalendarData() {
     }
   });
   dayIndex = buildDayIndex(allInstances);
+  loadedInstances = allInstances;
   return { failures };
 }
 
@@ -1598,6 +1741,7 @@ async function handleRefresh() {
 }
 
 async function init() {
+  const linkedKey = linkedEventKey();
   renderTiles();
   renderPickHint();
   renderComingSoon();
@@ -1651,6 +1795,7 @@ async function init() {
     el.error.hidden = false;
   }
   render();
+  if (linkedKey) openLinkedEvent(linkedKey);
 }
 
 init();

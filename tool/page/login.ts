@@ -25,6 +25,7 @@ export async function loadCalendars() {
     return;
   }
   setYearGroups(data.yearGroups);
+  state.posters = data.posters === true;
   fillCalendarPicker();
 }
 

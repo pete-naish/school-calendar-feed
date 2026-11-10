@@ -48,7 +48,7 @@ from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 import requests
-from dateutil.rrule import DAILY, MONTHLY, WEEKLY, rrule
+from dateutil.rrule import DAILY, MONTHLY, WEEKLY, rrule, rrulestr
 from icalendar import Calendar, Event
 
 API_URL = "https://www.st-pauls.enfield.sch.uk/calendar/api.asp"
@@ -67,7 +67,18 @@ MANUAL_EVENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "manual_ev
 # location at all, so a location override adds one rather than replacing one.
 WHOLE_SCHOOL_OVERRIDES_PATH = Path(__file__).resolve().parent.parent / "data" / "whole_school_overrides.json"
 
-_OVERRIDE_FIELDS = ("description", "location")
+_OVERRIDE_FIELDS = ("description", "location", "image", "rev")
+
+# Event posters: a manual event's `image`, or a school event's `image`
+# override, is the key of a poster the class rep tool stored in its R2 bucket
+# and serves from here (tool/functions/api/_shared/posters.ts). Published as an
+# RFC 7986 IMAGE property - which the parent page shows, but calendar apps
+# ignore - and as a "Poster: <url>" line ending the DESCRIPTION, which every
+# app shows as a link. Readers of a published description strip that line
+# again (splitPosterLine() in posters.ts, stripPosterLine() in
+# docs/assets/calendar.ts), so keep its wording in step with theirs.
+POSTER_BASE_URL = "https://calendar-admin.nai.sh/posters/"
+_POSTER_KEY_RE = re.compile(r"[0-9a-f]{24}\.jpg")
 
 # Date/time corrections for school-sourced events the school has entered
 # wrongly - {"<school event id>": {"start": ..., "end": ..., "note": "..."}},
@@ -375,6 +386,33 @@ def _safe_url(url: str | None) -> str | None:
     return url if parsed.scheme in ("http", "https") else None
 
 
+def _poster_key(value: object) -> str | None:
+    """A poster key as the tool makes them, or None - anything else (a URL, a
+    hand-edited typo) is ignored rather than published."""
+    return value if isinstance(value, str) and _POSTER_KEY_RE.fullmatch(value) else None
+
+
+def _add_description_and_poster(event: Event, description: str | None, image: object) -> None:
+    """DESCRIPTION, with the poster's link line after it, plus IMAGE."""
+    key = _poster_key(image)
+    if key:
+        url = f"{POSTER_BASE_URL}{key}"
+        line = f"Poster: {url}"
+        description = f"{description}\n\n{line}" if description else line
+    if description:
+        event.add("description", description)
+    if key:
+        event.add("image", url, parameters={"VALUE": "URI", "DISPLAY": "FULLSIZE", "FMTTYPE": "image/jpeg"})
+
+
+def _poster_preview_url(image_url: str) -> str | None:
+    """The small, link-preview-sized copy the tool uploads beside every poster
+    (1200x630, see tool/page/poster.ts): `<key>-p.jpg`."""
+    if not image_url.startswith(POSTER_BASE_URL) or not _poster_key(image_url[len(POSTER_BASE_URL):]):
+        return None
+    return f"{image_url[:-len('.jpg')]}-p.jpg"
+
+
 def _parse_all_day(raw: dict) -> tuple[date, date]:
     start_date = date.fromisoformat(raw["start"][:10])
     end_raw = raw.get("end")
@@ -403,6 +441,7 @@ def build_event(
     code: str | None = None,
     description_override: str | None = None,
     location_override: str | None = None,
+    image_override: str | None = None,
 ) -> Event:
     """`code` prefixes the published title with that calendar's code (e.g.
     "RR: PE Kit") - only class/FOSPS calendars pass this; whole-school
@@ -414,7 +453,8 @@ def build_event(
     outright when set, including clearing it entirely if set to "" - both
     are display-only changes to the published .ics; the source data (title,
     raw description) is never touched. `location_override` sets LOCATION,
-    which the school's own feed never provides."""
+    which the school's own feed never provides, and `image_override` a
+    poster (see POSTER_BASE_URL)."""
     event = Event()
     event.add("uid", f"stpauls-{raw['id']}@{UID_DOMAIN}")
     title = _clean(raw.get("title"))
@@ -423,8 +463,7 @@ def build_event(
     event.add("summary", title)
 
     desc = description_override if description_override is not None else _clean_description(raw.get("desc"))
-    if desc:
-        event.add("description", desc)
+    _add_description_and_poster(event, desc, image_override)
 
     if location_override:
         event.add("location", location_override)
@@ -487,9 +526,7 @@ def _build_moved_exception_event(raw: dict, exception: dict, code: str) -> Event
     event.add("uid", f"manual-{base_id}-{exception['date']}@{UID_DOMAIN}")
     event.add("summary", f"{class_prefix(code)}{raw['title']}")
 
-    desc = raw.get("description")
-    if desc:
-        event.add("description", desc)
+    _add_description_and_poster(event, raw.get("description"), raw.get("image"))
     if raw.get("location"):
         event.add("location", raw["location"])
     url = _safe_url(raw.get("url"))
@@ -531,9 +568,7 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
     # never touched, only what's published.
     event.add("summary", f"{class_prefix(code)}{raw['title']}")
 
-    desc = raw.get("description")
-    if desc:
-        event.add("description", desc)
+    _add_description_and_poster(event, raw.get("description"), raw.get("image"))
 
     if raw.get("location"):
         event.add("location", raw["location"])
@@ -692,7 +727,7 @@ def load_class_manual_events(code: str, year_key: str) -> list[dict]:
 
 
 def _normalize_override(value: object) -> dict[str, str]:
-    """One override entry as {"description"?, "location"?}. Accepts the older
+    """One override entry as {"description"?, "location"?, "image"?}. Accepts the older
     bare-string form (a description) and ignores anything unrecognised, so a
     hand-edited file can't break the build."""
     if isinstance(value, str):
@@ -1024,6 +1059,205 @@ def write_calendar(filename: str, code: str, name: str, events: list[Event], cha
     path.write_bytes(make_calendar(name, events).to_ical())
 
 
+# --- Event pages --------------------------------------------------------------
+#
+# docs/e/<key>.html, one per event in the feeds: what the class rep tool's
+# "Copy for WhatsApp" links to (tool/page/eventShare.ts). WhatsApp builds a
+# link's preview from the page's Open Graph tags without running any script, so
+# the event's title, when/where and poster have to be in the HTML itself; the
+# parent page (which builds everything in the browser) can't provide them. A
+# person following the link is sent straight on to /?e=<key>, which opens the
+# event there (openLinkedEvent() in docs/assets/calendar.ts).
+#
+# `key` is the event's id: a manual event's own id, or "s" + the school's id
+# for a school event. A moved occurrence shares its series' page. Keep
+# eventKey() in calendar.ts and eventPageKey() in tool/page/eventShare.ts in
+# step with event_page_key().
+
+EVENT_PAGES_DIR = Path(__file__).resolve().parent.parent / "docs" / "e"
+SITE_URL = "https://calendar.nai.sh"
+_UID_KEY_RE = re.compile(rf"(?:manual-([0-9A-Za-z]+?)(?:-\d{{4}}-\d{{2}}-\d{{2}})?|stpauls-(\d+))@{re.escape(UID_DOMAIN)}")
+_REPEAT_WORDS = {("DAILY", 1): "daily", ("WEEKLY", 1): "weekly", ("WEEKLY", 2): "every 2 weeks", ("MONTHLY", 1): "monthly"}
+
+
+def event_page_key(uid: str) -> str | None:
+    match = _UID_KEY_RE.fullmatch(uid)
+    if not match:
+        return None
+    return match.group(1) or f"s{match.group(2)}"
+
+
+def _london(value) -> datetime | date:
+    return value.astimezone(LONDON) if isinstance(value, datetime) else value
+
+
+def _day_text(day: date, today: date) -> str:
+    text = f"{day.strftime('%a')} {day.day} {day.strftime('%b')}"
+    return text if day.year == today.year else f"{text} {day.year}"
+
+
+def _next_start(event: Event, today: date):
+    """A repeating event's next occurrence from `today` (skipping EXDATEs),
+    else its last one; a one-off's own start."""
+    start = _london(event.decoded("dtstart"))
+    if "rrule" not in event:
+        return start
+    all_day = not isinstance(start, datetime)
+    anchor = datetime.combine(start, dt_time()) if all_day else start
+    rule_text = event["rrule"].to_ical().decode()
+    try:
+        # A timed series' UNTIL is UTC, which needs a timezone-aware start (and
+        # keeps each occurrence at its London wall-clock time across DST). An
+        # all-day one's is a date, read as a naive datetime like its start.
+        rule = rrulestr(rule_text, dtstart=anchor)
+    except ValueError:
+        # A floating (no-Z) UNTIL on a timed series, from a hand-edited file.
+        rule = rrulestr(rule_text, dtstart=anchor.replace(tzinfo=None))
+    skipped = _exdates(event)
+    last = start
+    for occurrence in rule:
+        day = occurrence.date()
+        if day in skipped:
+            continue
+        value = day if all_day else occurrence.replace(tzinfo=LONDON) if occurrence.tzinfo is None else occurrence.astimezone(LONDON)
+        last = value
+        if day >= today:
+            return value
+    return last
+
+
+def event_when_text(event: Event, today: date) -> str:
+    """"Sat 5 Dec, 12:00–15:00 · School Hall" - one line, for a link preview.
+    A repeating event shows its next occurrence and how often it repeats."""
+    first = _london(event.decoded("dtstart"))
+    start = _next_start(event, today)
+    end = _london(event.decoded("dtend")) if "dtend" in event else None
+    # A later occurrence lasts as long as the first one.
+    if end is not None:
+        end = start + (end - first)
+    if isinstance(start, datetime):
+        text = f"{_day_text(start.date(), today)}, {start:%H:%M}"
+        if isinstance(end, datetime) and end > start:
+            same_day = end.date() == start.date()
+            text += f"–{end:%H:%M}" if same_day else f" – {_day_text(end.date(), today)} {end:%H:%M}"
+    else:
+        text = _day_text(start, today)
+        last_day = end - timedelta(days=1) if end is not None else start
+        if last_day > start:
+            text += f" – {_day_text(last_day, today)}"
+    if "rrule" in event:
+        rule = event["rrule"]
+        first = lambda value: value[0] if isinstance(value, list) else value  # noqa: E731
+        words = _REPEAT_WORDS.get((first(rule.get("FREQ", "")), int(first(rule.get("INTERVAL", 1)))))
+        if words:
+            text += f" ({words})"
+    location = str(event.get("location") or "").strip()
+    return f"{text} · {location}" if location else text
+
+
+def render_event_page(key: str, title: str, when: str, image_url: str | None, rev: str | None = None) -> str:
+    """`rev` is the event's version stamp from its last save in the class rep
+    tool, which the tool's event-ready check looks for (see
+    tool/functions/api/event-ready.ts)."""
+    esc = lambda s: html.escape(s, quote=True)  # noqa: E731
+    rev_tag = f'<meta name="calendar-rev" content="{esc(rev)}">\n' if rev else ""
+    target = f"../?e={key}"
+    preview = _poster_preview_url(image_url) if image_url else None
+    image_tags = (
+        f'<meta property="og:image" content="{esc(preview)}">\n'
+        '<meta property="og:image:width" content="1200">\n'
+        '<meta property="og:image:height" content="630">\n'
+        '<meta name="twitter:card" content="summary_large_image">\n'
+        if preview
+        else f'<meta property="og:image" content="{SITE_URL}/apple-touch-icon.png">\n'
+    )
+    return (
+        "<!doctype html>\n"
+        '<html lang="en-GB">\n<head>\n<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        f"<title>{esc(title)}</title>\n"
+        '<meta name="robots" content="noindex">\n'
+        f'<meta property="og:type" content="website">\n'
+        f'<meta property="og:site_name" content="{esc(SCHOOL_NAME)} calendars">\n'
+        f'<meta property="og:title" content="{esc(title)}">\n'
+        f'<meta property="og:description" content="{esc(when)}">\n'
+        f'<meta property="og:url" content="{SITE_URL}/e/{key}">\n'
+        f"{image_tags}"
+        f"{rev_tag}"
+        f'<meta http-equiv="refresh" content="0; url={esc(target)}">\n'
+        f'<link rel="canonical" href="{SITE_URL}/?e={key}">\n'
+        "</head>\n<body>\n"
+        f'<p><a href="{esc(target)}">{esc(title)} - {esc(when)}</a></p>\n'
+        "</body>\n</html>\n"
+    )
+
+
+def _page_start_sort(event: Event, today: date):
+    """When an event next happens, as a sortable (upcoming?, datetime) - for
+    picking which of a series and its moved occurrences a page describes."""
+    start = _next_start(event, today)
+    day = start.date() if isinstance(start, datetime) else start
+    moment = start if isinstance(start, datetime) else datetime.combine(start, dt_time(), tzinfo=LONDON)
+    upcoming = day >= today
+    # Upcoming first, soonest first; then past ones, latest first.
+    return (0, moment.timestamp()) if upcoming else (1, -moment.timestamp())
+
+
+def load_event_revs(overrides: dict[str, dict[str, str]]) -> dict[str, str]:
+    """Each event's version stamp from its last save in the class rep tool
+    (`rev`), by page key: a manual event's from data/manual_events/, a school
+    event's from its override."""
+    revs: dict[str, str] = {}
+    for path in sorted(MANUAL_EVENTS_DIR.glob("*.json")):
+        with path.open() as f:
+            for raw in json.load(f):
+                if isinstance(raw, dict) and raw.get("id") and isinstance(raw.get("rev"), str):
+                    revs[str(raw["id"])] = raw["rev"]
+    for event_id, override in overrides.items():
+        if override.get("rev"):
+            revs[f"s{event_id}"] = override["rev"]
+    return revs
+
+
+def write_event_pages(
+    calendars: list[tuple[str | None, list[Event]]], today: date, revs: dict[str, str] | None = None
+) -> int:
+    """One page per event across every calendar (`code` None for Whole
+    School, whose titles have no prefix). An event in several calendars (a
+    year-wide one) gets one page, and a series shares its page with its moved
+    occurrences: it describes whichever happens next. `revs` gives each page
+    its event's version stamp (load_event_revs()). A page for an event no
+    longer in any feed is deleted. Only rewrites a page whose content changed."""
+    by_key: dict[str, list[tuple[str, Event]]] = {}
+    for code, events in calendars:
+        prefix = class_prefix(code) if code else ""
+        for event in events:
+            key = event_page_key(str(event.get("uid", "")))
+            if key:
+                by_key.setdefault(key, []).append((prefix, event))
+
+    pages: dict[str, str] = {}
+    for key, entries in by_key.items():
+        prefix, event = min(entries, key=lambda entry: _page_start_sort(entry[1], today))
+        title = str(event.get("summary", ""))
+        if prefix and title.startswith(prefix):
+            title = title[len(prefix):]
+        image = event.get("image")
+        pages[key] = render_event_page(
+            key, title, event_when_text(event, today), str(image) if image else None, (revs or {}).get(key)
+        )
+
+    EVENT_PAGES_DIR.mkdir(parents=True, exist_ok=True)
+    for path in EVENT_PAGES_DIR.glob("*.html"):
+        if path.stem not in pages:
+            path.unlink()
+    for key, content in pages.items():
+        path = EVENT_PAGES_DIR / f"{key}.html"
+        if not path.exists() or path.read_text(encoding="utf-8") != content:
+            path.write_text(content, encoding="utf-8")
+    return len(pages)
+
+
 def write_change_log(new_changes: list[dict], now: datetime) -> None:
     """Adds this build's changes to calendars/changes.json, newest first, and
     drops entries older than CHANGE_LOG_DAYS. Only rewritten when that changes
@@ -1099,6 +1333,7 @@ def main() -> None:
         override_kwargs = {
             "description_override": override.get("description"),
             "location_override": override.get("location"),
+            "image_override": override.get("image"),
         }
         if bucket == "whole-school":
             whole_school_events.append(build_event(raw, **override_kwargs))
@@ -1114,6 +1349,8 @@ def main() -> None:
 
     now = datetime.now(tz=UTC)
     changes: list[dict] = []
+    # Every calendar's events, for write_event_pages().
+    built_calendars: list[tuple[str | None, list[Event]]] = [(None, whole_school_events)]
     write_calendar("whole-school.ics", "whole-school", f"{SCHOOL_NAME} — Whole School", whole_school_events, changes, now)
     calendar_counts["whole-school.ics"] = len(whole_school_events)
     print(f"Wrote {len(whole_school_events)} events to whole-school.ics", file=sys.stderr)
@@ -1126,13 +1363,20 @@ def main() -> None:
             )
             name = f"{SCHOOL_NAME} — {group['label']} ({cls['current_label']})"
             write_calendar(f"{code.lower()}.ics", code, name, events, changes, now)
+            built_calendars.append((code, events))
             calendar_counts[f"{code.lower()}.ics"] = len(events)
             print(f"Wrote {len(events)} events to {code.lower()}.ics", file=sys.stderr)
 
     fosps_events = build_manual_events(load_manual_events("fosps"), "fosps", closure_dates)
+    built_calendars.append(("fosps", fosps_events))
     write_calendar("fosps.ics", "fosps", f"{SCHOOL_NAME} — Friends of St Paul's (FOSPS)", fosps_events, changes, now)
     calendar_counts["fosps.ics"] = len(fosps_events)
     print(f"Wrote {len(fosps_events)} events to fosps.ics", file=sys.stderr)
+
+    written_pages = write_event_pages(
+        built_calendars, now.astimezone(LONDON).date(), load_event_revs(whole_school_overrides)
+    )
+    print(f"Wrote {written_pages} event pages to {EVENT_PAGES_DIR}", file=sys.stderr)
 
     write_change_log(changes, now)
     if changes:

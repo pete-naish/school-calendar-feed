@@ -42,6 +42,8 @@ export const state: {
   // The event the last delete removed, for its Undo - cleared by switching
   // calendar or by undoing it.
   lastDeleted: CardValue | null;
+  // Whether events can have posters (GET /api/calendars says).
+  posters: boolean;
 } = {
   calendar: null,
   passcode: null,
@@ -52,6 +54,7 @@ export const state: {
   lastExtractedText: "",
   extracting: false,
   lastDeleted: null,
+  posters: false,
 };
 
 export function setYearGroups(groups: YearGroup[]) {

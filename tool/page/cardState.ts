@@ -23,6 +23,9 @@ export interface CardState {
   exceptions: EventException[];
   // A saved rep event as it was last saved, for undoing a delete.
   saved?: CardValue;
+  // The saved event's version stamp (see generateRev() in github.ts), which
+  // its public page shows once it's caught up - see eventShare.ts.
+  rev?: string;
 }
 
 const cards = new WeakMap<HTMLElement, CardState>();

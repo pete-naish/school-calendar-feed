@@ -1490,3 +1490,37 @@ button:disabled {
     padding: 24px;
   }
 }
+
+/* An event's poster: a thumbnail (tap for full size) beside its buttons. See
+   page/poster.ts. */
+.poster-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.poster-thumb {
+  display: block;
+  line-height: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.poster-thumb img {
+  display: block;
+  max-width: 120px;
+  max-height: 160px;
+  object-fit: contain;
+}
+
+.poster-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.poster-status:empty {
+  display: none;
+}

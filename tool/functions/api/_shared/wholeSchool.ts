@@ -17,6 +17,7 @@
 
 import { fetchIcsText, unescapeIcsText, parseDateTime, dayToIso } from "./ics.ts";
 import { titlePrefixFor } from "./calendars.ts";
+import { posterKeyFromUrl, splitPosterLine } from "./posters.ts";
 import type { SchoolEvent } from "./types.d.ts";
 
 const UID_PATTERN = /^stpauls-(\d+)@school-calendar-feed$/;
@@ -44,6 +45,7 @@ export function extractEvents(icsText: string): SchoolEvent[] {
     const dtendMatch = body.match(/\nDTEND[^:]*:([^\r\n]*)/);
     const descMatch = body.match(/\nDESCRIPTION:([^\r\n]*(?:\r?\n [^\r\n]*)*)/);
     const locationMatch = body.match(/\nLOCATION:([^\r\n]*(?:\r?\n [^\r\n]*)*)/);
+    const imageMatch = body.match(/\nIMAGE[^:]*:([^\r\n]*(?:\r?\n [^\r\n]*)*)/);
     if (!uidMatch || !summaryMatch || !dtstartMatch) continue;
 
     const idMatch = uidMatch[1].trim().match(UID_PATTERN);
@@ -54,6 +56,11 @@ export function extractEvents(icsText: string): SchoolEvent[] {
     const end = dtendMatch && parseDateTime(dtendMatch[1].trim());
 
     const endDay = end ? (end.time === null ? end.day - 1 : end.day) : start.day;
+    // The build adds a "Poster: <url>" line to the description of an event
+    // with a poster - not part of the description a rep edits.
+    const published = descMatch ? unescapeIcsText(descMatch[1].replace(/\r?\n /g, "")) : "";
+    const { description, image: linkedImage } = splitPosterLine(published);
+    const image = posterKeyFromUrl(imageMatch && imageMatch[1].replace(/\r?\n /g, "").trim()) ?? linkedImage;
 
     events.push({
       id: idMatch[1],
@@ -62,8 +69,9 @@ export function extractEvents(icsText: string): SchoolEvent[] {
       end_date: dayToIso(Math.max(endDay, start.day)),
       time: start.time,
       end_time: start.time && end && end.time && end.day === start.day ? end.time : null,
-      description: descMatch ? unescapeIcsText(descMatch[1].replace(/\r?\n /g, "")) : "",
+      description,
       location: locationMatch ? unescapeIcsText(locationMatch[1].replace(/\r?\n /g, "")) : "",
+      image,
     });
   }
   return events;

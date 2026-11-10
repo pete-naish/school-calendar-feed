@@ -78,6 +78,13 @@ export function generateEventId() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 }
 
+// A new version stamp for an event, set on every save through the tool. The
+// event's page (docs/e/, written by scripts/build_ics.py) carries it, so
+// event-ready.ts can tell whether the page has caught up with a save yet.
+export function generateRev() {
+  return crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+}
+
 export async function dedupeKey(calendar: string, title: string, date: string) {
   const input = `${calendar}|${title.trim().toLowerCase()}|${date}`;
   const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(input));

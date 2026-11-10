@@ -31,6 +31,7 @@ export const SERVER_ACTIONS = [
   "date_correction", // a school event's date or time corrected
   "date_correction_undo", // ... or put back to the school's
   "delete",
+  "poster_upload", // attached a poster to an event (or a draft)
   "confirm_public", // saved anyway after the personal details warning
   "week_view", // built a "What's on this week" list
   "share_view", // opened the Share tab
@@ -43,6 +44,8 @@ export const PAGE_ACTIONS = [
   "qr_download",
   "manual_add", // + Add a calendar event manually
   "add_anyway", // kept a draft marked "Already in the calendar"
+  "event_copy", // Copy for WhatsApp, on one event
+  "event_share", // Share, on one event
 ] as const;
 
 export type UsageAction = (typeof SERVER_ACTIONS)[number] | (typeof PAGE_ACTIONS)[number];

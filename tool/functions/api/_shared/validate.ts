@@ -1,5 +1,6 @@
 import { toTitleCase } from "./titleCase.ts";
 import { YEAR_GROUPS } from "./calendars.ts";
+import { cleanPosterKey } from "./posters.ts";
 import type { EventException, EventFields, Recurrence, RecurrenceFreq } from "./types.d.ts";
 
 // Input straight from a request or the model, before anything has checked it.
@@ -341,7 +342,12 @@ export function validateEventInput(
   const common = commonFields(event, recurrence);
   const tooLong = lengthError({ title, ...common });
   if (tooLong) return { valid: false, error: tooLong };
-  const cleaned: EventFields = { title, date: event.date, end_date, ...common };
+  // Only a key the upload endpoint could have made - never a URL - so a
+  // poster can only ever be one of ours.
+  if (event.image != null && event.image !== "" && !cleanPosterKey(event.image)) {
+    return { valid: false, error: "That poster isn't one uploaded here - remove it and add it again" };
+  }
+  const cleaned: EventFields = { title, date: event.date, end_date, ...common, image: cleanPosterKey(event.image) };
   const timeError = timeOrderError(cleaned);
   if (timeError) return { valid: false, error: timeError };
   const stray = recurrence && cleaned.exceptions.find((exc) => !isOccurrence(exc.date, cleaned.date, recurrence));

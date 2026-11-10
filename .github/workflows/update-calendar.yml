@@ -50,12 +50,14 @@ jobs:
           for attempt in 1 2 3; do
             # data/ is included for build_ics.py pruning stale whole-school
             # description overrides (data/whole_school_overrides.json) and
-            # date corrections (data/school_event_corrections.json).
-            if git diff --quiet -- docs/calendars/ data/; then
+            # date corrections (data/school_event_corrections.json). docs/e/
+            # holds the per-event link-preview pages - status, not diff, so a
+            # brand new (untracked) page counts as a change too.
+            if [ -z "$(git status --porcelain -- docs/calendars/ docs/e/ data/)" ]; then
               echo "No changes to calendar feeds"
               exit 0
             fi
-            git add docs/calendars/ data/
+            git add docs/calendars/ docs/e/ data/
             git commit -m "Update calendar feeds"
             git push && exit 0
             # Rejected: the class rep tool (or an earlier run) pushed while

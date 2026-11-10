@@ -7,6 +7,9 @@ import { daysInclusive, endsBeforeStart, formatDate, shiftIsoDate, todayIso } fr
 import { confirmSecondClick, el, find, plural } from "./dom.js";
 import { listDate, placeCard, rebuildWait, reloadEventList, showListStatus, updateEventListState } from "./eventList.js";
 import { getCardExceptions, wireExceptionsSection } from "./exceptions.js";
+import { setupEventShare } from "./eventShare.js";
+import { eventPageKey } from "../appHelpers.js";
+import { POSTER_BUSY_MESSAGE, posterBusy, posterKey, setupPosterField } from "./poster.js";
 import { apiCall, currentYearGroup, state, yearGroupDescription } from "./state.js";
 const RECURRENCE_OPTIONS = {
     daily: { freq: "DAILY", interval: 1 },
@@ -93,6 +96,7 @@ export function fillCardFields(card, event) {
     find(card, ".field-url").value = event.url || "";
     find(card, ".field-recurrence").value = recurrenceToSelectValue(event.recurrence);
     find(card, ".field-recurrence-until").value = (event.recurrence && event.recurrence.until) || "";
+    setupPosterField(card, event.image);
 }
 export function readCardFields(card) {
     const recurSelectValue = find(card, ".field-recurrence").value;
@@ -107,6 +111,7 @@ export function readCardFields(card) {
         description: find(card, ".field-description").value.trim() || null,
         location: find(card, ".field-location").value.trim() || null,
         url: find(card, ".field-url").value.trim() || null,
+        image: posterKey(card),
         year_group: find(card, ".field-year-group").checked,
         recurrence,
         exceptions: [...getCardExceptions(card)],
@@ -180,6 +185,7 @@ export function createExistingEventCard(event) {
     card.date = listDate(event);
     card.kind = "rep";
     card.shared = Boolean(event.year_group);
+    card.rev = event.rev;
     fillCardFields(node, event);
     wireCardDefaultEndTime(node);
     wireRecurrenceToggle(node);
@@ -193,6 +199,23 @@ export function createExistingEventCard(event) {
     const saveButton = find(node, ".card-save-button");
     saveButton.hidden = false;
     saveButton.addEventListener("click", () => handleUpdateExisting(node, event.id, saveButton));
+    setupEventShare(node, () => {
+        const saved = cardState(node).saved;
+        const repeat = RECURRENCE_LABELS[recurrenceToSelectValue(saved.recurrence)];
+        return {
+            key: eventPageKey(event.id, false),
+            title: saved.title,
+            // A repeating event's next day, as its date tile shows.
+            date: cardState(node).date ?? saved.date,
+            end_date: saved.recurrence ? null : saved.end_date,
+            time: saved.time,
+            end_time: saved.end_time,
+            location: saved.location,
+            repeats: repeat ? repeat.toLowerCase() : null,
+            image: saved.image,
+            rev: cardState(node).rev,
+        };
+    });
     const removeButton = find(node, ".card-remove-button");
     removeButton.textContent = "Delete";
     removeButton.addEventListener("click", () => handleDeleteExisting(node, event.id, removeButton));
@@ -201,7 +224,7 @@ export function createExistingEventCard(event) {
 async function handleUpdateExisting(card, id, button) {
     const errorEl = find(card, ".field-error");
     const value = readCardFields(card);
-    const error = localValidationError(value);
+    const error = posterBusy(card) ? POSTER_BUSY_MESSAGE : localValidationError(value);
     if (error) {
         errorEl.textContent = error;
         errorEl.hidden = false;
@@ -232,6 +255,7 @@ async function handleUpdateExisting(card, id, button) {
         return;
     }
     cardState(card).saved = { ...value, year_group: cardState(card).shared };
+    cardState(card).rev = data.rev;
     setDirty(card, false);
     setManualSummary(card, value);
     showCardStatus(card, `Saved ✓ - calendars update ${rebuildWait(data.rebuild_triggered)}.`);

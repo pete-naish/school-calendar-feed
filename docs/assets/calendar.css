@@ -889,6 +889,47 @@
   }
 }
 
+/* Under an event opened from a shared link: what this site is, and a way to
+   subscribe (showSubscribeInvite() in calendar.ts). */
+.day-dialog-invite {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cal-border);
+}
+
+.day-dialog-invite p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--cal-muted);
+  text-wrap: pretty;
+}
+
+.day-dialog-invite strong {
+  color: var(--cal-fg);
+  font-weight: 600;
+}
+
+.day-dialog-invite-button {
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--cal-fg);
+  color: var(--cal-surface-alt);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.day-dialog-invite-button:focus-visible {
+  outline: 2px solid var(--cal-fg);
+  outline-offset: 2px;
+}
+
 .day-dialog-head {
   display: flex;
   align-items: flex-start;
@@ -1024,6 +1065,31 @@
 
 .day-event-link:hover {
   text-decoration-color: currentColor;
+}
+
+/* An event's poster (attached in the class rep tool); tap for full size. */
+.day-event-poster {
+  display: block;
+  width: fit-content;
+  max-width: min(100%, 22rem);
+  margin-top: 0.6rem;
+  border: 1px solid var(--cal-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.day-event-poster img {
+  display: block;
+  max-width: 100%;
+  max-height: 28rem;
+  height: auto;
+  object-fit: contain;
+}
+
+.day-event-poster:focus-visible {
+  outline: 2px solid var(--cal-fg);
+  outline-offset: 2px;
 }
 
 /* Day view agenda on the page reuses the rows with no sheet around them. */

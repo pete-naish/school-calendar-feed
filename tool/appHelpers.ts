@@ -147,3 +147,63 @@ export function nextOccurrence(
   }
   return next ?? event.date;
 }
+
+// --- Sharing one event (page/eventShare.ts) ----------------------------------
+//
+// "Copy for WhatsApp" copies a short message - the title, one line of when and
+// where, and a link - rather than the whole description and poster, so a class
+// group isn't handed a wall of text. The link is the event's page on the
+// public site (/e/<key>, written by scripts/build_ics.py's
+// write_event_pages()), whose link preview carries the poster; tapping it
+// opens the event on the calendar page.
+
+export const SITE_URL = "https://calendar.nai.sh";
+
+// An event's key in its link: a manual event's own id, or "s" + the school's
+// id. Same as event_page_key() in scripts/build_ics.py.
+export function eventPageKey(id: string, school: boolean) {
+  return school ? `s${id}` : id;
+}
+
+export function eventLink(key: string) {
+  return `${SITE_URL}/e/${key}`;
+}
+
+const SHARE_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const SHARE_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function shareDay(iso: string, today: string) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const year = iso.slice(0, 4) === today.slice(0, 4) ? "" : ` ${iso.slice(0, 4)}`;
+  return `${SHARE_WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${SHARE_MONTHS[d.getUTCMonth()]}${year}`;
+}
+
+export interface SharedEvent {
+  key: string;
+  title: string;
+  // The day to show: a repeating event's next one.
+  date: string;
+  end_date: string | null;
+  time: string | null;
+  end_time: string | null;
+  location: string | null;
+  // "weekly", "every 2 weeks"... for a repeating event.
+  repeats: string | null;
+}
+
+// "Sat 5 Dec, 12:00–15:00 · School Hall", like the link preview's line.
+export function sharedEventWhen(event: SharedEvent, today: string) {
+  const multiDay = Boolean(event.end_date && event.end_date !== event.date);
+  let when = shareDay(event.date, today);
+  if (multiDay) when += ` – ${shareDay(event.end_date as string, today)}`;
+  if (event.time) when += `, ${event.time}${event.end_time && !multiDay ? `–${event.end_time}` : ""}`;
+  if (event.repeats) when += ` (${event.repeats})`;
+  return event.location ? `${when} · ${event.location}` : when;
+}
+
+// The message itself. WhatsApp shows *text* as bold, so the title's own
+// asterisks come out rather than unbalance it.
+export function whatsAppEventMessage(event: SharedEvent, today: string) {
+  const title = event.title.replace(/\*/g, "").trim();
+  return `*${title}*\n${sharedEventWhen(event, today)}\n${eventLink(event.key)}`;
+}

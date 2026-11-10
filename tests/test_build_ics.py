@@ -1073,3 +1073,138 @@ def test_change_tracking_failing_still_publishes_every_feed(tmp_path, monkeypatc
     assert len(feeds) == 16
     assert b"DTSTAMP" in feeds["y5-b.ics"]
     assert "couldn't track changes" in capsys.readouterr().err
+
+
+# --------------------------------------------------------------------------
+# Posters (POSTER_BASE_URL): an IMAGE property plus a "Poster: <url>" line
+# ending the description, for calendar apps that ignore IMAGE.
+# --------------------------------------------------------------------------
+
+POSTER_KEY = "0123456789abcdef01234567.jpg"
+POSTER_URL = f"https://calendar-admin.nai.sh/posters/{POSTER_KEY}"
+
+
+def test_manual_event_poster_is_published_as_image_and_description_link():
+    raw = {"id": "p1", "title": "Disco", "date": "2026-11-20", "description": "Bring a torch", "image": POSTER_KEY}
+    [event] = build_ics.build_manual_event(raw, "fosps", set())
+    assert str(event["description"]) == f"Bring a torch\n\nPoster: {POSTER_URL}"
+    assert str(event["image"]) == POSTER_URL
+    assert event["image"].params["VALUE"] == "URI"
+
+
+def test_manual_event_poster_with_no_description_is_just_the_link():
+    raw = {"id": "p2", "title": "Disco", "date": "2026-11-20", "image": POSTER_KEY}
+    [event] = build_ics.build_manual_event(raw, "fosps", set())
+    assert str(event["description"]) == f"Poster: {POSTER_URL}"
+
+
+@pytest.mark.parametrize("image", ["https://example.com/x.jpg", "../../etc.jpg", "0123.jpg", 42, None, ""])
+def test_manual_event_ignores_anything_but_a_poster_key(image):
+    raw = {"id": "p3", "title": "Disco", "date": "2026-11-20", "image": image}
+    [event] = build_ics.build_manual_event(raw, "fosps", set())
+    assert "image" not in event
+    assert "description" not in event
+
+
+def test_moved_occurrence_keeps_the_poster():
+    raw = {
+        "id": "p4",
+        "title": "Bake Sale",
+        "date": "2026-11-06",
+        "image": POSTER_KEY,
+        "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-11-27"},
+        "exceptions": [{"date": "2026-11-13", "action": "moved", "new_date": "2026-11-12"}],
+    }
+    events = build_ics.build_manual_event(raw, "fosps", set())
+    assert len(events) == 2
+    assert all(str(e["image"]) == POSTER_URL for e in events)
+
+
+def test_school_event_poster_override():
+    raw = {"id": 7, "title": "Christmas Fair", "allDay": True, "start": "2026-12-05", "desc": "In the hall"}
+    event = build_ics.build_event(raw, image_override=POSTER_KEY)
+    assert str(event["description"]) == f"In the hall\n\nPoster: {POSTER_URL}"
+    assert str(event["image"]) == POSTER_URL
+
+
+def test_override_file_keeps_image_field():
+    assert build_ics._normalize_override({"image": POSTER_KEY, "other": "x"}) == {"image": POSTER_KEY}
+
+
+# --------------------------------------------------------------------------
+# Event pages (docs/e/<key>.html): what a shared event link previews as.
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "uid, key",
+    [
+        ("manual-1a4e2f2ddd1f@school-calendar-feed", "1a4e2f2ddd1f"),
+        ("manual-1a4e2f2ddd1f-2026-11-12@school-calendar-feed", "1a4e2f2ddd1f"),
+        ("stpauls-123@school-calendar-feed", "s123"),
+        ("something-else@example.com", None),
+    ],
+)
+def test_event_page_key(uid, key):
+    assert build_ics.event_page_key(uid) == key
+
+
+def test_event_when_text_timed_with_location():
+    [event] = build_ics.build_manual_event(
+        {"id": "w1", "title": "AGM", "date": "2026-10-08", "time": "20:00", "end_time": "21:00", "location": "Hall"}, "fosps", set()
+    )
+    assert build_ics.event_when_text(event, date(2026, 10, 1)) == "Thu 8 Oct, 20:00–21:00 · Hall"
+
+
+def test_event_when_text_multi_day_next_year():
+    [event] = build_ics.build_manual_event({"id": "w2", "title": "Stall", "date": "2027-03-01", "end_date": "2027-03-05"}, "fosps", set())
+    assert build_ics.event_when_text(event, date(2026, 11, 10)) == "Mon 1 Mar 2027 – Fri 5 Mar 2027"
+
+
+def test_event_when_text_repeat_shows_next_occurrence():
+    raw = {
+        "id": "w3",
+        "title": "PE",
+        "date": "2026-09-03",
+        "time": "09:00",
+        "end_time": "10:00",
+        "recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2026-12-17"},
+    }
+    [event] = build_ics.build_manual_event(raw, "rec-a", set())
+    assert build_ics.event_when_text(event, date(2026, 11, 10)) == "Thu 12 Nov, 09:00–10:00 (weekly)"
+
+
+def test_write_event_pages(tmp_path):
+    with_poster = build_ics.build_manual_event(
+        {"id": "p9", "title": "Disco <3", "date": "2026-11-20", "image": POSTER_KEY}, "fosps", set()
+    )
+    school = build_ics.build_event({"id": 5, "title": "Fair", "allDay": True, "start": "2026-12-05"}, code="rec-a")
+    pages = tmp_path / "e"
+    pages.mkdir()
+    (pages / "gone.html").write_text("old")
+    build_ics.EVENT_PAGES_DIR = pages  # restored by conftest's fixture
+    count = build_ics.write_event_pages([("fosps", with_poster), ("rec-a", [school])], date(2026, 11, 10))
+    assert count == 2
+    assert not (pages / "gone.html").exists()
+    disco = (pages / "p9.html").read_text()
+    assert '<meta property="og:title" content="Disco &lt;3">' in disco
+    assert f'content="{POSTER_URL[:-4]}-p.jpg"' in disco
+    assert 'url=../?e=p9' in disco
+    fair = (pages / "s5.html").read_text()
+    assert 'content="Fair"' in fair  # class prefix taken off
+    assert "apple-touch-icon.png" in fair
+
+
+def test_event_page_carries_version_stamp():
+    page = build_ics.render_event_page("p1", "Disco", "Fri 20 Nov", None, "0a1b2c3d")
+    assert '<meta name="calendar-rev" content="0a1b2c3d">' in page
+    assert "calendar-rev" not in build_ics.render_event_page("p1", "Disco", "Fri 20 Nov", None)
+
+
+def test_load_event_revs(tmp_path, monkeypatch):
+    (tmp_path / "fosps.json").write_text(json.dumps([{"id": "a1", "rev": "11111111"}, {"id": "a2"}]))
+    monkeypatch.setattr(build_ics, "MANUAL_EVENTS_DIR", tmp_path)
+    assert build_ics.load_event_revs({"42": {"rev": "22222222"}, "43": {"description": "x"}}) == {
+        "a1": "11111111",
+        "s42": "22222222",
+    }

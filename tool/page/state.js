@@ -15,6 +15,7 @@ export const state = {
     lastExtractedText: "",
     extracting: false,
     lastDeleted: null,
+    posters: false,
 };
 export function setYearGroups(groups) {
     state.yearGroups = groups;

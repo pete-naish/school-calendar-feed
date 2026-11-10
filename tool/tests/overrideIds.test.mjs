@@ -56,7 +56,10 @@ test("a whole-school edit for an event in the feed is saved under its id", async
   assert.equal(resp.status, 200);
   assert.equal(puts.length, 1);
   const written = JSON.parse(Buffer.from(puts[0].content, "base64").toString());
-  assert.deepEqual(written, { 859: { description: "Parking on the field" } });
+  // Plus a fresh version stamp, which the response hands back too.
+  const { rev } = await resp.json();
+  assert.match(rev, /^[0-9a-f]{8}$/);
+  assert.deepEqual(written, { 859: { description: "Parking on the field", rev } });
 });
 
 test("a whole-school edit for an id that isn't in the feed is a 404 and writes nothing", async () => {

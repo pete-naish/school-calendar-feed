@@ -84,7 +84,7 @@
       </div>
 
       <section id="existing-section" class="panel" role="tabpanel" aria-labelledby="tab-events">
-        <p id="whole-school-notice" class="notice" hidden>These come from the school's own calendar. You can add a description and location, or correct an upcoming event's date or time, but not change titles or which events appear.</p>
+        <p id="whole-school-notice" class="notice" hidden>These come from the school's own calendar. You can add a description, location and poster, or correct an upcoming event's date or time, but not change titles or which events appear.</p>
         <p id="school-events-notice" class="notice" hidden><span class="badge badge-outline">From school calendar</span> events are the school's: add a location and description, or correct a wrong date.
           <button type="button" id="school-notice-dismiss" class="notice-dismiss">Got it</button></p>
         <p id="existing-status" class="banner banner-success" role="status" tabindex="-1" hidden>
@@ -309,6 +309,18 @@
           <label class="field span-2">Description
             <textarea class="field-description" rows="2" maxlength="2000"></textarea>
           </label>
+          <div class="field span-2 poster-field" hidden>
+            <span>Poster <span class="optional">· Optional</span></span>
+            <div class="poster-row">
+              <a class="poster-thumb" target="_blank" rel="noopener" hidden><img alt="The event's poster"></a>
+              <div class="poster-actions">
+                <button type="button" class="secondary-button small-button poster-pick-button">Add poster</button>
+                <button type="button" class="secondary-button small-button poster-remove-button" hidden>Remove</button>
+                <input type="file" accept="image/*" class="poster-input" hidden>
+              </div>
+            </div>
+            <span class="hint poster-status" role="status"></span>
+          </div>
           <!-- Hidden for now, not removed: readCardFields() still reads it, so saving
                an event that already has a link keeps that link. -->
           <label class="field span-2" hidden>Link
@@ -319,6 +331,8 @@
         <div class="card-actions">
           <button type="button" class="card-save-button" hidden>Save changes</button>
           <button type="button" class="danger-button card-remove-button">Delete</button>
+          <button type="button" class="secondary-button card-copy-button" hidden>Copy for WhatsApp</button>
+          <button type="button" class="secondary-button card-share-button" hidden>Share…</button>
           <span class="spacer"></span>
           <span class="card-unsaved" hidden>Unsaved changes</span>
           <span class="card-status hint" role="status"></span>
@@ -348,10 +362,24 @@
           <label class="field span-2">Description
             <textarea class="field-description" rows="3" maxlength="2000"></textarea>
           </label>
+          <div class="field span-2 poster-field" hidden>
+            <span>Poster <span class="optional">· Optional</span></span>
+            <div class="poster-row">
+              <a class="poster-thumb" target="_blank" rel="noopener" hidden><img alt="The event's poster"></a>
+              <div class="poster-actions">
+                <button type="button" class="secondary-button small-button poster-pick-button">Add poster</button>
+                <button type="button" class="secondary-button small-button poster-remove-button" hidden>Remove</button>
+                <input type="file" accept="image/*" class="poster-input" hidden>
+              </div>
+            </div>
+            <span class="hint poster-status" role="status"></span>
+          </div>
           <p class="field-error error span-2" role="alert" hidden></p>
         </div>
         <div class="card-actions">
           <button type="button" class="card-save-button">Save changes</button>
+          <button type="button" class="secondary-button card-copy-button" hidden>Copy for WhatsApp</button>
+          <button type="button" class="secondary-button card-share-button" hidden>Share…</button>
           <span class="spacer"></span>
           <span class="card-unsaved" hidden>Unsaved changes</span>
           <span class="card-status hint" role="status"></span>
