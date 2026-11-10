@@ -28,13 +28,13 @@ URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=879
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:5HP: Year 5 - Westminster Abbey
+SUMMARY:5HP: Year 5 - Trip to Westminster Abbey
 DTSTART;VALUE=DATE:20261209
 DTEND;VALUE=DATE:20261210
-DTSTAMP:20261005T124711Z
+DTSTAMP:20261110T135037Z
 UID:stpauls-887@school-calendar-feed
 CREATED:20261005T232351Z
-LAST-MODIFIED:20261005T124711Z
+LAST-MODIFIED:20261110T135037Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=887
 END:VEVENT

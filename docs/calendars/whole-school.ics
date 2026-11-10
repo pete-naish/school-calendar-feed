@@ -193,6 +193,17 @@ URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=886
 END:VEVENT
 BEGIN:VEVENT
+SUMMARY:R/KS1 Production
+DTSTART:20261210T134500Z
+DTEND:20261210T144500Z
+DTSTAMP:20261110T135037Z
+UID:stpauls-910@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=910
+END:VEVENT
+BEGIN:VEVENT
 SUMMARY:Christmas Jumper Day
 DTSTART;VALUE=DATE:20261211
 DTEND;VALUE=DATE:20261212
@@ -240,15 +251,15 @@ URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=891
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:Last Day of Autumn Term
+SUMMARY:Last day of Autumn Term
 DTSTART:20261218T131500Z
 DTEND:20261218T133000Z
-DTSTAMP:20261005T124711Z
+DTSTAMP:20261110T135037Z
 UID:stpauls-892@school-calendar-feed
 CREATED:20261005T232351Z
-DESCRIPTION:Reception 1:15pm\nYear 1 and 3 1:20pm\nYear 3 and 4 1:25pm\nYe
+DESCRIPTION:Reception 1:15pm\nYear 1 and 3 1:20pm\nYear 2 and 4 1:25pm\nYe
  ar 5 and 6 1:30pm
-LAST-MODIFIED:20261005T124711Z
+LAST-MODIFIED:20261110T135037Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=892
 END:VEVENT
@@ -264,6 +275,74 @@ URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=893
 END:VEVENT
 BEGIN:VEVENT
+SUMMARY:Half Term
+DTSTART;VALUE=DATE:20270215
+DTEND;VALUE=DATE:20270220
+DTSTAMP:20261110T135037Z
+UID:stpauls-911@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=911
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Last day of Spring Term
+DTSTART:20270325T131500Z
+DTEND:20270325T133000Z
+DTSTAMP:20261110T135037Z
+UID:stpauls-915@school-calendar-feed
+CREATED:20261110T135037Z
+DESCRIPTION:Reception 1:15pm\nYear 1 and 3 1:20pm\nYear 2 and 4 1:25pm\nYe
+ ar 5 and 6 1:30pm
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=915
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Bank Holiday - Good Friday
+DTSTART;VALUE=DATE:20270326
+DTEND;VALUE=DATE:20270327
+DTSTAMP:20261110T135037Z
+UID:stpauls-912@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=912
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Bank Holiday - Easter Monday
+DTSTART;VALUE=DATE:20270329
+DTEND;VALUE=DATE:20270330
+DTSTAMP:20261110T135037Z
+UID:stpauls-914@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=914
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Easter Holiday
+DTSTART;VALUE=DATE:20270330
+DTEND;VALUE=DATE:20270412
+DTSTAMP:20261110T135037Z
+UID:stpauls-913@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=913
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Bank Holiday
+DTSTART;VALUE=DATE:20270503
+DTEND;VALUE=DATE:20270504
+DTSTAMP:20261110T135037Z
+UID:stpauls-916@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=916
+END:VEVENT
+BEGIN:VEVENT
 SUMMARY:Break the Rules Day
 DTSTART;VALUE=DATE:20270522
 DTEND;VALUE=DATE:20270523
@@ -273,6 +352,28 @@ CREATED:20261012T133820Z
 LAST-MODIFIED:20261012T133820Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=906
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Bank Holiday
+DTSTART;VALUE=DATE:20270531
+DTEND;VALUE=DATE:20270601
+DTSTAMP:20261110T135037Z
+UID:stpauls-917@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=917
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Half Term
+DTSTART;VALUE=DATE:20270601
+DTEND;VALUE=DATE:20270607
+DTSTAMP:20261110T135037Z
+UID:stpauls-918@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=918
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:Young Entrepreneurs
@@ -295,5 +396,40 @@ CREATED:20261012T133820Z
 LAST-MODIFIED:20261012T133820Z
 URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
  vent=908
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Last day of Summer Term
+DTSTART:20270721T121500Z
+DTEND:20270721T123000Z
+DTSTAMP:20261110T135037Z
+UID:stpauls-921@school-calendar-feed
+CREATED:20261110T135037Z
+DESCRIPTION:Reception 1:15pm\nYear 1 and 3 1:20pm\nYear 2 and 4 1:25pm\nYe
+ ar 5 and 6 1:30pm
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=921
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Inset Day
+DTSTART;VALUE=DATE:20270722
+DTEND;VALUE=DATE:20270723
+DTSTAMP:20261110T135037Z
+UID:stpauls-919@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=919
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Summer Holiday
+DTSTART;VALUE=DATE:20270723
+DTEND;VALUE=DATE:20270901
+DTSTAMP:20261110T135037Z
+UID:stpauls-920@school-calendar-feed
+CREATED:20261110T135037Z
+LAST-MODIFIED:20261110T135037Z
+URL:https://www.st-pauls.enfield.sch.uk/calendar/?calid=1&pid=3&viewid=1&e
+ vent=920
 END:VEVENT
 END:VCALENDAR

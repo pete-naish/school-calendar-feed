@@ -1,6 +1,114 @@
 {
  "changes": [
   {
+   "calendar": "whole-school",
+   "uid": "stpauls-910@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "R/KS1 Production",
+   "start": "2026-12-10T13:45",
+   "all_day": false
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-911@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Half Term",
+   "start": "2027-02-15",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-915@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Last day of Spring Term",
+   "start": "2027-03-25T13:15",
+   "all_day": false
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-912@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Bank Holiday - Good Friday",
+   "start": "2027-03-26",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-914@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Bank Holiday - Easter Monday",
+   "start": "2027-03-29",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-913@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Easter Holiday",
+   "start": "2027-03-30",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-916@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Bank Holiday",
+   "start": "2027-05-03",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-917@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Bank Holiday",
+   "start": "2027-05-31",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-918@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Half Term",
+   "start": "2027-06-01",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-921@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Last day of Summer Term",
+   "start": "2027-07-21T13:15",
+   "all_day": false
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-919@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Inset Day",
+   "start": "2027-07-22",
+   "all_day": true
+  },
+  {
+   "calendar": "whole-school",
+   "uid": "stpauls-920@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-10T13:50:37Z",
+   "title": "Summer Holiday",
+   "start": "2027-07-23",
+   "all_day": true
+  },
+  {
    "calendar": "fosps",
    "uid": "manual-9d9324a69303@school-calendar-feed",
    "kind": "moved",
