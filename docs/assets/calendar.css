@@ -1296,15 +1296,13 @@ button.cal-change:focus-visible,
 }
 
 @media (max-width: 600px) {
-  /* "2 days ago" under the change rather than squeezed beside it. */
+  /* No room for "2 days ago" on phones; drop it and its column. */
   .cal-change {
     grid-template-columns: 0.625rem minmax(0, 1fr);
-    row-gap: 0;
   }
 
   .cal-change-when {
-    grid-column: 2;
-    padding-top: 0;
+    display: none;
   }
 }
 
