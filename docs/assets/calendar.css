@@ -214,6 +214,58 @@
   margin-top: 0;
 }
 
+.add-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* Step 2's heading is a button so phones can fold the step away once the
+   calendars are added (see setupAddToggle in calendar.ts). Wider screens have
+   room for it, so there it's just a heading. */
+.step-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  .step-toggle {
+    cursor: pointer;
+  }
+
+  .step-toggle::after {
+    content: "";
+    flex: none;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-right: 0.25rem;
+    border-right: 2px solid var(--cal-muted);
+    border-bottom: 2px solid var(--cal-muted);
+    transform: rotate(-135deg) translateY(-2px);
+    transition: transform 150ms ease;
+  }
+
+  .subscribe-add.is-collapsed .step-toggle::after {
+    transform: rotate(45deg) translateY(-2px);
+  }
+
+  .subscribe-add.is-collapsed .add-body {
+    display: none;
+  }
+}
+
 /* A calendar's name called out within otherwise-muted copy. */
 .step-hint strong,
 .cal-highlight {

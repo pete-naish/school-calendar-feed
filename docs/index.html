@@ -214,7 +214,10 @@
           <p id="coming-soon" class="step-hint" hidden></p>
         </div>
         <div class="subscribe-add">
-          <h3 class="step-title">2. Add them to your calendar app</h3>
+          <h3 class="step-title">
+            <button id="add-toggle" class="step-toggle" type="button" aria-controls="add-body">2. Add them to your calendar app</button>
+          </h3>
+          <div id="add-body" class="add-body">
           <p id="app-question" class="step-hint">Which app do you use?</p>
           <div id="platform-choice" class="app-choice" role="group" aria-labelledby="app-question"></div>
           <div id="add-progress" class="add-progress" hidden>
@@ -224,6 +227,7 @@
           <ul id="calendar-add-list" class="add-list"></ul>
           <p id="calendar-add-hint" class="step-hint"></p>
           <p id="calendar-add-google" class="step-hint" hidden>Google Calendar on a phone can hide new calendars at first. <a href="#google-phone">How to show them</a></p>
+          </div>
         </div>
       </section>
 

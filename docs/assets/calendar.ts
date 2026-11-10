@@ -125,6 +125,9 @@ const APP_STORAGE_KEY = "stpauls-calendar-app";
 // navigating away and back, but a later visit starts fresh, since a tap isn't
 // proof the subscription actually went through.
 const CLICKED_STORAGE_KEY = "stpauls-subscribe-clicked";
+// Whether step 2 is folded away on a phone - parents who've already added
+// their calendars don't need it every visit.
+const ADD_COLLAPSED_STORAGE_KEY = "stpauls-add-collapsed";
 
 const TODAY = new Date();
 const WINDOW_START = ICAL.Time.fromJSDate(addDays(TODAY, -90), true);
@@ -299,6 +302,45 @@ function savePlatform(key: string) {
   } catch {
     // localStorage unavailable - the choice just won't persist
   }
+}
+
+function loadAddCollapsed(): boolean {
+  try {
+    return localStorage.getItem(ADD_COLLAPSED_STORAGE_KEY) === "1";
+  } catch {
+    return false; // localStorage unavailable - start open
+  }
+}
+
+function saveAddCollapsed(collapsed: boolean) {
+  try {
+    if (collapsed) localStorage.setItem(ADD_COLLAPSED_STORAGE_KEY, "1");
+    else localStorage.removeItem(ADD_COLLAPSED_STORAGE_KEY);
+  } catch {
+    // localStorage unavailable - the fold just won't persist
+  }
+}
+
+// Step 2 folds away on phones only (the CSS hides it under .is-collapsed
+// inside the narrow media query), so wider screens always show it and the
+// heading button does nothing there.
+function setupAddToggle() {
+  const section = document.querySelector(".subscribe-add") as HTMLElement;
+  const toggle = document.getElementById("add-toggle") as HTMLButtonElement;
+  let collapsed = loadAddCollapsed();
+  const sync = () => {
+    section.classList.toggle("is-collapsed", collapsed);
+    if (NARROW.matches) toggle.setAttribute("aria-expanded", String(!collapsed));
+    else toggle.removeAttribute("aria-expanded");
+  };
+  toggle.addEventListener("click", () => {
+    if (!NARROW.matches) return;
+    collapsed = !collapsed;
+    saveAddCollapsed(collapsed);
+    sync();
+  });
+  NARROW.addEventListener("change", sync);
+  sync();
 }
 
 function loadClickedLinks(): Set<string> {
@@ -1563,6 +1605,7 @@ async function init() {
   renderAddActions();
   renderIcsLinks();
   renderShareSelection();
+  setupAddToggle();
   updateViewButtonStyles();
   openHelpFromLinks();
 
