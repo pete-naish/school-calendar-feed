@@ -90,12 +90,12 @@ DESCRIPTION:The Christmas artwork sheet will be going into school to be ha
 LAST-MODIFIED:20261010T193734Z
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:RR: Xmas 4 for Schools Ordering Closes
+SUMMARY:RR: Xmas Art 4 Schools- order deadline
 DTSTART;VALUE=DATE:20261115
 DTEND;VALUE=DATE:20261116
-DTSTAMP:20261111T091834Z
-UID:manual-8432e00ea379@school-calendar-feed
-CREATED:20261111T091834Z
+DTSTAMP:20261111T092105Z
+UID:manual-285dd3712e21@school-calendar-feed
+CREATED:20261111T092105Z
 DESCRIPTION:🎄 *Xmas 4 for Schools – A Friendly Reminder!*🎄\n\nYou 
  should have already received\, or will shortly receive\, a text message to
   the mobile number provided on your Xmas4 for Schools ordering form.\n\nTh
@@ -107,7 +107,7 @@ DESCRIPTION:🎄 *Xmas 4 for Schools – A Friendly Reminder!*🎄\n\nYou
  1 from every item purchased will be donated to FOSPS*\, helping us to supp
  ort our school. ❤️\n\nThank you so much for your support\, and happy o
  rdering! 🎅
-LAST-MODIFIED:20261111T091834Z
+LAST-MODIFIED:20261111T092105Z
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:RR: PE Day 👟 – Wear PE Kit

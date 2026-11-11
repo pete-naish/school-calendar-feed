@@ -2,6 +2,24 @@
  "changes": [
   {
    "calendar": "rec-a",
+   "uid": "manual-285dd3712e21@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-11T09:21:05Z",
+   "title": "Xmas Art 4 Schools- order deadline",
+   "start": "2026-11-15",
+   "all_day": true
+  },
+  {
+   "calendar": "rec-a",
+   "uid": "manual-8432e00ea379@school-calendar-feed",
+   "kind": "cancelled",
+   "at": "2026-11-11T09:21:05Z",
+   "title": "Xmas 4 for Schools Ordering Closes",
+   "start": "2026-11-15",
+   "all_day": true
+  },
+  {
+   "calendar": "rec-a",
    "uid": "manual-8432e00ea379@school-calendar-feed",
    "kind": "added",
    "at": "2026-11-11T09:18:34Z",
