@@ -1,6 +1,15 @@
 {
  "changes": [
   {
+   "calendar": "rec-a",
+   "uid": "manual-8432e00ea379@school-calendar-feed",
+   "kind": "added",
+   "at": "2026-11-11T09:18:34Z",
+   "title": "Xmas 4 for Schools Ordering Closes",
+   "start": "2026-11-15",
+   "all_day": true
+  },
+  {
    "calendar": "whole-school",
    "uid": "stpauls-910@school-calendar-feed",
    "kind": "added",
