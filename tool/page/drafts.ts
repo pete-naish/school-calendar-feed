@@ -12,6 +12,7 @@ import {
   setupYearGroupControls,
   wireCardDefaultEndTime,
   wireEachDay,
+  wireWindow,
   wireRecurrenceToggle,
 } from "./eventCard.js";
 import { allEventCards, rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
@@ -114,6 +115,7 @@ export function addDraftCard(
   wireCardDefaultEndTime(node);
   wireRecurrenceToggle(node);
   wireEachDay(node);
+  wireWindow(node);
   setupYearGroupControls(node);
   addWeekdayHints(node);
   // Drafts save together from the save bar, so they have no buttons of their

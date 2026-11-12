@@ -583,6 +583,7 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
     end_date = max(date.fromisoformat(end_date_raw), start_date) if end_date_raw else start_date
 
     time_str = raw.get("time")
+    window = _is_window(raw, start_date, end_date)
     # `each_day`: a multi-day event with the same times on each of its days
     # (a 19:00-22:00 event on Tuesday and Wednesday) rather than one stretch
     # from the first day's start to the last day's end. Published as a daily
@@ -621,6 +622,15 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
         event.add("dtend", end_dt)
         if each_day_count:
             event.add("rrule", {"freq": "DAILY", "count": each_day_count})
+    elif window:
+        # A drop-off window (see _is_window()): its first day only here - the
+        # last day is a companion event (_window_last_day_event()) - so it
+        # doesn't sit across every day in between.
+        event.add("dtstart", start_date)
+        event.add("dtend", start_date + timedelta(days=1))
+        event.pop("summary")
+        event.add("summary", f"{class_prefix(code)}{raw['title']} (until {_window_day(end_date)})")
+        event.add(WINDOW_PROP, f"{start_date:%Y%m%d}/{end_date:%Y%m%d}")
     else:
         event.add("dtstart", start_date)
         # DTEND is exclusive in iCalendar, so a single all-day event still
@@ -699,7 +709,78 @@ def build_manual_event(raw: dict, code: str, closure_dates: set[date]) -> list[E
             if exc.get("action") == "moved":
                 moved_events.append(_build_moved_exception_event(raw, exc, code))
 
+    if window:
+        return [event, _window_last_day_event(event, raw, code, end_date)]
     return [event, *moved_events]
+
+
+# A drop-off window: a multi-day all-day event a rep has marked `window` (coat
+# donations taken any day 2-20 Nov). Published as two one-day events - "Coat
+# Donation (until Fri 20 Nov)" on the first day and "Last day: Coat Donation"
+# on the last - rather than one spanning every day, which fills a parent's
+# calendar (and the parent page's grid) for weeks. Both carry WINDOW_PROP,
+# "YYYYMMDD/YYYYMMDD", so the whole window is still known from either one
+# (event_when_text(), _last_day()). The last-day one's UID ends "-last".
+WINDOW_PROP = "X-SCHOOL-WINDOW"
+WINDOW_LAST_SUFFIX = "-last"
+
+
+def _is_window(raw: dict, start_date: date, end_date: date) -> bool:
+    return bool(
+        raw.get("window") and not raw.get("time") and end_date > start_date
+        and not (raw.get("recurrence") or {}).get("freq")
+    )
+
+
+def _window_day(day: date) -> str:
+    return f"{day.strftime('%a')} {day.day} {day.strftime('%b')}"
+
+
+def _window_last_day_event(first: Event, raw: dict, code: str, end_date: date) -> Event:
+    event = Event()
+    event.add("uid", str(first["uid"]).replace("@", f"{WINDOW_LAST_SUFFIX}@", 1))
+    event.add("summary", f"{class_prefix(code)}Last day: {raw['title']}")
+    _add_description_and_poster(event, raw.get("description"), raw.get("image"))
+    if raw.get("location"):
+        event.add("location", raw["location"])
+    url = _safe_url(raw.get("url"))
+    if url:
+        event.add("url", url)
+    event.add("dtstart", end_date)
+    event.add("dtend", end_date + timedelta(days=1))
+    event.add(WINDOW_PROP, str(first[WINDOW_PROP]))
+    return event
+
+
+def _all_day_span(event: Event) -> tuple[date, date] | None:
+    """The days a non-repeating all-day event covers: a window's whole range
+    (WINDOW_PROP), else DTSTART to the day before DTEND."""
+    window = _window_range(event)
+    if window:
+        return window
+    start = event.get("dtstart")
+    if start is None or isinstance(start.dt, datetime) or "rrule" in event:
+        return None
+    end = event.get("dtend")
+    return start.dt, (end.dt - timedelta(days=1)) if end is not None else start.dt
+
+
+def _window_toggled(before: Event, after: Event, old_shape: dict, new_shape: dict) -> bool:
+    """Whether a first-day event's only change is a rep marking it a drop-off
+    window, or unmarking it - the same days, so nothing a parent need be told."""
+    if bool(_window_range(before)) == bool(_window_range(after)):
+        return False
+    same_rest = all(old_shape[p] == new_shape[p] for p in _FINGERPRINT_PROPS if p not in ("SUMMARY", "DTEND"))
+    return same_rest and _all_day_span(before) == _all_day_span(after)
+
+
+def _window_range(event: Event) -> tuple[date, date] | None:
+    value = event.get(WINDOW_PROP)
+    try:
+        start, end = str(value).split("/")
+        return datetime.strptime(start, "%Y%m%d").date(), datetime.strptime(end, "%Y%m%d").date()
+    except (TypeError, ValueError):
+        return None
 
 
 def build_manual_events(raws: list[dict], code: str, closure_dates: set[date]) -> list[Event]:
@@ -956,7 +1037,11 @@ def _as_date(value) -> date:
 
 
 def _last_day(event: Event) -> date:
-    """The last day an event (or, for a repeat, its series) touches."""
+    """The last day an event (or, for a repeat, its series) touches - for
+    either half of a drop-off window, the window's last day."""
+    window = _window_range(event)
+    if window:
+        return window[1]
     rule = event.get("rrule")
     until = rule.get("UNTIL") if rule else None
     if until:
@@ -1031,6 +1116,12 @@ def track_changes(code: str, events: list[Event], old: dict[str, Event] | None, 
         return {"calendar": code, "uid": str(event["uid"]), "kind": kind, "at": stamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "title": title, "start": start, "all_day": all_day, **extra}
 
+    def companion(uid: str) -> bool:
+        # A drop-off window's last-day event comes and goes with its
+        # first-day one, which reports that - but a moved last day (the
+        # deadline changing) is its own entry.
+        return uid.endswith(f"{WINDOW_LAST_SUFFIX}@{UID_DOMAIN}")
+
     for event in events:
         uid = str(event["uid"])
         before = (old or {}).get(uid)
@@ -1042,7 +1133,9 @@ def track_changes(code: str, events: list[Event], old: dict[str, Event] | None, 
             if old_shape == new_shape and "last-modified" in before:
                 last_modified = before["last-modified"].dt
             elif not baseline and _last_day(event) >= today:
-                if any(old_shape[p] != new_shape[p] for p in _WHEN_PROPS):
+                if _window_toggled(before, event, old_shape, new_shape):
+                    pass  # the same days, just shown as a window now (or no longer)
+                elif any(old_shape[p] != new_shape[p] for p in _WHEN_PROPS):
                     changes.append(entry("moved", event, old_start=_start_text(before)[0]))
                 elif old_shape["RRULE"] != new_shape["RRULE"]:
                     changes.append(entry("repeat", event))
@@ -1056,7 +1149,7 @@ def track_changes(code: str, events: list[Event], old: dict[str, Event] | None, 
                     )
                     if skipped:
                         changes.append(entry("skipped", event, dates=skipped))
-        elif not baseline and _last_day(event) >= today:
+        elif not baseline and not companion(uid) and _last_day(event) >= today:
             moved_from = _MOVED_OCCURRENCE_UID.match(uid)
             if moved_from:
                 changes.append(entry("moved", event, old_start=moved_from.group(1)))
@@ -1070,7 +1163,7 @@ def track_changes(code: str, events: list[Event], old: dict[str, Event] | None, 
         for uid, before in old.items():
             # A moved occurrence disappearing means the move was undone, and
             # that day is back in the series - not a cancellation.
-            if uid in current_uids or _MOVED_OCCURRENCE_UID.match(uid) or _last_day(before) < today:
+            if uid in current_uids or _MOVED_OCCURRENCE_UID.match(uid) or companion(uid) or _last_day(before) < today:
                 continue
             changes.append(entry("cancelled", before))
     return changes
@@ -1107,7 +1200,7 @@ def write_calendar(filename: str, code: str, name: str, events: list[Event], cha
 
 EVENT_PAGES_DIR = Path(__file__).resolve().parent.parent / "docs" / "e"
 SITE_URL = "https://calendar.nai.sh"
-_UID_KEY_RE = re.compile(rf"(?:manual-([0-9A-Za-z]+?)(?:-\d{{4}}-\d{{2}}-\d{{2}})?|stpauls-(\d+))@{re.escape(UID_DOMAIN)}")
+_UID_KEY_RE = re.compile(rf"(?:manual-([0-9A-Za-z]+?)(?:-\d{{4}}-\d{{2}}-\d{{2}}|-last)?|stpauls-(\d+))@{re.escape(UID_DOMAIN)}")
 _REPEAT_WORDS = {("DAILY", 1): "daily", ("WEEKLY", 1): "weekly", ("WEEKLY", 2): "every 2 weeks", ("MONTHLY", 1): "monthly"}
 
 
@@ -1160,6 +1253,12 @@ def _next_start(event: Event, today: date):
 def event_when_text(event: Event, today: date) -> str:
     """"Sat 5 Dec, 12:00–15:00 · School Hall" - one line, for a link preview.
     A repeating event shows its next occurrence and how often it repeats."""
+    window = _window_range(event)
+    if window:
+        # A drop-off window: "Mon 2 Nov – Fri 20 Nov, any day".
+        text = f"{_day_text(window[0], today)} – {_day_text(window[1], today)}, any day"
+        location = str(event.get("location") or "").strip()
+        return f"{text} · {location}" if location else text
     first = _london(event.decoded("dtstart"))
     each_day = _each_day_count(event)
     if each_day and isinstance(first, datetime):
@@ -1273,7 +1372,10 @@ def write_event_pages(
     for code, events in calendars:
         prefix = class_prefix(code) if code else ""
         for event in events:
-            key = event_page_key(str(event.get("uid", "")))
+            uid = str(event.get("uid", ""))
+            if uid.endswith(f"{WINDOW_LAST_SUFFIX}@{UID_DOMAIN}"):
+                continue  # a drop-off window's page is its first-day event's
+            key = event_page_key(uid)
             if key:
                 by_key.setdefault(key, []).append((prefix, event))
 

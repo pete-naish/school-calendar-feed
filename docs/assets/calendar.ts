@@ -442,10 +442,10 @@ function stripPosterLine(description: string) {
 }
 
 // An event's id from its UID: a manual event's own id (a moved occurrence's
-// UID adds the date it moved from, and it shares its series' id), or "s" + the
-// school's id. Same as event_page_key() in scripts/build_ics.py, which writes
+// UID adds the date it moved from, and it shares its series' id; a drop-off
+// window's last-day event adds "-last"), or "s" + the school's id. Same as event_page_key() in scripts/build_ics.py, which writes
 // the /e/<key> page a shared link points at.
-const UID_KEY = /^(?:manual-([0-9A-Za-z]+?)(?:-\d{4}-\d{2}-\d{2})?|stpauls-(\d+))@school-calendar-feed$/;
+const UID_KEY = /^(?:manual-([0-9A-Za-z]+?)(?:-\d{4}-\d{2}-\d{2}|-last)?|stpauls-(\d+))@school-calendar-feed$/;
 
 function eventKey(uid: unknown): string | null {
   const match = typeof uid === "string" ? uid.match(UID_KEY) : null;

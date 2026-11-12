@@ -59,6 +59,12 @@ export interface EventFields {
   // true. From the model: true, false, or null when it couldn't tell (the rep
   // is asked).
   each_day?: boolean | null;
+  // On a multi-day all-day event that doesn't repeat: true when it's a
+  // drop-off window (coat donations any day 2-20 Nov), published as its first
+  // and last days only rather than across every day (see build_manual_event()
+  // in scripts/build_ics.py). Saved only when true; from the model as for
+  // `each_day`.
+  window?: boolean | null;
 }
 
 // One entry in data/manual_events/<file>.json. `rev` changes on every save

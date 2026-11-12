@@ -136,6 +136,10 @@ export async function onRequestPost(ctx: ApiContext) {
           `each of the days ("7-10pm on Tuesday and Wednesday"), false if it runs straight through from ` +
           `the first day's start to the last day's end (a residential trip leaving Monday 9am, back ` +
           `Wednesday 3pm), or null if the text doesn't make it clear - the rep is asked when it's null. ` +
+          `For an all-day event over several days, set window to true if it's a period to bring something ` +
+          `in or do something on any one day up to the last (a coat donation drop-off, "bring in by ` +
+          `Friday", a gift stall open all week), false if it's happening on every one of its days (Book ` +
+          `Week, a residential trip), or null if unclear. ` +
           `If the text explicitly states a repeating pattern (e.g. "every Thursday", "weekly", "every ` +
           `other Monday"), set recurrence.freq (DAILY/WEEKLY/MONTHLY) and recurrence.interval (2 for ` +
           `"every other/fortnightly", otherwise 1). Never set recurrence unless the text explicitly says ` +
@@ -181,6 +185,11 @@ export async function onRequestPost(ctx: ApiContext) {
                         type: ["boolean", "null"],
                         description:
                           "Only for an event over several days with a start time: true if its times apply on each day, false if it runs straight through, null if unclear",
+                      },
+                      window: {
+                        type: ["boolean", "null"],
+                        description:
+                          "Only for an all-day event over several days: true if it's a window to bring in/do something on any day up to the last, false if it happens on every day, null if unclear",
                       },
                       description: { type: ["string", "null"] },
                       location: {

@@ -268,3 +268,31 @@ test("an exception on a day the event doesn't repeat on is refused", () => {
   assert.equal(result.valid, false);
   assert.match(result.error, /2026-10-09 isn't a day this event repeats on/);
 });
+
+// A drop-off window (see EventFields.window) only means something on an
+// all-day event over several days that doesn't repeat.
+test("window is kept only on a multi-day all-day one-off", () => {
+  const coats = event({ title: "Coat Donation", date: "2026-11-02", end_date: "2026-11-20", window: true });
+  assert.equal(validateEventInput(coats).event.window, true);
+  for (const change of [
+    { end_date: null },
+    { time: "09:00" },
+    { recurrence: { freq: "WEEKLY", interval: 1, until: "2026-12-17" } },
+    { window: false },
+  ]) {
+    const result = validateEventInput({ ...coats, ...change });
+    assert.equal(result.valid, true, JSON.stringify(change));
+    assert.equal(result.event.window, undefined, JSON.stringify(change));
+  }
+});
+
+test("the model's window answer is kept, unsure included, only where it applies", () => {
+  const { events } = validateExtractedEvents({
+    events: [
+      { title: "Coat Donation", date: "2026-11-02", end_date: "2026-11-20", window: true },
+      { title: "Book Week", date: "2026-11-02", end_date: "2026-11-06", window: false },
+      { title: "Bake Sale", date: "2026-11-02", window: true },
+    ],
+  });
+  assert.deepEqual(events.map((e) => e.window), [true, false, undefined]);
+});

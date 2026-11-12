@@ -45,6 +45,12 @@ export function blankEvent() {
 function eachDayApplies(value) {
     return Boolean(value.end_date && value.end_date > value.date && value.time && !value.recurrence);
 }
+// A multi-day all-day event could be a drop-off window (bring coats in any
+// day up to the last) or something on every one of its days - the card asks
+// which (see wireWindow()).
+function windowApplies(value) {
+    return Boolean(value.end_date && value.end_date > value.date && !value.time && !value.recurrence);
+}
 export function localValidationError(value) {
     if (!value.title || !value.date)
         return "Title and date are required.";
@@ -52,6 +58,9 @@ export function localValidationError(value) {
         return "End date can't be before the start date.";
     if (eachDayApplies(value) && typeof value.each_day !== "boolean") {
         return "Say whether it's on at those times each day, or runs straight through from the first day to the last.";
+    }
+    if (windowApplies(value) && typeof value.window !== "boolean") {
+        return "Say whether it's something to bring in or do by the last day, or happening on every day.";
     }
     if ((!value.end_date || value.end_date === value.date || value.each_day) && endsBeforeStart(value.time, value.end_time)) {
         return "The end time must be after the start time.";
@@ -106,6 +115,7 @@ export function fillCardFields(card, event) {
     find(card, ".field-recurrence").value = recurrenceToSelectValue(event.recurrence);
     find(card, ".field-recurrence-until").value = (event.recurrence && event.recurrence.until) || "";
     find(card, ".field-each-day").value = event.each_day === true ? "each" : event.each_day === false ? "through" : "";
+    find(card, ".field-window").value = event.window === true ? "window" : event.window === false ? "span" : "";
     setupPosterField(card, event.image);
 }
 // The card's answer to wireEachDay()'s question: true (each day), false
@@ -115,6 +125,33 @@ function eachDayField(card) {
         return {};
     const answer = find(card, ".field-each-day").value;
     return { each_day: answer === "each" ? true : answer === "through" ? false : null };
+}
+// The card's answer to wireWindow()'s question, as eachDayField().
+function windowField(card) {
+    if (find(card, ".field-window-label").hidden)
+        return {};
+    const answer = find(card, ".field-window").value;
+    return { window: answer === "window" ? true : answer === "span" ? false : null };
+}
+// Shows the window question when the card's an all-day event over several
+// days that doesn't repeat, its answers spelt out with the card's own days.
+export function wireWindow(card) {
+    const label = find(card, ".field-window-label");
+    const select = find(card, ".field-window");
+    const sync = () => {
+        const date = find(card, ".field-date").value;
+        const endDate = find(card, ".field-end-date").value || null;
+        const time = find(card, ".field-time").value || null;
+        const recurrence = find(card, ".field-recurrence").value || null;
+        label.hidden = !windowApplies({ date, end_date: endDate, time, recurrence });
+        if (label.hidden)
+            return;
+        select.options[1].textContent = `Something to bring in or do by ${formatDate(endDate)} - shown on the first and last day only`;
+        select.options[2].textContent = `On every day, ${formatDate(date)} to ${formatDate(endDate)} - shown across all of them`;
+    };
+    card.addEventListener("input", sync);
+    card.addEventListener("change", sync);
+    sync();
 }
 // Shows the each-day question when the card's an event over several days
 // with a start time and no repeat, its answers spelt out with the card's own
@@ -155,6 +192,7 @@ export function readCardFields(card) {
         url: find(card, ".field-url").value.trim() || null,
         image: posterKey(card),
         ...eachDayField(card),
+        ...windowField(card),
         year_group: find(card, ".field-year-group").checked,
         recurrence,
         exceptions: [...getCardExceptions(card)],
@@ -191,7 +229,9 @@ function manualEventWhen(event) {
     const parts = [];
     if (event.end_date && event.end_date !== event.date) {
         parts.push(`${formatDate(event.date)} – ${formatDate(event.end_date)}`, `${daysInclusive(event.date, event.end_date)} days`);
-        if (event.time && event.each_day)
+        if (event.window)
+            parts.push(`drop-off window, last day ${formatDate(event.end_date)}`);
+        else if (event.time && event.each_day)
             parts.push(`${event.time}${event.end_time ? `–${event.end_time}` : ""} each day`);
         else if (event.time)
             parts.push(`from ${event.time}`);
@@ -235,11 +275,15 @@ export function createExistingEventCard(event) {
     wireCardDefaultEndTime(node);
     wireRecurrenceToggle(node);
     wireEachDay(node);
+    wireWindow(node);
     // Saved before the question existed (or answered "straight through"):
     // that's how it's been published.
     const eachDay = find(node, ".field-each-day");
     if (!find(node, ".field-each-day-label").hidden && !eachDay.value)
         eachDay.value = "through";
+    const windowSelect = find(node, ".field-window");
+    if (!find(node, ".field-window-label").hidden && !windowSelect.value)
+        windowSelect.value = "span";
     wireExceptionsSection(node, event.exceptions, { shared: card.shared });
     setupYearGroupControls(node, { saved: true, shared: card.shared });
     addWeekdayHints(node);

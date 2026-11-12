@@ -1226,3 +1226,64 @@ def test_multi_day_event_without_each_day_runs_straight_through():
     [event] = build_ics.build_manual_event(raw, "fosps", set())
     assert "rrule" not in event
     assert build_ics.event_when_text(event, date(2026, 11, 10)) == "Mon 7 Dec, 09:00 – Wed 9 Dec, 15:00"
+
+
+# --------------------------------------------------------------------------
+# Drop-off windows: a multi-day all-day event marked `window` is published as
+# its first and last days only, not one event across every day.
+# --------------------------------------------------------------------------
+
+COATS = {"id": "coats", "title": "Coat Donation", "date": "2030-03-04", "end_date": "2030-03-22",
+         "description": "Good quality coats please", "window": True}
+
+
+def test_a_window_is_published_as_its_first_and_last_days():
+    first, last = build_ics.build_manual_event(COATS, "rec-a", set())
+    assert str(first["uid"]) == "manual-coats@school-calendar-feed"
+    assert str(first["summary"]) == "RR: Coat Donation (until Fri 22 Mar)"
+    assert (first["dtstart"].dt, first["dtend"].dt) == (date(2030, 3, 4), date(2030, 3, 5))
+    assert str(last["uid"]) == "manual-coats-last@school-calendar-feed"
+    assert str(last["summary"]) == "RR: Last day: Coat Donation"
+    assert (last["dtstart"].dt, last["dtend"].dt) == (date(2030, 3, 22), date(2030, 3, 23))
+    assert str(last["description"]) == "Good quality coats please"
+
+
+@pytest.mark.parametrize("changes", [
+    {"window": False},
+    {"end_date": None},
+    {"time": "09:00"},
+    {"recurrence": {"freq": "WEEKLY", "interval": 1, "until": "2030-04-29"}},
+])
+def test_window_only_applies_to_a_multi_day_all_day_one_off(changes):
+    events = build_ics.build_manual_event({**COATS, **changes}, "rec-a", set())
+    assert len(events) == 1
+    assert build_ics.WINDOW_PROP not in events[0]
+    assert "until" not in str(events[0]["summary"])
+
+
+def test_a_windows_last_day_shares_its_event_key_and_page():
+    assert build_ics.event_page_key("manual-coats-last@school-calendar-feed") == "coats"
+    events = build_ics.build_manual_event(COATS, "rec-a", set())
+    assert build_ics.event_when_text(events[1], date(2030, 1, 1)) == "Mon 4 Mar – Fri 22 Mar, any day"
+
+
+def test_marking_an_event_a_window_isnt_logged_but_moving_one_is(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    span = {**COATS, "window": False}
+    site.build(manual={"rec-a": [span]})
+    site.build(manual={"rec-a": [COATS]})
+    assert site.changes() == []
+    site.build(manual={"rec-a": [{**COATS, "end_date": "2030-03-25"}]})
+    # The deadline moving: the last-day event moved.
+    assert [(c["kind"], c["uid"], c["old_start"], c["start"]) for c in site.changes()] == [
+        ("moved", "manual-coats-last@school-calendar-feed", "2030-03-22", "2030-03-25")
+    ]
+
+
+def test_a_new_or_deleted_window_is_logged_once(tmp_path, monkeypatch):
+    site = _Site(tmp_path, monkeypatch)
+    site.build(manual={"rec-a": [TRIP]})
+    site.build(manual={"rec-a": [TRIP, COATS]})
+    assert [c["kind"] for c in site.changes()] == ["added"]
+    site.build(manual={"rec-a": [TRIP]})
+    assert sorted(c["kind"] for c in site.changes()) == ["added", "cancelled"]

@@ -250,6 +250,12 @@ export function eachDayApplies(event: { date: string; end_date: string | null; t
   return !singleDay(event) && Boolean(event.time) && !event.recurrence;
 }
 
+// Whether `window` means anything for an event: several days, all day, and no
+// repeat.
+export function windowApplies(event: { date: string; end_date: string | null; time: string | null; recurrence: unknown }) {
+  return !singleDay(event) && !event.time && !event.recurrence;
+}
+
 export function isOccurrence(date: string, start: string, recurrence: Recurrence) {
   if (date < start || date > recurrence.until) return false;
   if (recurrence.freq === "MONTHLY") {
@@ -312,6 +318,7 @@ export function validateExtractedEvents(input: unknown): { events: EventFields[]
     if (event.url && event.url.length > LIMITS.url) event.url = null;
     // Kept as the model gave it (null: unsure) - the rep confirms it.
     if (eachDayApplies(event) && typeof item.each_day === "boolean") event.each_day = item.each_day;
+    if (windowApplies(event) && typeof item.window === "boolean") event.window = item.window;
     if (singleDay(event) && endsBeforeStart(event.time, event.end_time)) {
       warnings.push(`"${event.title}" had an end time before its start time - ignored`);
       event.end_time = null;
@@ -357,6 +364,7 @@ export function validateEventInput(
   }
   const cleaned: EventFields = { title, date: event.date, end_date, ...common, image: cleanPosterKey(event.image) };
   if (event.each_day === true && eachDayApplies(cleaned)) cleaned.each_day = true;
+  if (event.window === true && windowApplies(cleaned)) cleaned.window = true;
   const timeError = timeOrderError(cleaned);
   if (timeError) return { valid: false, error: timeError };
   const stray = recurrence && cleaned.exceptions.find((exc) => !isOccurrence(exc.date, cleaned.date, recurrence));

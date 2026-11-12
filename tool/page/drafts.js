@@ -5,7 +5,7 @@ import { addWeekdayHints, cardState } from "./cardState.js";
 import { formatSchoolSpan } from "./dates.js";
 import { confirmSecondClick, el, find, plural } from "./dom.js";
 import { POSTER_BUSY_MESSAGE, posterBusy } from "./poster.js";
-import { fillCardFields, localValidationError, readCardFields, setupYearGroupControls, wireCardDefaultEndTime, wireEachDay, wireRecurrenceToggle, } from "./eventCard.js";
+import { fillCardFields, localValidationError, readCardFields, setupYearGroupControls, wireCardDefaultEndTime, wireEachDay, wireWindow, wireRecurrenceToggle, } from "./eventCard.js";
 import { allEventCards, rebuildWait, renderExistingEvents, showListStatus } from "./eventList.js";
 import { watchNewEvents } from "./eventShare.js";
 import { selectTab } from "./tabs.js";
@@ -92,6 +92,7 @@ export function addDraftCard(event, { fromText = false, alreadyListed } = {}) {
     wireCardDefaultEndTime(node);
     wireRecurrenceToggle(node);
     wireEachDay(node);
+    wireWindow(node);
     setupYearGroupControls(node);
     addWeekdayHints(node);
     // Drafts save together from the save bar, so they have no buttons of their
